@@ -26,5 +26,8 @@ Gem::Specification.new do |spec|
   spec.add_dependency "pg", ">= 1.4.5"
 
   # Development.
+  spec.add_development_dependency "dotenv-rails"
+  spec.add_development_dependency "awesome_print"
   spec.add_development_dependency "rspec-rails"
+  spec.add_development_dependency "factory_bot_rails"
 end
