@@ -31,18 +31,6 @@ This engine was created with
 ```
 rails plugin new stern \
   --mountable \
-  --database=postgresql \
-  --skip-action-mailer \
-  --skip-action-mailbox \
-  --skip-action-text \
-  --skip-active-storage \
-  --skip-action-cable \
-  --skip-hotwire \
-  --skip-test \
-  --css=tailwind
-
-rails plugin new stern \
-  --mountable \
   --database postgresql \
   --skip-action-mailer \
   --skip-action-mailbox \
