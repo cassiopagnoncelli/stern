@@ -1,0 +1,102 @@
+books:
+  merchant_balance: 1
+  merchant_withholding_balance: 2
+  merchant_credit: 3
+  given_balance: 21
+  given_credit: 22
+  settlement: 41
+  settlement_fee: 42
+  subscription: 51
+  boleto: 101
+  boleto_fee: 102
+  boleto_refund: 103
+  cc: 121
+  cc_fee: 122
+  cc_refund: 123
+  cc_refund_fee: 124
+  cc_chargeback: 125
+  cc_chargeback_fee: 126
+  cc_anticipation: 127
+  cc_anticipation_fee: 128
+
+txs:
+  balance:
+    code: 1
+    book1: merchant_balance
+    book2: given_credit
+    positive: true
+  credit:
+    code: 11
+    book1: merchant_credit
+    book2: given_credit
+    positive: true
+  settlement:
+    code: 21
+    book1: merchant_balance
+    book2: settlement
+    positive: false
+  settlement_fee:
+    code: 31
+    book1: merchant_balance
+    book2: settlement_fee
+    positive: false
+  subscription:
+    code: 41
+    book1: merchant_balance
+    book2: subscription
+    positive: false
+  boleto_payment:
+    code: 101
+    book1: merchant_balance
+    book2: boleto
+    positive: true
+  boleto_fee:
+    code: 111
+    book1: merchant_balance
+    book2: boleto_fee
+    positive: false
+  boleto_refund:
+    code: 121
+    book1: merchant_balance
+    book2: boleto_refund
+    positive: false
+  cc:
+    code: 201
+    book1: merchant_withholding_balance
+    book2: cc
+    positive: true
+  cc_fee:
+    code: 211
+    book1: merchant_balance
+    book2: cc_fee
+    positive: false
+  cc_refund:
+    code: 221
+    book1: merchant_balance
+    book2: cc_refund
+    positive: false
+  cc_refund_fee:
+    code: 231
+    book1: merchant_balance
+    book2: cc_refund_fee
+    positive: false
+  cc_chargeback:
+    code: 241
+    book1: merchant_balance
+    book2: cc_chargeback
+    positive: false
+  cc_chargeback_fee:
+    code: 251
+    book1: merchant_balance
+    book2: cc_chargeback_fee
+    positive: false
+  cc_anticipation:
+    code: 261
+    book1: merchant_balance
+    book2: cc_anticipation
+    positive: false
+  cc_anticipation_fee:
+    code: 271
+    book1: merchant_balance
+    book2: cc_anticipation_fee
+    positive: false
