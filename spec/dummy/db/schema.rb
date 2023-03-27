@@ -10,8 +10,32 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 0) do
+ActiveRecord::Schema[7.0].define(version: 2023_03_26_215510) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "stern_entries", force: :cascade do |t|
+    t.integer "book_id", null: false
+    t.integer "gid", null: false
+    t.bigint "tx_id", null: false
+    t.bigint "amount", null: false
+    t.bigint "ending_balance", null: false
+    t.datetime "timestamp", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["book_id", "gid", "timestamp"], name: "index_stern_entries_on_book_id_and_gid_and_timestamp", unique: true
+    t.index ["book_id", "gid", "tx_id"], name: "index_stern_entries_on_book_id_and_gid_and_tx_id", unique: true
+  end
+
+  create_table "stern_txs", force: :cascade do |t|
+    t.integer "code", null: false
+    t.bigint "uid", null: false
+    t.bigint "amount", null: false
+    t.datetime "timestamp", null: false
+    t.bigint "credit_tx_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code", "uid"], name: "index_stern_txs_on_code_and_uid", unique: true
+  end
 
 end
