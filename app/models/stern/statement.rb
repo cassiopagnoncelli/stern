@@ -2,7 +2,7 @@
 
 module Stern
   # Statement are reported list of transactions.
-  class Statement < Base
+  class Statement < ApplicationRecord
     def self.process(gid, **args)
       start_date = args[:start_date]
       end_date = args[:end_date]

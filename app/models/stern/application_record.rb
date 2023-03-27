@@ -1,5 +1,15 @@
 module Stern
   class ApplicationRecord < ActiveRecord::Base
     self.abstract_class = true
+
+    connects_to database: {
+      writing: "#{Rails.env}".to_sym,
+      reading: "#{Rails.env}".to_sym,
+    }
+
+    def self.inherited(subclass)
+      super
+      # subclass.table_name = ... # rename table
+    end
   end
 end

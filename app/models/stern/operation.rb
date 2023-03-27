@@ -5,7 +5,7 @@ module Stern
   #
   # Note. End-user *shouldn't* use transactions directly, but rather operations.
   #
-  class Operation < Base
+  class Operation < ApplicationRecord
     enum name: %i[
       give_balance revert_give_balance
       give_credit revert_give_credit
@@ -15,7 +15,7 @@ module Stern
       pay_boleto_fee boleto_pay_bolet_fee
     ]
 
-    def self.register(operation, *parameters, timestamp: Time.current, atomic: true, cascade: false)
+    def self.register(operation, *parameters, timestamp: Time.current, cascade: false)
       raise OperationDoesNotExist unless operation.to_s.in?(names)
       raise CascadeShouldBeBoolean unless cascade.in?([true, false])
       raise AtomicShouldBeBoolean unless atomic.in?([true, false])
@@ -23,16 +23,16 @@ module Stern
 
       blk = lambda do
         params = parameters + [timestamp, cascade]
-        Stern::Operation.public_send(operation.to_sym, *params)
+        ::Stern::Operation.public_send(operation.to_sym, *params)
       end
 
-      atomic ? ApplicationRecord.transaction { blk.call } : blk.call
+      ApplicationRecord.transaction { blk.call }
     end
 
     def self.new_credit_tx_id(remaining_tries = 100)
       raise CreditTxIdSeqInvalid unless remaining_tries.positive?
 
-      seq = Stern::Base.connection.execute("SELECT nextval('credit_tx_id_seq')").first.values.first
+      seq = ::Stern::Base.connection.execute("SELECT nextval('credit_tx_id_seq')").first.values.first
 
       already_present = Tx.find_by(code: Tx.codes['add_credit'], uid: seq).present?
       already_present ? new_credit_tx_id(remaining_tries - 1) : seq

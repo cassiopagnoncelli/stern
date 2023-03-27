@@ -7,7 +7,7 @@ module Stern
   # different nominal ledger accounts within the financial accounting system, so that the
   # total debits equals the total credits in the general ledger.
   #
-  class Entry < Base
+  class Entry < ApplicationRecord
     validates_presence_of :book_id
     validates_presence_of :gid
     validates_presence_of :tx_id
@@ -17,7 +17,7 @@ module Stern
     belongs_to :tx, class_name: 'Stern::Tx', optional: true
 
     before_create do
-      e = STERN_AUTOFILL_ENDING_BALANCE ? nil : self.last_entry(book_id, gid, timestamp)
+      e = STERN_AUTOFILL_ENDING_BALANCE ? nil : self.class.last_entry(book_id, gid, timestamp)
       self.amount = amount
       self.ending_balance = (e&.ending_balance || 0) + amount
     end
@@ -43,7 +43,7 @@ module Stern
     # and easy to port to a another database engine.
     def cascade_gid_balance
       s = ending_balance
-      self.next_entries(book_id, gid, id, timestamp).each do |e|
+      self.class.next_entries(book_id, gid, id, timestamp).each do |e|
         s += e.amount
         e.update(ending_balance: s)
       end

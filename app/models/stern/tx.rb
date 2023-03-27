@@ -13,7 +13,7 @@ module Stern
   # 1. Furthermore we register each transaction by its name for auditing purposes.
   # 2. Transactions are append-only whereas entries are not.
   #
-  class Tx < Base
+  class Tx < ApplicationRecord
     enum book: STERN_DEFS[:books]
     enum code: STERN_TX_CODES
 

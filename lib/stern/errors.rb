@@ -1,20 +1,20 @@
 module Stern
-  class InvalidTime < StandardError; end
-  class InvalidDate < StandardError; end
-  class ShouldBeDateOrTimestamp < StandardError; end
-  class TimestampShouldBeDateTime < StandardError; end
-  class DateNotSpecified < StandardError; end
-  class CreditTxIdSeqInvalid < StandardError; end
+  InvalidTime = class.new(StandardError)
+  InvalidDate = class.new(StandardError)
+  ShouldBeDateOrTimestamp = class.new(StandardError)
+  TimestampShouldBeDateTime = class.new(StandardError)
+  DateNotSpecified = class.new(StandardError)
+  CreditTxIdSeqInvalid = class.new(StandardError)
 
-  class InvalidTxCode < StandardError; end
-  class InvalidTxName < StandardError; end
-  class InconsistentDefinitions < StandardError; end
-  class InvalidBook < StandardError; end
-  class BookDoesNotExist < StandardError; end
-  class OperationDoesNotExist < StandardError; end
-  class AmountShouldNotBeZero < StandardError; end
-  class CascadeShouldBeBoolean < StandardError; end
-  class AtomicShouldBeBoolean < StandardError; end
-  class InvalidGroupingDatePrecision < StandardError; end
-  class GidNotSpecified < StandardError; end
+  InvalidTxCode = class.new(StandardError)
+  InvalidTxName = class.new(StandardError)
+  InconsistentDefinitions = class.new(StandardError)
+  InvalidBook = class.new(StandardError)
+  BookDoesNotExist = class.new(StandardError)
+  OperationDoesNotExist = class.new(StandardError)
+  AmountShouldNotBeZero = class.new(StandardError)
+  CascadeShouldBeBoolean = class.new(StandardError)
+  AtomicShouldBeBoolean = class.new(StandardError)
+  InvalidGroupingDatePrecision = class.new(StandardError)
+  GidNotSpecified = class.new(StandardError)
 end
