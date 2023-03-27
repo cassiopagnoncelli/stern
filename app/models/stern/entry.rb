@@ -17,9 +17,9 @@ module Stern
     belongs_to :tx, class_name: 'Stern::Tx', optional: true
 
     before_create do
-      e = STERN_AUTOFILL_ENDING_BALANCE ? nil : self.class.last_entry(book_id, gid, timestamp)
+      eb = self.class.last_entry(book_id, gid, timestamp).last&.ending_balance || 0
       self.amount = amount
-      self.ending_balance = (e&.ending_balance || 0) + amount
+      self.ending_balance = eb + amount
     end
 
     scope :last_entry, ->(book_id, gid, timestamp) do
@@ -45,7 +45,7 @@ module Stern
       s = ending_balance
       self.class.next_entries(book_id, gid, id, timestamp).each do |e|
         s += e.amount
-        e.update(ending_balance: s)
+        e.update!(ending_balance: s)
       end
       true
     end

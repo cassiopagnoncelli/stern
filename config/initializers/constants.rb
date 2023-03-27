@@ -1,9 +1,5 @@
 # frozen_string_literal: true
 
-# By default, ending balance should be filled for every new transaction.
-# For optimal bulk insertion, disabling it will speed up importing; combine with Doctor.rebuild_balances
-STERN_AUTOFILL_ENDING_BALANCE = ![false, 'false'].include?(ENV.fetch('STERN_AUTOFILL_ENDING_BALANCE', true))
-
 # Chart of accounts configuration.
 STERN_DEFS = YAML.load_file("#{Rails.root}/config/chart_of_accounts.yml").deep_symbolize_keys!
 
