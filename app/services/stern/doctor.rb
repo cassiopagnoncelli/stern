@@ -34,7 +34,7 @@ module Stern
     def self.rebuild_balances(confirm = false)
       raise(OperationNotConfirmedError, "You must confirm the operation") unless confirm
 
-      Entry.pluck(:gid).uniq.find_each(batch_size: 1_000) do |gid|
+      Entry.pluck(:gid).uniq.each do |gid|
         rebuild_gid_balance(gid)
       end
     end
