@@ -1,8 +1,9 @@
 FactoryBot.define do
-  factory :entry do
+  factory :entry, class: 'Stern::Entry' do
     book_id { 1 }
     gid { 1 }
     tx_id { 12345 }
-    amount { 9900 }
+    amount { 100 }
+    timestamp { Time.now }
   end
-end
+end  

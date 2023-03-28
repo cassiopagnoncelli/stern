@@ -1,6 +1,6 @@
 class CreateSternEntries < ActiveRecord::Migration[7.0]
   def change
-    create_table :stern_entries do |t|
+    create_table :stern_entries, if_not_exists: true do |t|
       t.integer :book_id, null: false
       t.integer :gid, null: false
       t.bigint :tx_id, null: false
@@ -10,7 +10,7 @@ class CreateSternEntries < ActiveRecord::Migration[7.0]
 
       t.timestamps
     end
-    add_index :stern_entries, [:book_id, :gid, :tx_id], unique: true
-    add_index :stern_entries, [:book_id, :gid, :timestamp], unique: true
+    add_index :stern_entries, [:book_id, :gid, :tx_id], unique: true, if_not_exists: true
+    add_index :stern_entries, [:book_id, :gid, :timestamp], unique: true, if_not_exists: true
   end
 end
