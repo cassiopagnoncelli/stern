@@ -38,7 +38,7 @@ module Stern
     end
 
     def self.apply_credits(charged_credits, merchant_id, ts0)
-      return nil unless charged_credits.present? && charged_credits.abs > 0
+      return nil unless charged_credits.present? && charged_credits.abs.positive?
 
       credit_tx_id = new_credit_tx_id
       Tx.add_credit(credit_tx_id, merchant_id, -charged_credits, ts0)
@@ -134,7 +134,7 @@ module Stern
     end
 
     def self.pay_boleto_fee(payment_id, merchant_id, fee, timestamp, cascade)
-      raise AmountShouldNotBeZeroError unless fee.abs > 0
+      raise AmountShouldNotBeZeroError unless fee.abs.positive?
 
       credits = ::Stern.balance(merchant_id, :merchant_credit)
       charged_credits = [fee, credits].min
