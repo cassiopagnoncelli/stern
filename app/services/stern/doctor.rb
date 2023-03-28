@@ -3,14 +3,14 @@
 module Stern
   # Safety methods.
   class Doctor < ApplicationRecord
-    OperationNotConfirmed = class.new(StandardError)
+    OperationNotConfirmedError = Class.new(StandardError)
 
     def self.doctor_consistency
       Entry.sum(:amount) == 0
     end
 
     def self.rebuild_book_gid_balance(book, gid)
-      Stern::Base.connection.execute(%{
+      ApplicationRecord.connection.execute(%{
         UPDATE stern_entries
         SET ending_balance = l.new_ending_balance
         FROM (
@@ -32,9 +32,9 @@ module Stern
     end
 
     def self.rebuild_balances(confirm = false)
-      raise(OperationNotConfirmed, "You must confirm the operation") unless confirm
+      raise(OperationNotConfirmedError, "You must confirm the operation") unless confirm
 
-      Stern::Entry.pluck(:gid).uniq.each do |gid|
+      Entry.pluck(:gid).uniq.find_each(batch_size: 1_000) do |gid|
         rebuild_gid_balance(gid)
       end
     end
