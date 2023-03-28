@@ -15,4 +15,5 @@ module Stern
   AtomicShouldBeBooleanError = Class.new(StandardError)
   InvalidGroupingDatePrecisionError = Class.new(StandardError)
   GidNotSpecifiedError = Class.new(StandardError)
+  OperationNotConfirmedError = Class.new(StandardError)
 end
