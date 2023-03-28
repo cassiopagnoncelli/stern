@@ -27,7 +27,7 @@ module Stern
 
     scope :last_entry, ->(book_id, gid, timestamp) do
       where(book_id: book_id, gid: gid)
-        .where('timestamp < ?', timestamp)
+        .where('timestamp <= ?', timestamp)
         .order(:timestamp, :id)
         .last(1)
     end
