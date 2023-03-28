@@ -24,13 +24,14 @@ module Stern
     validates_presence_of :amount
     validates_presence_of :timestamp
     validate :no_future_timestamp, on: :create
+    validates_uniqueness_of :uid, scope: [:code]
 
     class << self
       # Note. Edit transactions do not exist for entries would otherwise have multiple
       # transactions this way increasing audit complexity. A preferred way is to simply
       # redo the transaction all along.
       STERN_DEFS[:txs].each do |name, defs|
-        define_method "add_#{name}".to_sym do |uid, gid, amount, timestamp = Time.current, credit_tx_id = nil, cascade: false|
+        define_method "add_#{name}".to_sym do |uid, gid, amount, timestamp = DateTime.current, credit_tx_id = nil, cascade: false|
           double_entry_add("add_#{name}".to_sym, gid, uid,
                             defs[:book1].to_sym, defs[:book2].to_sym,
                             defs[:positive] ? amount : -amount, timestamp, credit_tx_id, cascade)
@@ -72,10 +73,14 @@ module Stern
       tx_id
     end
 
+    def self.generate_tx_credit_id
+      self.connection.execute("SELECT nextval('credit_tx_id_seq')").first.values.first
+    end
+
     private
 
     def no_future_timestamp
-      errors.add(:timestamp, 'cannot be in the future') if timestamp > Time.current
+      errors.add(:timestamp, 'cannot be in the future') if timestamp > DateTime.current
     end
   end
 end

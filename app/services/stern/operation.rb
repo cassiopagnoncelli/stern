@@ -15,7 +15,7 @@ module Stern
       pay_boleto_fee boleto_pay_bolet_fee
     ]
 
-    def self.register(operation, *parameters, timestamp: Time.current, cascade: false)
+    def self.register(operation, *parameters, timestamp: DateTime.current, cascade: false)
       raise OperationDoesNotExist unless operation.to_s.in?(names)
       raise CascadeShouldBeBoolean unless cascade.in?([true, false])
       raise AtomicShouldBeBoolean unless atomic.in?([true, false])
@@ -32,14 +32,14 @@ module Stern
     def self.new_credit_tx_id(remaining_tries = 100)
       raise CreditTxIdSeqInvalid unless remaining_tries.positive?
 
-      seq = ::Stern::Base.connection.execute("SELECT nextval('credit_tx_id_seq')").first.values.first
+      seq = ::Stern::Tx.generate_tx_credit_id
 
       already_present = Tx.find_by(code: Tx.codes['add_credit'], uid: seq).present?
       already_present ? new_credit_tx_id(remaining_tries - 1) : seq
     end
 
     def self.apply_credits(charged_credits, merchant_id, ts0)
-      return nil unless charged_credits.present? && charged_credits.abs > 1e-3
+      return nil unless charged_credits.present? && charged_credits.abs > 0
 
       credit_tx_id = new_credit_tx_id
       Tx.add_credit(credit_tx_id, merchant_id, -charged_credits, ts0)
