@@ -5,11 +5,11 @@ module Stern
   class Doctor < ApplicationRecord
     OperationNotConfirmedError = Class.new(StandardError)
 
-    def self.doctor_consistency
+    def self.consistent?
       Entry.sum(:amount) == 0
     end
 
-    def self.rebuild_book_gid_balance(book, gid)
+    def self.rebuild_book_gid_balance(book_id, gid)
       ApplicationRecord.connection.execute(%{
         UPDATE stern_entries
         SET ending_balance = l.new_ending_balance
@@ -29,6 +29,7 @@ module Stern
       Tx.books.values.each do |book_id|
         rebuild_book_gid_balance(book_id, gid)
       end
+      nil
     end
 
     def self.rebuild_balances(confirm = false)
