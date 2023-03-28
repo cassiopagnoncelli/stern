@@ -2,9 +2,9 @@
 
 # Stern engine.
 module Stern
-  raise InvalidTxName if STERN_TX_CODES.keys.detect { |e| STERN_TX_CODES.keys.count(e) > 1 }
-  raise InvalidTxCode if STERN_TX_CODES.values.detect { |e| STERN_TX_CODES.values.count(e) > 1 }
-  raise InconsistentDefinitions unless STERN_TX_2TREES.flatten(2).select(&:nil?).blank?
+  raise InvalidTxNameError if STERN_TX_CODES.keys.detect { |e| STERN_TX_CODES.keys.count(e) > 1 }
+  raise InvalidTxCodeError if STERN_TX_CODES.values.detect { |e| STERN_TX_CODES.values.count(e) > 1 }
+  raise InconsistentDefinitionsError unless STERN_TX_2TREES.flatten(2).select(&:nil?).blank?
 
   # In a Double-Entry bookkeeping, a financial transaction combines two entries, one for
   # credit, one for debit, in such a way credits = debits.

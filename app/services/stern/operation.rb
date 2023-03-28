@@ -16,10 +16,10 @@ module Stern
     ]
 
     def self.register(operation, *parameters, timestamp: DateTime.current, cascade: false)
-      raise OperationDoesNotExist unless operation.to_s.in?(names)
-      raise CascadeShouldBeBoolean unless cascade.in?([true, false])
-      raise AtomicShouldBeBoolean unless atomic.in?([true, false])
-      raise TimestampShouldBeDateTime unless timestamp.is_a?(Time)
+      raise OperationDoesNotExistError unless operation.to_s.in?(names)
+      raise CascadeShouldBeBooleanError unless cascade.in?([true, false])
+      raise AtomicShouldBeBooleanError unless atomic.in?([true, false])
+      raise TimestampShouldBeDateTimeError unless timestamp.is_a?(Time)
 
       blk = lambda do
         params = parameters + [timestamp, cascade]
@@ -30,7 +30,7 @@ module Stern
     end
 
     def self.new_credit_tx_id(remaining_tries = 100)
-      raise CreditTxIdSeqInvalid unless remaining_tries.positive?
+      raise CreditTxIdSeqInvalidError unless remaining_tries.positive?
 
       seq = ::Stern::Tx.generate_tx_credit_id
 
@@ -47,7 +47,7 @@ module Stern
     end
 
     def self.give_balance(uid, merchant_id, amount, timestamp, cascade)
-      raise AmountShouldNotBeZero if amount.zero?
+      raise AmountShouldNotBeZeroError if amount.zero?
 
       Tx.add_balance(uid, merchant_id, amount, timestamp, cascade: cascade)
     end
@@ -58,7 +58,7 @@ module Stern
     end
 
     def self.give_credit(uid, merchant_id, amount, timestamp, cascade)
-      raise AmountShouldNotBeZero if amount.zero?
+      raise AmountShouldNotBeZeroError if amount.zero?
 
       Tx.add_credit(uid, merchant_id, amount, timestamp, cascade: cascade)
     end
@@ -69,7 +69,7 @@ module Stern
     end
 
     def self.pay_settlement(settlement_id, merchant_id, amount, fee, timestamp, cascade)
-      raise AmountShouldNotBeZero if amount.zero?
+      raise AmountShouldNotBeZeroError if amount.zero?
 
       credits = Stern.balance(merchant_id, :merchant_credit)
       charged_credits = [fee, credits].min
@@ -92,7 +92,7 @@ module Stern
     end
 
     def self.charge_subscription(subs_charge_id, merchant_id, amount, timestamp, cascade)
-      raise AmountShouldNotBeZero if amount.zero?
+      raise AmountShouldNotBeZeroError if amount.zero?
 
       credits = Stern.balance(merchant_id, :merchant_credit)
       charged_credits = [amount, credits].min
@@ -112,7 +112,7 @@ module Stern
     end
 
     def self.pay_boleto(payment_id, merchant_id, amount, fee, timestamp, cascade)
-      raise AmountShouldNotBeZero if amount.zero?
+      raise AmountShouldNotBeZeroError if amount.zero?
 
       credits = Stern.balance(merchant_id, :merchant_credit)
       charged_credits = [fee, credits].min
@@ -135,7 +135,7 @@ module Stern
     end
 
     def self.pay_boleto_fee(payment_id, merchant_id, fee, timestamp, cascade)
-      raise AmountShouldNotBeZero unless fee.abs > 0
+      raise AmountShouldNotBeZeroError unless fee.abs > 0
 
       credits = Stern.balance(merchant_id, :merchant_credit)
       charged_credits = [fee, credits].min

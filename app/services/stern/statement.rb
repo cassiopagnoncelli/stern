@@ -12,8 +12,8 @@ module Stern
     end
 
     def self.cashflow(gid, **args)
-      raise InvalidBook unless args[:book].nil? || Stern::Tx.books.keys.include?(args[:book])
-      raise GidNotSpecified unless gid.present? && gid.is_a?(Integer)
+      raise InvalidBookError unless args[:book].nil? || Stern::Tx.books.keys.include?(args[:book])
+      raise GidNotSpecifiedError unless gid.present? && gid.is_a?(Integer)
 
       start_date = normalize_time(args[:start_date], false)
       end_date = normalize_time(args[:end_date], true)
@@ -58,8 +58,8 @@ module Stern
     end
 
     def self.consolidated_txs(gid, **args)
-      raise InvalidBook unless args[:book].nil? || Stern::Tx.books.keys.include?(args[:book])
-      raise GidNotSpecified unless gid.present? && gid.is_a?(Integer)
+      raise InvalidBookError unless args[:book].nil? || Stern::Tx.books.keys.include?(args[:book])
+      raise GidNotSpecifiedError unless gid.present? && gid.is_a?(Integer)
 
       start_date = normalize_time(args[:start_date], false)
       end_date = normalize_time(args[:end_date], true)
@@ -84,7 +84,7 @@ module Stern
     end
 
     def self.normalize_time(dt, past_eod)
-      raise InvalidTime unless dt.is_a?(Date) || dt.is_a?(Time) || dt.is_a?(DateTime)
+      raise InvalidTimeError unless dt.is_a?(Date) || dt.is_a?(Time) || dt.is_a?(DateTime)
 
       t = dt.is_a?(Time) ? dt : dt.to_time
       t.to_date >= Date.current ? t : (past_eod ? t.end_of_day : t)
@@ -103,7 +103,7 @@ module Stern
       when :yearly
         'YEAR'
       else
-        raise InvalidGroupingDatePrecision
+        raise InvalidGroupingDatePrecisionError
       end
     end
   end

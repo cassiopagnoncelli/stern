@@ -7,8 +7,8 @@ module Stern
   end
 
   def self.outstanding_balance(book_id = :merchant_balance, timestamp = DateTime.current)
-    raise BookDoesNotExist unless book_id.to_s.in?(Tx.books.keys) || book_id.in?(Tx.books.values)
-    raise ShouldBeDateOrTimestamp unless timestamp.is_a?(Date) || timestamp.is_a?(Time)
+    raise BookDoesNotExistError unless book_id.to_s.in?(Tx.books.keys) || book_id.in?(Tx.books.values)
+    raise ShouldBeDateOrTimestampError unless timestamp.is_a?(Date) || timestamp.is_a?(Time)
 
     book_id = book_id.is_a?(Symbol) || book_id.is_a?(String) ? Tx.books[book_id] : book_id
     timestamp = timestamp.is_a?(Date) ? timestamp.to_time.end_of_day : timestamp
@@ -31,8 +31,8 @@ module Stern
   end
 
   def self.balance(gid, book_id = :merchant_balance, timestamp = DateTime.current)
-    raise BookDoesNotExist unless book_id.to_s.in?(Tx.books.keys) || book_id.in?(Tx.books.values)
-    raise ShouldBeDateOrTimestamp unless timestamp.is_a?(Date) || timestamp.is_a?(Time)
+    raise BookDoesNotExistError unless book_id.to_s.in?(Tx.books.keys) || book_id.in?(Tx.books.values)
+    raise ShouldBeDateOrTimestampError unless timestamp.is_a?(Date) || timestamp.is_a?(Time)
 
     book_id = book_id.is_a?(Symbol) || book_id.is_a?(String) ? Tx.books[book_id] : book_id
     ts = normalize_time(timestamp, true)
@@ -42,7 +42,7 @@ module Stern
   end
 
   def self.normalize_time(dt, past_eod)
-    raise InvalidTime unless dt.is_a?(Date) || dt.is_a?(Time) || dt.is_a?(DateTime)
+    raise InvalidTimeError unless dt.is_a?(Date) || dt.is_a?(Time) || dt.is_a?(DateTime)
 
     t = dt.is_a?(DateTime) ? dt : dt.to_datetime
     return t unless past_eod
