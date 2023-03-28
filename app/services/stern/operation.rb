@@ -18,8 +18,7 @@ module Stern
     def self.register(operation, *parameters, timestamp: DateTime.current, cascade: false)
       raise OperationDoesNotExistError unless operation.to_s.in?(names)
       raise CascadeShouldBeBooleanError unless cascade.in?([true, false])
-      raise AtomicShouldBeBooleanError unless atomic.in?([true, false])
-      raise TimestampShouldBeDateTimeError unless timestamp.is_a?(Time)
+      raise TimestampShouldBeDateTimeError unless timestamp.is_a?(DateTime)
 
       blk = lambda do
         params = parameters + [timestamp, cascade]
@@ -71,7 +70,7 @@ module Stern
     def self.pay_settlement(settlement_id, merchant_id, amount, fee, timestamp, cascade)
       raise AmountShouldNotBeZeroError if amount.zero?
 
-      credits = Stern.balance(merchant_id, :merchant_credit)
+      credits = ::Stern.balance(merchant_id, :merchant_credit)
       charged_credits = [fee, credits].min
       charged_fees = fee - charged_credits
 
@@ -94,7 +93,7 @@ module Stern
     def self.charge_subscription(subs_charge_id, merchant_id, amount, timestamp, cascade)
       raise AmountShouldNotBeZeroError if amount.zero?
 
-      credits = Stern.balance(merchant_id, :merchant_credit)
+      credits = ::Stern.balance(merchant_id, :merchant_credit)
       charged_credits = [amount, credits].min
       charged_subs = amount - charged_credits
 
@@ -114,7 +113,7 @@ module Stern
     def self.pay_boleto(payment_id, merchant_id, amount, fee, timestamp, cascade)
       raise AmountShouldNotBeZeroError if amount.zero?
 
-      credits = Stern.balance(merchant_id, :merchant_credit)
+      credits = ::Stern.balance(merchant_id, :merchant_credit)
       charged_credits = [fee, credits].min
       charged_fees = fee - charged_credits
 
@@ -137,7 +136,7 @@ module Stern
     def self.pay_boleto_fee(payment_id, merchant_id, fee, timestamp, cascade)
       raise AmountShouldNotBeZeroError unless fee.abs > 0
 
-      credits = Stern.balance(merchant_id, :merchant_credit)
+      credits = ::Stern.balance(merchant_id, :merchant_credit)
       charged_credits = [fee, credits].min
       charged_fees = fee - charged_credits
 
