@@ -18,6 +18,4 @@ module Stern
   OperationNotConfirmedError = Class.new(StandardError)
   ParameterMissingError = Class.new(StandardError)
   OperationDirectionNotProvidedError = Class.new(StandardError)
-  OperationPerformNotImplementedError = Class.new(StandardError)
-  OperationUndoNotImplementedError = Class.new(StandardError)
 end

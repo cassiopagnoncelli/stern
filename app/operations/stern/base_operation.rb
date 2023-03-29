@@ -18,11 +18,15 @@ module Stern
     end
 
     def perform
-      raise OperationPerformNotImplementedError
+      raise NotImplementedError
     end
 
     def undo
-      raise OperationUndoNotImplementedError
+      raise NotImplementedError
+    end
+
+    def new_gid
+      raise NotImplementedError
     end
 
     def new_credit_tx_id(remaining_tries = 10)
