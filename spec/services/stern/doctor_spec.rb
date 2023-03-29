@@ -70,7 +70,7 @@ module Stern
         Doctor.rebuild_balances(true)
         last_tx.reload
 
-        byebug
+        # byebug
 
         expect(last_tx.entries.first.ending_balance.abs).to be(4 * amount + 250)
         expect(last_tx.entries.last.ending_balance.abs).to be(4 * amount + 250)

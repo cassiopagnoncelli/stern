@@ -29,6 +29,21 @@ module Stern
       end
     end
 
+    describe "times, timezones" do
+      it "properly sorts entries by the end of the summertime", :pending do
+        pending "To be implemented"
+      end
+
+      it "keeps ending balance consistent when summertime ends", :pending do
+        pending "To be implemented"
+      end
+
+      it "asserts timestamp delta is minimum", :pending do
+        pending "To be implemented"
+        # https://chat.openai.com/chat/674f0ea8-728c-49df-b993-2d320228574b
+      end
+    end
+
     context "scopes" do
       before do
         entry_a
@@ -36,7 +51,7 @@ module Stern
       end
 
       subject(:last_entry_query) do
-        described_class.last_entry(entry_b.book_id, entry_b.gid, Time.now)
+        described_class.last_entry(entry_b.book_id, entry_b.gid, DateTime.current)
       end
 
       subject(:next_entries_query) do

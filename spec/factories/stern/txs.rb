@@ -3,7 +3,7 @@ FactoryBot.define do
     code { STERN_TX_CODES[:add_balance] }
     uid { 1 }
     amount { 100 }
-    timestamp { Time.now }
+    timestamp { DateTime.current }
     credit_tx_id { nil }
   end
 end

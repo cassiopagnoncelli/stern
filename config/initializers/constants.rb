@@ -14,4 +14,4 @@ STERN_TX_2TREES = STERN_DEFS[:txs].map { |_k, g|
 }.to_h
 
 # Minimum timestamp difference.
-STERN_TIMESTAMP_DELTA = 1.second / 1e6
+STERN_TIMESTAMP_DELTA = 2 * (1.second / 1e6)

@@ -36,5 +36,8 @@ module Dummy
 
     # Don't generate system test files.
     config.generators.system_tests = nil
+
+    # Set timezone so DateTime/Time.current works properly
+    config.time_zone = 'America/Sao_Paulo'
   end
 end

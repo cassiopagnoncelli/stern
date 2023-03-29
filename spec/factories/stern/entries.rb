@@ -4,6 +4,6 @@ FactoryBot.define do
     gid { 1 }
     tx_id { 12345 }
     amount { 100 }
-    timestamp { DateTime.now }
+    timestamp { DateTime.current }
   end
 end  
