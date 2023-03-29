@@ -1,5 +1,5 @@
 module Stern
-  class PayBoleto < BaseOperation
+  class PayBoletoFee < BaseOperation
     attr_accessor :payment_id, :merchant_id, :fee, :timestamp
 
     def initialize(payment_id: nil, merchant_id: nil, fee: nil, timestamp: DateTime.current)
@@ -20,7 +20,7 @@ module Stern
       charged_credits = [fee, credits].min
       charged_fees = fee - charged_credits
 
-      credit_tx_id = apply_credits(charged_credits, merchant_id, ts0)
+      credit_tx_id = apply_credits(charged_credits, merchant_id, timestamp)
       Tx.add_boleto_fee(payment_id, merchant_id, charged_fees, timestamp, credit_tx_id, cascade: false)
     end
 

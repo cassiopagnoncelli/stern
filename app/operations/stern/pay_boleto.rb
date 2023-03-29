@@ -1,11 +1,12 @@
 module Stern
   class PayBoleto < BaseOperation
-    attr_accessor :payment_id, :merchant_id, :amount, :timestamp
+    attr_accessor :payment_id, :merchant_id, :amount, :fee, :timestamp
 
-    def initialize(payment_id: nil, merchant_id: nil, amount: nil, timestamp: DateTime.current)
+    def initialize(payment_id: nil, merchant_id: nil, amount: nil, fee: nil, timestamp: DateTime.current)
       @payment_id = payment_id
       @merchant_id = merchant_id
       @amount = amount
+      @fee = fee
       @timestamp = timestamp
     end
 
@@ -13,6 +14,7 @@ module Stern
       raise ParameterMissingError unless payment_id.present? && payment_id.is_a?(Numeric)
       raise ParameterMissingError unless merchant_id.present? && merchant_id.is_a?(Numeric)
       raise ParameterMissingError unless amount.present? && amount.is_a?(Numeric)
+      raise ParameterMissingError unless fee.present? && fee.is_a?(Numeric)
       raise ParameterMissingError unless timestamp.present? && timestamp.is_a?(DateTime)
       raise AmountShouldNotBeZeroError if amount.zero?
 

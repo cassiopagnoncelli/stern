@@ -1,10 +1,10 @@
 module Stern
-  class ChargeSubscription < OperationBase
+  class ChargeSubscription < BaseOperation
     attr_accessor :subs_charge_id, :merchant_id, :amount, :timestamp
 
     def initialize(subs_charge_id: nil, merchant_id: nil, amount: nil, timestamp: DateTime.current)
       @subs_charge_id = subs_charge_id
-      @merchant_id
+      @merchant_id = merchant_id
       @amount = amount
       @timestamp = timestamp
     end

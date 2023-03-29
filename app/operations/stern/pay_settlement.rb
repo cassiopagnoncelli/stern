@@ -6,6 +6,7 @@ module Stern
       @settlement_id = settlement_id
       @merchant_id = merchant_id
       @amount = amount
+      @fee = fee
       @timestamp = timestamp
     end
 
@@ -13,6 +14,7 @@ module Stern
       raise ParameterMissingError unless settlement_id.present? && settlement_id.is_a?(Numeric)
       raise ParameterMissingError unless merchant_id.present? && merchant_id.is_a?(Numeric)
       raise ParameterMissingError unless amount.present? && amount.is_a?(Numeric)
+      raise ParameterMissingError unless fee.present? && fee.is_a?(Numeric)
       raise ParameterMissingError unless timestamp.present? && timestamp.is_a?(DateTime)
       raise AmountShouldNotBeZeroError if amount.zero?
 
