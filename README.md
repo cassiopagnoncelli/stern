@@ -1,48 +1,4 @@
-# Stern
 Double-entry ledger Rails engine.
-
-## Usage
-Plug into your existing app and attach it to (preferably brand new) database.
-
-Before using it you may have to configure the chart of accounts, define operations,
-and of course configuring your local time zone.
-
-### Chart of accounts
-You need to provide the chart of accounts (`config/chart_of_accounts.yml`) specifying the
-books and transactions, each transaction is made of a pair of entries in two different books.
-
-### Define operations
-On top of it you may want to add an abstraction layer with **operations**
-(`app/operations`).
-Operations involve a sequence of transactions.
-An example would be `pay_credit_card` which would fetch existing credits to rebate from charged
-fees then charge the credit card.
-
-### Timezone
-The ledger uses the versatile `DateTime` to handle events.
-Make sure it is configured in your application
-
-```ruby
-# config/application.rb
-config.time_zone = 'America/Sao_Paulo'
-```
-
-## Installation
-Add this line to your application's Gemfile:
-
-```ruby
-gem "stern"
-```
-
-And then execute:
-```bash
-$ bundle
-```
-
-Or install it yourself as:
-```bash
-$ gem install stern
-```
 
 ## Contributing
 Contribution directions go here.
@@ -68,4 +24,4 @@ rails plugin new stern \
 ```
 
 ## License
-You need written authorization from the author for commercial usage.
+You need written authorization from the author for any type of usage.
