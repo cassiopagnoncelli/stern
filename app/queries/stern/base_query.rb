@@ -2,10 +2,6 @@
 
 module Stern
   class BaseQuery
-    def self.call(**params)
-      new.call(params)
-    end
-
     def call(**params)
       raise NotImplementedError
     end

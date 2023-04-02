@@ -5,6 +5,12 @@ require_relative '../../../lib/stern/errors'
 module Stern
   # Safety methods.
   class Doctor
+    def self.consistent?
+      return false unless amount_consistent?
+
+      true
+    end
+
     def self.amount_consistent?
       Entry.sum(:amount) == 0
     end
@@ -19,10 +25,36 @@ module Stern
       true
     end
 
-    def self.consistent?
-      return false unless amount_consistent?
+    def self.ending_balances_inconsistencies_across_books(gid:)
+      entry_ids = []
+      BOOKS.values.each do |book_id|
+        entry_ids += ending_balances_inconsistencies(book_id:, gid:)
+      end
+      entry_ids
+    end
 
-      true
+    def self.ending_balances_inconsistencies(book_id:, gid:)
+      sql = %{
+        SELECT entry_id
+        FROM (
+          SELECT
+            se.id AS entry_id,
+            CASE WHEN ending_balance = checked_ending_balance THEN 0 ELSE 1 END AS inconsistent
+          FROM (SELECT id, ending_balance FROM stern_entries WHERE book_id = :book_id AND gid = :gid) se
+          LEFT JOIN (
+            SELECT
+              id,
+              (SUM(amount) OVER (ORDER BY timestamp)) AS checked_ending_balance
+            FROM stern_entries
+            WHERE book_id = :book_id AND gid = :gid
+            ORDER BY timestamp
+          ) se2 ON se.id = se2.id
+        ) inconsistencies_results
+        WHERE inconsistent = 1
+      }
+      sanitized_sql = ActiveRecord::Base.sanitize_sql_array([sql, {book_id:, gid:}])
+      results = ActiveRecord::Base.connection.execute(sanitized_sql)
+      results.to_a.flatten
     end
 
     def self.rebuild_book_gid_balance(book_id, gid)
