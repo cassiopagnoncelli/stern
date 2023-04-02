@@ -21,82 +21,66 @@ books:
 
 txs:
   balance:
-    code: 1
-    book1: merchant_balance
-    book2: given_credit
-    positive: true
+    code: 10
+    book_add: merchant_balance
+    book_sub: given_credit
   credit:
     code: 11
-    book1: merchant_credit
-    book2: given_credit
-    positive: true
+    book_add: merchant_credit
+    book_sub: given_credit
   settlement:
-    code: 21
-    book1: merchant_balance
-    book2: settlement
-    positive: false
+    code: 12
+    book_add: settlement
+    book_sub: merchant_balance
   settlement_fee:
-    code: 31
-    book1: merchant_balance
-    book2: settlement_fee
-    positive: false
+    code: 13
+    book_add: settlement_fee
+    book_sub: merchant_balance
   subscription:
-    code: 41
-    book1: merchant_balance
-    book2: subscription
-    positive: false
+    code: 14
+    book_add: subscription
+    book_sub: merchant_balance
   boleto_payment:
-    code: 101
-    book1: merchant_balance
-    book2: boleto
-    positive: true
+    code: 15
+    book_add: merchant_balance
+    book_sub: boleto
   boleto_fee:
-    code: 111
-    book1: merchant_balance
-    book2: boleto_fee
-    positive: false
+    code: 16
+    book_add: boleto_fee
+    book_sub: merchant_balance
   boleto_refund:
-    code: 121
-    book1: merchant_balance
-    book2: boleto_refund
-    positive: false
+    code: 17
+    book_add: boleto_refund
+    book_sub: merchant_balance
   cc:
-    code: 201
-    book1: merchant_withholding_balance
-    book2: cc
-    positive: true
+    code: 18
+    book_add: merchant_withholding_balance
+    book_sub: cc
   cc_fee:
-    code: 211
-    book1: merchant_balance
-    book2: cc_fee
-    positive: false
+    code: 19
+    book_add: cc_fee
+    book_sub: merchant_balance
   cc_refund:
-    code: 221
-    book1: merchant_balance
-    book2: cc_refund
-    positive: false
+    code: 20
+    book_add: cc_refund
+    book_sub: merchant_balance
   cc_refund_fee:
-    code: 231
-    book1: merchant_balance
-    book2: cc_refund_fee
-    positive: false
+    code: 21
+    book_add: cc_refund_fee
+    book_sub: merchant_balance
   cc_chargeback:
-    code: 241
-    book1: merchant_balance
-    book2: cc_chargeback
-    positive: false
+    code: 22
+    book_add: cc_chargeback
+    book_sub: merchant_balance
   cc_chargeback_fee:
-    code: 251
-    book1: merchant_balance
-    book2: cc_chargeback_fee
-    positive: false
+    code: 23
+    book_add: cc_chargeback_fee
+    book_sub: merchant_balance
   cc_anticipation:
-    code: 261
-    book1: merchant_balance
-    book2: cc_anticipation
-    positive: false
+    code: 24
+    book_add: cc_anticipation
+    book_sub: merchant_balance
   cc_anticipation_fee:
-    code: 271
-    book1: merchant_balance
-    book2: cc_anticipation_fee
-    positive: false
+    code: 25
+    book_add: cc_anticipation_fee
+    book_sub: merchant_balance

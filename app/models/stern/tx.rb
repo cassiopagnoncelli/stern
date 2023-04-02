@@ -2,20 +2,8 @@
 
 # Stern engine.
 module Stern
-  raise InvalidTxNameError if STERN_TX_CODES.keys.detect { |e| STERN_TX_CODES.keys.count(e) > 1 }
-  raise InvalidTxCodeError if STERN_TX_CODES.values.detect { |e| STERN_TX_CODES.values.count(e) > 1 }
-  raise InconsistentDefinitionsError unless STERN_TX_2TREES.flatten(2).select(&:nil?).blank?
-
-  # In a Double-Entry bookkeeping, a financial transaction combines two entries, one for
-  # credit, one for debit, in such a way credits = debits.
-  #
-  # Notes.
-  # 1. Furthermore we register each transaction by its name for auditing purposes.
-  # 2. Transactions are append-only whereas entries are not.
-  #
   class Tx < ApplicationRecord
-    enum book: STERN_DEFS[:books]
-    enum code: STERN_TX_CODES
+    enum code: TXS
 
     has_many :entries, class_name: 'Stern::Entry'
 
@@ -23,42 +11,38 @@ module Stern
     validates_presence_of :uid
     validates_presence_of :amount
     validates_presence_of :timestamp
-    validate :no_future_timestamp, on: :create
     validates_uniqueness_of :uid, scope: [:code]
+    validate :no_future_timestamp, on: :create
 
-    class << self
-      # Note. Edit transactions do not exist for entries would otherwise have multiple
-      # transactions this way increasing audit complexity. A preferred way is to simply
-      # redo the transaction all along.
-      STERN_DEFS[:txs].each do |name, defs|
-        define_method "add_#{name}".to_sym do |uid, gid, amount, timestamp = DateTime.current, credit_tx_id = nil, cascade: false|
-          double_entry_add("add_#{name}".to_sym, gid, uid,
-                            defs[:book1].to_sym, defs[:book2].to_sym,
-                            defs[:positive] ? amount : -amount, timestamp, credit_tx_id, cascade)
-        end
+    STERN_DEFS[:txs].each do |name, defs|
+      define_singleton_method "add_#{name}".to_sym do |uid, gid, amount, credit_tx_id = nil, timestamp: DateTime.current, cascade: false|
+        double_entry_add("add_#{name}", gid, uid,
+                          defs[:book_add], defs[:book_sub], amount, credit_tx_id, timestamp, cascade)
+      end
 
-        define_method "remove_#{name}".to_sym do |uid|
-          double_entry_remove("add_#{name}".to_sym, uid, defs[:book1].to_sym, defs[:book2].to_sym)
-        end
+      define_singleton_method "remove_#{name}".to_sym do |uid|
+        double_entry_remove("add_#{name}".to_sym, uid, defs[:book_add].to_sym, defs[:book_sub].to_sym)
       end
     end
 
-    #
     # Double-entry operations.
-    #
-    def self.double_entry_add(code, gid, uid, book1, book2, amount, timestamp, credit_tx_id, cascade)
-      tx = Tx.find_or_create_by!(code: codes[code], uid: uid, amount: amount, timestamp: timestamp, credit_tx_id: credit_tx_id)
-      e1 = Entry.create!(book_id: books[book1], gid: gid, tx_id: tx.id, amount: amount, timestamp: timestamp)
-      e2 = Entry.create!(book_id: books[book2], gid: gid, tx_id: tx.id, amount: -amount, timestamp: timestamp)
+    # 
+    # Note: when timestamp is not the immediate current time therefore implying this transaction
+    # will not be the latest by timestamp, the ending balances for all transactions after this
+    # timestamp will be incorrect. Hence, *always* set cascade = true in these operations.
+    def self.double_entry_add(code, gid, uid, book_add, book_sub, amount, credit_tx_id, timestamp, cascade)
+      tx = Tx.find_or_create_by!(code: codes[code], uid:, amount:, credit_tx_id:, timestamp:)
+      e1 = Entry.create!(book_id: Book.code(book_add), gid:, tx_id: tx.id, amount:, timestamp:)
+      e2 = Entry.create!(book_id: Book.code(book_sub), gid:, tx_id: tx.id, amount: -amount, timestamp:)
       [e1.cascade_gid_balance, e2.cascade_gid_balance] if cascade
       tx.id
     end
 
-    def self.double_entry_remove(code, uid, book1, book2)
-      tx = Tx.find_by!(code: codes[code], uid: uid)
+    def self.double_entry_remove(code, uid, book_add, book_sub)
+      tx = Tx.find_by!(code: codes[code], uid:)
       tx_id = tx.id
-      e1 = Entry.find_by!(book_id: books[book1], tx_id: tx_id)
-      e2 = Entry.find_by!(book_id: books[book2], tx_id: tx_id)
+      e1 = Entry.find_by!(book_id: Book.code(book_add), tx_id:)
+      e2 = Entry.find_by!(book_id: Book.code(book_sub), tx_id:)
 
       e1.update(amount: 0, ending_balance: e1.ending_balance - e1.amount)
       e2.update(amount: 0, ending_balance: e2.ending_balance - e2.amount)

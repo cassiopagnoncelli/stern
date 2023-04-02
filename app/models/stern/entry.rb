@@ -1,12 +1,6 @@
 # frozen_string_literal: true
 
 module Stern
-  # Entry is the atomic piece of bookkeeping.
-  #
-  # For Double-Entry Bookkeeping, each financial transaction is recorded in at least two
-  # different nominal ledger accounts within the financial accounting system, so that the
-  # total debits equals the total credits in the general ledger.
-  #
   class Entry < ApplicationRecord
     validates_presence_of :book_id
     validates_presence_of :gid
@@ -17,6 +11,7 @@ module Stern
     validates_uniqueness_of :timestamp, scope: [:book_id, :gid]
 
     belongs_to :tx, class_name: 'Stern::Tx', optional: true
+    belongs_to :book, class_name: 'Stern::Book', optional: true
 
     before_save do
       eb = self.class.last_entry(book_id, gid, timestamp).last&.ending_balance || 0
@@ -39,16 +34,31 @@ module Stern
         .order(:timestamp)
     end
 
-    # Because this query is computationally expensive we may write a PL/pgSQL procedure
-    # to cascade balance updates given reference entry id, book_id, gid.
-    #
-    # Note. Bare in mind such a query should be computationally cheap, deadlock free,
-    # and easy to port to a another database engine.
+    def title
+      "%d %s %.2f %.2f" % [gid, book_name, amount.to_f/100, ending_balance.to_f/100]
+    end
+
+    def book_name
+      BOOKS.invert[book_id]
+    end
+
+    def previous_entry
+      self.class.where(book_id:, gid:)
+        .where('timestamp < ?', timestamp)
+        .order(timestamp: :desc)
+        .limit(1)
+        .first
+    end
+
     def cascade_gid_balance
-      s = ending_balance
+      previous_balance = previous_entry&.ending_balance || 0
+      current_balance = previous_balance + amount
+      update!(ending_balance: current_balance) unless current_balance == ending_balance
+
+      running_balance = current_balance
       self.class.next_entries(book_id, gid, id, timestamp).each do |e|
-        s += e.amount
-        e.update!(ending_balance: s)
+        running_balance += e.amount
+        e.update!(ending_balance: running_balance)
       end
       true
     end

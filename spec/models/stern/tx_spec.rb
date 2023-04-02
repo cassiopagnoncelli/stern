@@ -3,14 +3,14 @@ require 'rails_helper'
 module Stern
   RSpec.describe Tx, type: :model do
     subject(:tx_id) do
-      described_class.double_entry_add(code, gid, uid, book1, book2, amount, timestamp, nil, false)
+      described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, timestamp, false)
     end
     subject(:tx) { described_class.find_by!(id: tx_id, code: code, uid: uid) }
     let(:code) { "add_#{STERN_DEFS[:txs].keys.first}" }
     let(:gid) { 1 }
     let(:uid) { Integer(rand * 1e5) }
-    let(:book1) { STERN_DEFS[:txs].values.first[:book1] }
-    let(:book2) { STERN_DEFS[:txs].values.first[:book2] }
+    let(:book_add) { STERN_DEFS[:txs].values.first[:book_add] }
+    let(:book_sub) { STERN_DEFS[:txs].values.first[:book_sub] }
     let(:amount) { 100 }
     let(:timestamp) { DateTime.current }
 
@@ -30,7 +30,7 @@ module Stern
 
       it "destroys the transaction with its entries" do
         expect {
-          described_class.double_entry_remove(code, uid, book1, book2)
+          described_class.double_entry_remove(code, uid, book_add, book_sub)
         }.to change(described_class, :count).by(-1)
         expect { tx }.to raise_error(ActiveRecord::RecordNotFound)
       end

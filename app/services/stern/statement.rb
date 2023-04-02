@@ -12,14 +12,14 @@ module Stern
     end
 
     def self.cashflow(gid, **args)
-      raise InvalidBookError unless args[:book].nil? || Stern::Tx.books.keys.include?(args[:book])
+      raise InvalidBookError unless args[:book].nil? || Stern::BOOKS.keys.include?(args[:book])
       raise GidNotSpecifiedError unless gid.present? && gid.is_a?(Integer)
 
       start_date = normalize_time(args[:start_date], false)
       end_date = normalize_time(args[:end_date], true)
       grouping = switch_grouping(args[:grouping] || :daily)
       book_name = args[:book] || :merchant_balance
-      book_id = Stern::Tx.books[book_name]
+      book_id = Stern::BOOKS[book_name]
 
       entries = Stern::Base.connection.execute(%{
         SELECT
@@ -36,14 +36,14 @@ module Stern
         ORDER BY dp, code
       }).to_a.reject { |x| x['amount'].zero? }.map do |x|
         x['dp'] = x['dp'].to_time
-        x['code'] = STERN_TX_CODES.invert[x['code']]
+        x['code'] = Stern::TX_ENTRIES.invert[x['code']]
         x.symbolize_keys
       end
 
       previous_balance = {
-        dp: start_date - STERN_TIMESTAMP_DELTA,
+        dp: start_date - TIMESTAMP_DELTA,
         code: :previous_balance,
-        amount: Stern.balance(gid, book_name, start_date - STERN_TIMESTAMP_DELTA)
+        amount: Stern.balance(gid, book_name, start_date - TIMESTAMP_DELTA)
       }
       ending_balance = {
         dp: end_date,
@@ -58,7 +58,7 @@ module Stern
     end
 
     def self.consolidated_txs(gid, **args)
-      raise InvalidBookError unless args[:book].nil? || Stern::Tx.books.keys.include?(args[:book])
+      raise InvalidBookError unless args[:book].nil? || Stern::BOOKS.keys.include?(args[:book])
       raise GidNotSpecifiedError unless gid.present? && gid.is_a?(Integer)
 
       start_date = normalize_time(args[:start_date], false)
@@ -78,7 +78,7 @@ module Stern
         GROUP BY dp, code
         ORDER BY dp, code
       }).to_a.reject { |x| x['amount'].zero? }.map do |x|
-        x['code'] = STERN_TX_CODES.invert[x['code']]
+        x['code'] = Stern::TX_ENTRIES.invert[x['code']]
         x
       end
     end

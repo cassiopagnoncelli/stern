@@ -35,17 +35,17 @@ module Stern
     end
 
     describe ".rebuild_book_gid_balance" do
-      subject(:tx_1) { Tx.double_entry_add(code, gid, uid, book1, book2, amount, ts, nil, false) }
-      subject(:tx_2) { Tx.double_entry_add(code, gid, uid, book1, book2, amount, ts, nil, false) }
-      subject(:tx_3) { Tx.double_entry_add(code, gid, uid, book1, book2, amount, ts, nil, false) }
-      subject(:tx_4) { Tx.double_entry_add(code, gid, uid, book1, book2, amount, ts, nil, false) }
-      subject(:tx_5) { Tx.double_entry_add(code, gid, uid, book1, book2, amount, ts, nil, false) }
+      subject(:tx_1) { Tx.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, ts, false) }
+      subject(:tx_2) { Tx.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, ts, false) }
+      subject(:tx_3) { Tx.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, ts, false) }
+      subject(:tx_4) { Tx.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, ts, false) }
+      subject(:tx_5) { Tx.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, ts, false) }
       subject(:changed_tx) { Tx.find_by!(id: tx_4) }
       subject(:last_tx) { Tx.find_by!(id: tx_5) }
       let(:code) { "add_#{STERN_DEFS[:txs].keys.first}" }
       let(:gid) { 1 }
-      let(:book1) { STERN_DEFS[:txs].values.first[:book1] }
-      let(:book2) { STERN_DEFS[:txs].values.first[:book2] }
+      let(:book_add) { STERN_DEFS[:txs].values.first[:book_add] }
+      let(:book_sub) { STERN_DEFS[:txs].values.first[:book_sub] }
       let(:amount) { 100 }
 
       before do
@@ -74,6 +74,14 @@ module Stern
 
         expect(last_tx.entries.first.ending_balance.abs).to be(4 * amount + 250)
         expect(last_tx.entries.last.ending_balance.abs).to be(4 * amount + 250)
+      end
+    end
+
+    describe ".clear" do
+      it "clears entries and txs" do
+        described_class.clear
+        expect(Entry.count).to eq(0)
+        expect(Tx.count).to eq(0)
       end
     end
   end

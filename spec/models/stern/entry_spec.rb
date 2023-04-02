@@ -30,18 +30,12 @@ module Stern
     end
 
     describe "times, timezones" do
-      it "properly sorts entries by the end of the summertime", :pending do
-        pending "To be implemented"
-      end
+      it "properly sorts entries by the end of the summertime"
 
-      it "keeps ending balance consistent when summertime ends", :pending do
-        pending "To be implemented"
-      end
+      it "keeps ending balance consistent when summertime ends"
 
-      it "asserts timestamp delta is minimum", :pending do
-        pending "To be implemented"
-        # https://chat.openai.com/chat/674f0ea8-728c-49df-b993-2d320228574b
-      end
+      # https://chat.openai.com/chat/674f0ea8-728c-49df-b993-2d320228574b
+      it "asserts timestamp delta is minimum"
     end
 
     context "scopes" do

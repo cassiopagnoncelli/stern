@@ -4,7 +4,6 @@ module Stern
   TimestampShouldBeDateTimeError = Class.new(StandardError)
   CreditTxIdSeqInvalidError = Class.new(StandardError)
 
-  InvalidTxCodeError = Class.new(StandardError)
   InvalidTxNameError = Class.new(StandardError)
   InconsistentDefinitionsError = Class.new(StandardError)
   InvalidBookError = Class.new(StandardError)

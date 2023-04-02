@@ -38,11 +38,11 @@ module Stern
       already_present ? new_credit_tx_id(remaining_tries - 1) : seq
     end
 
-    def apply_credits(charged_credits, merchant_id, ts0)
+    def apply_credits(charged_credits, merchant_id)
       return nil unless charged_credits.present? && charged_credits.abs.positive?
 
       credit_tx_id = new_credit_tx_id
-      Tx.add_credit(credit_tx_id, merchant_id, -charged_credits, ts0)
+      Tx.add_credit(credit_tx_id, merchant_id, -charged_credits)
       credit_tx_id
     end
   end

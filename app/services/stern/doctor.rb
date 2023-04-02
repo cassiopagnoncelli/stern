@@ -29,10 +29,9 @@ module Stern
     end
 
     def self.rebuild_gid_balance(gid)
-      Tx.books.values.each do |book_id|
+      BOOKS.values.each do |book_id|
         rebuild_book_gid_balance(book_id, gid)
       end
-      nil
     end
 
     def self.rebuild_balances(confirm = false)
@@ -43,6 +42,15 @@ module Stern
       Entry.pluck(:gid).uniq.each do |gid|
         rebuild_gid_balance(gid)
       end
+    end
+
+    def self.clear
+      if Rails.env.production?
+        raise StandardError, "for security reasons this operation cannot be performed in production"
+      end
+  
+      Entry.delete_all
+      Tx.delete_all
     end
   end
 end

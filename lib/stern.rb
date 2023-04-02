@@ -2,39 +2,37 @@ require "stern/version"
 require "stern/engine"
 
 module Stern
-  def self.method_missing(name, *args)
-    Operation.register(name.to_sym, *args)
-  end
-
   def self.outstanding_balance(book_id = :merchant_balance, timestamp = DateTime.current)
-    raise BookDoesNotExistError unless book_id.to_s.in?(Tx.books.keys) || book_id.in?(Tx.books.values)
-    raise ShouldBeDateOrTimestampError unless timestamp.is_a?(Date) || timestamp.is_a?(Time)
+    raise BookDoesNotExistError unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
+    raise ShouldBeDateOrTimestampError unless timestamp.is_a?(DateTime)
 
-    book_id = book_id.is_a?(Symbol) || book_id.is_a?(String) ? Tx.books[book_id] : book_id
+    book_id = book_id.is_a?(Symbol) || book_id.is_a?(String) ? BOOKS[book_id] : book_id
     timestamp = timestamp.is_a?(Date) ? timestamp.to_time.end_of_day : timestamp
 
-    qr = ApplicationRecord.connection.execute(%{
+    sql = %{
+      SELECT
+        SUM(ending_balance) AS outstanding
+      FROM (
         SELECT
-          SUM(ending_balance) AS outstanding
-        FROM (
-          SELECT
-            DISTINCT ON (gid) gid,
-            FIRST_VALUE(ending_balance) OVER (
-              PARTITION BY gid ORDER BY timestamp DESC
-            ) AS ending_balance
-          FROM stern_entries
-          WHERE book_id = #{book_id} AND timestamp <= '#{timestamp}'
-        ) x
-      })
+          DISTINCT ON (gid) gid,
+          FIRST_VALUE(ending_balance) OVER (
+            PARTITION BY gid ORDER BY timestamp DESC
+          ) AS ending_balance
+        FROM stern_entries
+        WHERE book_id = :book_id AND timestamp <= :timestamp
+      ) x
+    }
+    sanitized_sql = ActiveRecord::Base.sanitize_sql_array([sql, {book_id:, timestamp:}])
+    results = ActiveRecord::Base.connection.execute(sanitized_sql)
 
-    qr.first['outstanding'] || 0
+    results.first['outstanding'] || 0
   end
 
   def self.balance(gid, book_id = :merchant_balance, timestamp = DateTime.current)
-    raise BookDoesNotExistError unless book_id.to_s.in?(Tx.books.keys) || book_id.in?(Tx.books.values)
+    raise BookDoesNotExistError unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
     raise ShouldBeDateOrTimestampError unless timestamp.is_a?(Date) || timestamp.is_a?(Time)
 
-    book_id = book_id.is_a?(Symbol) || book_id.is_a?(String) ? Tx.books[book_id] : book_id
+    book_id = book_id.is_a?(Symbol) || book_id.is_a?(String) ? BOOKS[book_id] : book_id
     ts = normalize_time(timestamp, true)
 
     e = Entry.last_entry(book_id, gid, ts).first
@@ -48,10 +46,5 @@ module Stern
     return t unless past_eod
 
     t.to_date >= Date.current ? t : t.end_of_day.to_datetime
-  end
-
-  def self.clear
-    Entry.delete_all
-    Tx.delete_all
   end
 end

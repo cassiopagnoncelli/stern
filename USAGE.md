@@ -42,7 +42,7 @@ and has two structures
 
 1. List of books, each mapping an unique id.
 2. List of double-entry transactions, each mapping
-an unique code.
+an unique code and a pair of additive-subtractive books.
 
 ## Operatons
 Operations are an abstraction layer defining how transactions take place.
