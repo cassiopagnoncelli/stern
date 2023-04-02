@@ -1,7 +1,2 @@
-- new_gid gerar uma sequência
-- Doctor
-  - corrige book
-  - corrige gid inteiro
-  - encontra inconsistência no Entry
 - refactor statement
 - assert timezones in datetime are not problematic
