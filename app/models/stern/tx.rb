@@ -14,6 +14,10 @@ module Stern
     validates_uniqueness_of :uid, scope: [:code]
     validate :no_future_timestamp, on: :create
 
+    before_update do
+      raise StandardError, "Ledger is append-only" unless Rails.env.test?
+    end
+
     STERN_DEFS[:txs].each do |name, defs|
       define_singleton_method "add_#{name}".to_sym do |uid, gid, amount, credit_tx_id = nil, timestamp: DateTime.current, cascade: false|
         double_entry_add("add_#{name}", gid, uid,
