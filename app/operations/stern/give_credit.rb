@@ -1,7 +1,15 @@
 module Stern
+  # Give away merchant credit.
+  #
+  # - add_credit
   class GiveCredit < BaseOperation
     attr_accessor :uid, :merchant_id, :amount
 
+    # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.
+    #
+    # @param uid [Bigint] unique id
+    # @param merchant_id [Bigint] merchant id
+    # @param amount [Bigint] amount in cents
     def initialize(uid: nil, merchant_id: nil, amount: nil)
       @uid = uid
       @merchant_id = merchant_id
@@ -9,16 +17,16 @@ module Stern
     end
 
     def perform
-      raise ParameterMissingError unless uid.present? && uid.is_a?(Numeric)
-      raise ParameterMissingError unless merchant_id.present? && merchant_id.is_a?(Numeric)
-      raise ParameterMissingError unless amount.present? && amount.is_a?(Numeric)
+      raise ArgumentError unless uid.present? && uid.is_a?(Numeric)
+      raise ArgumentError unless merchant_id.present? && merchant_id.is_a?(Numeric)
+      raise ArgumentError unless amount.present? && amount.is_a?(Numeric)
       raise AmountShouldNotBeZeroError if amount.zero?
 
       Tx.add_credit(uid, merchant_id, amount)
     end
 
     def undo
-      raise ParameterMissingError unless uid.present? && uid.is_a?(Numeric)
+      raise ArgumentError unless uid.present? && uid.is_a?(Numeric)
 
       tx = Tx.find_by!(code: TXS[:add_credit], uid:)
       Tx.remove_credit(tx.id)

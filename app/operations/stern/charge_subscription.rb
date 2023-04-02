@@ -1,7 +1,16 @@
 module Stern
+  # Charges a merchant subscription from credits and/or merchant balance.
+  #
+  # - apply credits
+  # - add_subscription
   class ChargeSubscription < BaseOperation
     attr_accessor :subs_charge_id, :merchant_id, :amount
 
+    # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.
+    #
+    # @param subs_charge_id [Bigint] unique subscription charge id
+    # @param merchant_id [Bigint] merchant id
+    # @param amount [Bigint] amount in cents
     def initialize(subs_charge_id: nil, merchant_id: nil, amount: nil)
       @subs_charge_id = subs_charge_id
       @merchant_id = merchant_id
@@ -9,9 +18,9 @@ module Stern
     end
 
     def perform
-      raise ParameterMissingError unless subs_charge_id.present? && subs_charge_id.is_a?(Numeric)
-      raise ParameterMissingError unless merchant_id.present? && merchant_id.is_a?(Numeric)
-      raise ParameterMissingError unless amount.present? && amount.is_a?(Numeric)
+      raise ArgumentError unless subs_charge_id.present? && subs_charge_id.is_a?(Numeric)
+      raise ArgumentError unless merchant_id.present? && merchant_id.is_a?(Numeric)
+      raise ArgumentError unless amount.present? && amount.is_a?(Numeric)
       raise AmountShouldNotBeZeroError if amount.zero?
 
       credits = ::Stern.balance(merchant_id, :merchant_credit)
@@ -23,7 +32,7 @@ module Stern
     end
 
     def undo
-      raise ParameterMissingError unless subs_charge_id.present? && subs_charge_id.is_a?(Numeric)
+      raise ArgumentError unless subs_charge_id.present? && subs_charge_id.is_a?(Numeric)
 
       credit_tx_id = Tx.find_by!(code: TXS[:add_subscription], uid: subs_charge_id).credit_tx_id
 

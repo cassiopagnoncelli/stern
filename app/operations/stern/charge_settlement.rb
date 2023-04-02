@@ -1,7 +1,18 @@
 module Stern
-  class PaySettlement < BaseOperation
+  # Charge merchant the settlement amount.
+  #
+  # - apply_credits
+  # - add_settlement_fee
+  # - add_settlement
+  class ChargeSettlement < BaseOperation
     attr_accessor :settlement_id, :merchant_id, :amount, :fee
 
+    # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.
+    #
+    # @param settlement_id [Bigint] unique settlement id
+    # @param merchant_id [Bigint] merchant id
+    # @param amount [Bigint] amount in cents
+    # @param fee [Bigint] amount in cents
     def initialize(settlement_id: nil, merchant_id: nil, amount: nil, fee: nil)
       @settlement_id = settlement_id
       @merchant_id = merchant_id
@@ -10,10 +21,10 @@ module Stern
     end
 
     def perform
-      raise ParameterMissingError unless settlement_id.present? && settlement_id.is_a?(Numeric)
-      raise ParameterMissingError unless merchant_id.present? && merchant_id.is_a?(Numeric)
-      raise ParameterMissingError unless amount.present? && amount.is_a?(Numeric)
-      raise ParameterMissingError unless fee.present? && fee.is_a?(Numeric)
+      raise ArgumentError unless settlement_id.present? && settlement_id.is_a?(Numeric)
+      raise ArgumentError unless merchant_id.present? && merchant_id.is_a?(Numeric)
+      raise ArgumentError unless amount.present? && amount.is_a?(Numeric)
+      raise ArgumentError unless fee.present? && fee.is_a?(Numeric)
       raise AmountShouldNotBeZeroError if amount.zero?
 
       credits = ::Stern.balance(merchant_id, :merchant_credit)
@@ -26,7 +37,7 @@ module Stern
     end
 
     def undo
-      raise ParameterMissingError unless settlement_id.present? && settlement_id.is_a?(Numeric)
+      raise ArgumentError unless settlement_id.present? && settlement_id.is_a?(Numeric)
 
       credit_tx_id = Tx.find_by!(code: TXS[:add_settlement], uid: settlement_id).credit_tx_id
 

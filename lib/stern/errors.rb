@@ -15,6 +15,6 @@ module Stern
   InvalidGroupingDatePrecisionError = Class.new(StandardError)
   GidNotSpecifiedError = Class.new(StandardError)
   OperationNotConfirmedError = Class.new(StandardError)
-  ParameterMissingError = Class.new(StandardError)
+  ArgumentError = Class.new(StandardError)
   OperationDirectionNotProvidedError = Class.new(StandardError)
 end

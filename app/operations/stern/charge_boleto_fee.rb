@@ -1,7 +1,16 @@
 module Stern
-  class PayBoletoFee < BaseOperation
+  # Charge merchant a boleto fee.
+  #
+  # - apply_credits
+  # - add_boleto_feez
+  class ChargeBoletoFee < BaseOperation
     attr_accessor :payment_id, :merchant_id, :fee
 
+    # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.
+    #
+    # @param payment_id [Bigint] unique settlement id
+    # @param merchant_id [Bigint] merchant id
+    # @param fee [Bigint] amount in cents
     def initialize(payment_id: nil, merchant_id: nil, fee: nil)
       @payment_id = payment_id
       @merchant_id = merchant_id
@@ -9,9 +18,9 @@ module Stern
     end
 
     def perform
-      raise ParameterMissingError unless payment_id.present? && payment_id.is_a?(Numeric)
-      raise ParameterMissingError unless merchant_id.present? && merchant_id.is_a?(Numeric)
-      raise ParameterMissingError unless fee.present? && fee.is_a?(Numeric)
+      raise ArgumentError unless payment_id.present? && payment_id.is_a?(Numeric)
+      raise ArgumentError unless merchant_id.present? && merchant_id.is_a?(Numeric)
+      raise ArgumentError unless fee.present? && fee.is_a?(Numeric)
       raise AmountShouldNotBeZeroError unless fee.abs.positive?
 
       credits = ::Stern.balance(merchant_id, :merchant_credit)
@@ -23,7 +32,7 @@ module Stern
     end
 
     def undo
-      raise ParameterMissingError unless payment_id.present? && payment_id.is_a?(Numeric)
+      raise ArgumentError unless payment_id.present? && payment_id.is_a?(Numeric)
 
       credit_tx_id = Tx.find_by!(code: TXS[:add_boleto_fee], uid: payment_id).credit_tx_id
       Tx.remove_credit(credit_tx_id) if credit_tx_id.present?

@@ -21,6 +21,9 @@ Before using it you may have to configure
 2. Chart of accounts
 3. Define operations
 
+For further examples, you may find
+[this guide](https://dev.to/szaszolak/extracting-rails-engine-by-example-vikings-social-media-4014)
+useful.
 
 ## Timezone
 The ledger uses the versatile `DateTime` to handle events.

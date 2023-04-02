@@ -1,4 +1,3 @@
-- Carregar o plano de contas como constantes
 - new_gid gerar uma sequência
 - Doctor
   - corrige book
