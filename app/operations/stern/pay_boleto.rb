@@ -31,8 +31,8 @@ module Stern
       charged_credits = [fee, credits].min
       charged_fees = fee - charged_credits
 
-      credit_tx_id = apply_credits(charged_credits, merchant_id)
-      Tx.add_boleto_fee(payment_id, merchant_id, charged_fees)
+      credit_tx_id = apply_credits(charged_credits, merchant_id) if charged_credits.abs.positive?
+      Tx.add_boleto_fee(payment_id, merchant_id, charged_fees) if charged_fees.abs.positive?
       Tx.add_boleto_payment(payment_id, merchant_id, amount, credit_tx_id)
     end
 

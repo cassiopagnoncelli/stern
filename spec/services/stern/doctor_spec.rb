@@ -10,70 +10,51 @@ module Stern
       DateTime.current
     end
 
-    describe ".consistent?" do
-      it "always true" do
-        expect(described_class.consistent?).to be_truthy
-      end
-    end
-
-    describe ".rebuild_balances" do
-      it "raises error if not confirmed" do
-        expect{ described_class.rebuild_balances }.to raise_error(OperationNotConfirmedError)
-      end
-
-      it "rebuilds if confirmed" do
-        allow(described_class).to receive(:rebuild_gid_balance)
-        described_class.rebuild_balances(true)
-      end
-    end
-
-    describe ".rebuild_gid_balance" do
-      it "rebuilds based on gid" do
-        expect(described_class).to receive(:rebuild_book_gid_balance).at_least(1).times
-        described_class.rebuild_gid_balance(1)
-      end
-    end
-
-    describe ".rebuild_book_gid_balance" do
-      subject(:tx_1) { Tx.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, ts, false) }
-      subject(:tx_2) { Tx.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, ts, false) }
-      subject(:tx_3) { Tx.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, ts, false) }
-      subject(:tx_4) { Tx.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, ts, false) }
-      subject(:tx_5) { Tx.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, ts, false) }
-      subject(:changed_tx) { Tx.find_by!(id: tx_4) }
-      subject(:last_tx) { Tx.find_by!(id: tx_5) }
-      let(:code) { "add_#{STERN_DEFS[:txs].keys.first}" }
-      let(:gid) { 1 }
-      let(:book_add) { STERN_DEFS[:txs].values.first[:book_add] }
-      let(:book_sub) { STERN_DEFS[:txs].values.first[:book_sub] }
-      let(:amount) { 100 }
+    context "inconsistent balance" do
+      let(:gid) { 1101 }
+      let(:book_id) { BOOKS[:merchant_balance] }
+      let(:entries) { Entry.where(book_id:, gid:).order(:timestamp) }
 
       before do
-        tx_1
-        tx_2
-        tx_3
-        tx_4
-        tx_5
+        PayBoleto.new(payment_id: 101, merchant_id: gid, amount: 100, fee: 0).call
+        PayBoleto.new(payment_id: 102, merchant_id: gid, amount: 100, fee: 0).call
+        PayBoleto.new(payment_id: 103, merchant_id: gid, amount: 100, fee: 0).call
+        entries.second.update_column(:amount, 50)
+        entries.second.update_column(:ending_balance, 9999)
       end
 
-      it "executes an SQL query" do
-        expect(ActiveRecord::Base.connection).to receive(:execute)
-        described_class.rebuild_book_gid_balance(1, 1)
+      it "has amount and ending balances inconsistent" do
+        expect(described_class.amount_consistent?).to be_falsey
+        expect(described_class.ending_balance_consistent?(book_id:, gid:)).to be_falsey
       end
 
-      it "fixes an inconsistent state" do
-        expect(described_class.consistent?).to be_truthy
-        expect(last_tx.entries.last.ending_balance.abs).to be(5 * amount)
+      describe ".rebuild_balances" do
+        it "raises error if not confirmed" do
+          expect{ described_class.rebuild_balances }.to raise_error(OperationNotConfirmedError)
+        end
 
-        changed_tx.entries.first.update!(amount: -250, ending_balance: 123)
-        changed_tx.entries.last.update!(amount: 250, ending_balance: 123)
-        Doctor.rebuild_balances(true)
-        last_tx.reload
+        it "rebuilds if confirmed" do
+          allow(described_class).to receive(:rebuild_gid_balance)
+          described_class.rebuild_balances(true)
+        end
+      end
 
-        # byebug
+      describe ".rebuild_gid_balance" do
+        it "rebuilds based on gid" do
+          expect(described_class).to receive(:rebuild_book_gid_balance).at_least(1).times
+          described_class.rebuild_gid_balance(1)
+        end
+      end
 
-        expect(last_tx.entries.first.ending_balance.abs).to be(4 * amount + 250)
-        expect(last_tx.entries.last.ending_balance.abs).to be(4 * amount + 250)
+      describe ".rebuild_book_gid_balance" do
+        it "fixes ending balances" do
+          described_class.rebuild_book_gid_balance(book_id, gid)
+          expect(described_class.ending_balance_consistent?(book_id:, gid:)).to be_truthy
+        end
+
+        it "does not fix previously spoiled amounts" do
+          expect(described_class.amount_consistent?).to be_falsey
+        end
       end
     end
 

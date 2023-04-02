@@ -20,6 +20,10 @@ module Stern
       self.timestamp ||= DateTime.current
     end
 
+    before_update do
+      raise StandardError, "Ledger is append-only" unless Rails.env.test?
+    end
+
     scope :last_entry, ->(book_id, gid, timestamp) do
       where(book_id: book_id, gid: gid)
         .where('timestamp <= ?', timestamp)
@@ -34,7 +38,7 @@ module Stern
         .order(:timestamp)
     end
 
-    def title
+    def show
       "%d %s %.2f %.2f" % [gid, book_name, amount.to_f/100, ending_balance.to_f/100]
     end
 

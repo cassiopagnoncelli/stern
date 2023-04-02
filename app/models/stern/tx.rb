@@ -61,6 +61,11 @@ module Stern
       self.connection.execute("SELECT nextval('credit_tx_id_seq')").first.values.first
     end
 
+    def cascade_gid_balance
+      entries.each(&:cascade_gid_balance)
+      entries.reload
+    end
+
     private
 
     def no_future_timestamp
