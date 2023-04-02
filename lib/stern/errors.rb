@@ -12,7 +12,6 @@ module Stern
   AmountShouldNotBeZeroError = Class.new(StandardError)
   CascadeShouldBeBooleanError = Class.new(StandardError)
   AtomicShouldBeBooleanError = Class.new(StandardError)
-  InvalidGroupingDatePrecisionError = Class.new(StandardError)
   GidNotSpecifiedError = Class.new(StandardError)
   OperationNotConfirmedError = Class.new(StandardError)
   ArgumentError = Class.new(StandardError)
