@@ -58,8 +58,8 @@ module Stern
     end
 
     def self.rebuild_book_gid_balance(book_id, gid)
-      raise InvalidBookError unless book_id.is_a?(Numeric)
-      raise GidNotSpecifiedError unless book_id.is_a?(Numeric)
+      raise ArgumentError, "book is not valid" unless book_id.is_a?(Numeric) && book_id.in?(BOOKS.keys)
+      raise ArgumentError, "gid is not valid" unless gid.is_a?(Numeric)
 
       sql = %{
         UPDATE stern_entries
@@ -86,7 +86,7 @@ module Stern
 
     def self.rebuild_balances(confirm = false)
       unless confirm
-        raise OperationNotConfirmedError, "You must confirm the operation"
+        raise ArgumentError, "You must confirm the operation"
       end
 
       Entry.pluck(:gid).uniq.each do |gid|

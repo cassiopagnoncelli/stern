@@ -1,1 +1,2 @@
 - assert timezones in datetime are not problematic
+- rubocop

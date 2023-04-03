@@ -30,7 +30,7 @@ module Stern
 
       describe ".rebuild_balances" do
         it "raises error if not confirmed" do
-          expect{ described_class.rebuild_balances }.to raise_error(OperationNotConfirmedError)
+          expect{ described_class.rebuild_balances }.to raise_error(ArgumentError)
         end
 
         it "rebuilds if confirmed" do

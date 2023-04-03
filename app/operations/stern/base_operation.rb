@@ -9,7 +9,7 @@ module Stern
         fun = lambda { undo }
         transaction ? ApplicationRecord.transaction { fun.call } : fun.call
       else
-        raise OperationDirectionNotProvidedError, "provide `direction` with :do or :undo"
+        raise ArgumentError, "provide `direction` with :do or :undo"
       end
     end
 
@@ -30,7 +30,7 @@ module Stern
     end
 
     def new_credit_tx_id(remaining_tries = 10)
-      raise CreditTxIdSeqInvalidError unless remaining_tries.positive?
+      raise RuntimeError, "remaining tries exhausted while generating credit_tx_id" unless remaining_tries.positive?
 
       seq = ::Stern::Tx.generate_tx_credit_id
 

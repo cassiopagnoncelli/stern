@@ -10,8 +10,8 @@ module Stern
     # @param gid [Bignum] group id, eg. merchant id
     # @param timestamp [DateTime] balance at the given time
     def initialize(book_id:, timestamp: DateTime.current)
-      raise BookDoesNotExistError unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
-      raise ShouldBeDateOrTimestampError unless timestamp.is_a?(Date) || timestamp.is_a?(DateTime)
+      raise ArgumentError, "book does not exist" unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
+      raise ArgumentError, "should be Date or DateTime" unless timestamp.is_a?(Date) || timestamp.is_a?(DateTime)
 
       self.book_id = book_id.is_a?(Symbol) || book_id.is_a?(String) ? BOOKS[book_id] : book_id
       self.timestamp = Helpers::NormalizeTimeHelper.normalize_time(timestamp, true)
