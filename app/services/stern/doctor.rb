@@ -58,7 +58,7 @@ module Stern
     end
 
     def self.rebuild_book_gid_balance(book_id, gid)
-      raise ArgumentError, "book is not valid" unless book_id.is_a?(Numeric) && book_id.in?(BOOKS.keys)
+      raise ArgumentError, "book is not valid" unless book_id.is_a?(Numeric) && book_id.in?(BOOKS.values)
       raise ArgumentError, "gid is not valid" unless gid.is_a?(Numeric)
 
       sql = %{
