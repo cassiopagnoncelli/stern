@@ -5,7 +5,7 @@ module Stern
   class OutstandingBalanceQuery < BaseQuery
     attr_accessor :book_id, :timestamp, :results
 
-    # @param gid [Bignum] group id, eg. merchant id
+    # @param book_id [Bignum] book, eg. merchant balance
     # @param timestamp [DateTime] balance at the given time
     def initialize(book_id:, timestamp: DateTime.current)
       raise ArgumentError, "book does not exist" unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
