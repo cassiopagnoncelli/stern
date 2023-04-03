@@ -1,10 +1,10 @@
 module Stern
-  # Pay a merchant boleto.
+  # Pay a merchant pix.
   # 
   # - apply credits
-  # - add_boleto_fee
-  # - add_boleto_payment
-  class PayBoleto < BaseOperation
+  # - add_pix_fee
+  # - add_pix_payment
+  class PayPix < BaseOperation
     attr_accessor :payment_id, :merchant_id, :amount, :fee
 
     # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.
@@ -32,17 +32,17 @@ module Stern
       charged_fees = fee - charged_credits
 
       credit_tx_id = apply_credits(charged_credits, merchant_id) if charged_credits.abs.positive?
-      Tx.add_boleto_fee(payment_id, merchant_id, charged_fees) if charged_fees.abs.positive?
-      Tx.add_boleto_payment(payment_id, merchant_id, amount, credit_tx_id)
+      Tx.add_pix_fee(payment_id, merchant_id, charged_fees) if charged_fees.abs.positive?
+      Tx.add_pix_payment(payment_id, merchant_id, amount, credit_tx_id)
     end
 
     def undo
       raise ArgumentError unless payment_id.present? && payment_id.is_a?(Numeric)
 
-      credit_tx_id = Tx.find_by!(code: TXS[:add_boleto_payment], uid: payment_id).credit_tx_id
+      credit_tx_id = Tx.find_by!(code: TXS[:add_pix_payment], uid: payment_id).credit_tx_id
       Tx.remove_credit(credit_tx_id) if credit_tx_id.present?
-      Tx.remove_boleto_fee(payment_id)
-      Tx.remove_boleto_payment(payment_id)
+      Tx.remove_pix_fee(payment_id)
+      Tx.remove_pix_payment(payment_id)
     end
   end
 end

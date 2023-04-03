@@ -21,7 +21,7 @@ module Stern
       raise ArgumentError unless subs_charge_id.present? && subs_charge_id.is_a?(Numeric)
       raise ArgumentError unless merchant_id.present? && merchant_id.is_a?(Numeric)
       raise ArgumentError unless amount.present? && amount.is_a?(Numeric)
-      raise AmountShouldNotBeZeroError if amount.zero?
+      raise ArgumentError, "amount should not be zero" if amount.zero?
 
       credits = ::Stern.balance(merchant_id, :merchant_credit)
       charged_credits = [amount, credits].min

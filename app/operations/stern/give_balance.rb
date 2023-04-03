@@ -20,7 +20,7 @@ module Stern
       raise ArgumentError unless uid.present? && uid.is_a?(Numeric)
       raise ArgumentError unless merchant_id.present? && merchant_id.is_a?(Numeric)
       raise ArgumentError unless amount.present? && amount.is_a?(Numeric)
-      raise AmountShouldNotBeZeroError if amount.zero?
+      raise ArgumentError, "amount should not be zero" if amount.zero?
 
       Tx.add_balance(uid, merchant_id, amount)
     end

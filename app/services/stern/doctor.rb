@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require_relative '../../../lib/stern/errors'
-
 module Stern
   # Safety methods.
   class Doctor

@@ -1,86 +1,104 @@
 books:
-  merchant_balance: 1
-  merchant_withholding_balance: 2
-  merchant_credit: 3
-  given_balance: 21
-  given_credit: 22
-  settlement: 41
-  settlement_fee: 42
-  subscription: 51
-  boleto: 101
-  boleto_fee: 102
-  boleto_refund: 103
-  cc: 121
-  cc_fee: 122
-  cc_refund: 123
-  cc_refund_fee: 124
-  cc_chargeback: 125
-  cc_chargeback_fee: 126
-  cc_anticipation: 127
-  cc_anticipation_fee: 128
+  merchant_balance: 1101
+  merchant_withholding_balance: 1301
+  merchant_credit: 1401
+  given_balance: 2101
+  given_credit: 2102
+  settlement_processing: 4101
+  settlement: 4102
+  settlement_fee: 4201
+  subscription: 5101
+  boleto: 11101
+  boleto_fee: 11111
+  boleto_refund_processing: 11121
+  boleto_refund: 11122
+  boleto_refund_fee: 11131
+  pix: 12101
+  pix_fee: 12111
+  pix_refund_processing: 12121
+  pix_refund: 12122
+  pix_refund_fee: 12131
+  cc: 13101
+  cc_fee: 13111
+  cc_refund_processing: 13121
+  cc_refund: 13122
+  cc_refund_fee: 13131
+  cc_chargeback_processing: 13141
+  cc_chargeback: 13142
+  cc_chargeback_fee: 13151
+  cc_anticipation: 13501
+  cc_anticipation_fee: 13502
 
 txs:
   balance:
-    code: 10
+    code: 1000
     book_add: merchant_balance
     book_sub: given_credit
   credit:
-    code: 11
+    code: 2000
     book_add: merchant_credit
     book_sub: given_credit
-  settlement:
-    code: 12
-    book_add: settlement
+  settlement_processing:
+    code: 4000
+    book_add: settlement_processing
     book_sub: merchant_balance
+  settlement:
+    code: 4001
+    book_add: settlement
+    book_sub: settlement_processing
   settlement_fee:
-    code: 13
+    code: 4002
     book_add: settlement_fee
     book_sub: merchant_balance
   subscription:
-    code: 14
+    code: 5000
     book_add: subscription
     book_sub: merchant_balance
   boleto_payment:
-    code: 15
+    code: 11000
     book_add: merchant_balance
     book_sub: boleto
   boleto_fee:
-    code: 16
+    code: 11001
     book_add: boleto_fee
     book_sub: merchant_balance
-  boleto_refund:
-    code: 17
-    book_add: boleto_refund
+  boleto_refund_processing:
+    code: 11002
+    book_add: boleto_refund_processing
     book_sub: merchant_balance
+  boleto_refund:
+    code: 11003
+    book_add: boleto_refund
+    book_sub: boleto_refund_processing
   cc:
-    code: 18
+    code: 13000
     book_add: merchant_withholding_balance
     book_sub: cc
   cc_fee:
-    code: 19
+    code: 13011
     book_add: cc_fee
     book_sub: merchant_balance
   cc_refund:
-    code: 20
+    code: 13021
     book_add: cc_refund
     book_sub: merchant_balance
   cc_refund_fee:
-    code: 21
+    code: 13031
     book_add: cc_refund_fee
     book_sub: merchant_balance
   cc_chargeback:
-    code: 22
+    code: 13041
     book_add: cc_chargeback
     book_sub: merchant_balance
   cc_chargeback_fee:
-    code: 23
+    code: 13051
     book_add: cc_chargeback_fee
     book_sub: merchant_balance
   cc_anticipation:
-    code: 24
+    code: 13061
     book_add: cc_anticipation
     book_sub: merchant_balance
   cc_anticipation_fee:
-    code: 25
+    code: 13071
     book_add: cc_anticipation_fee
     book_sub: merchant_balance
