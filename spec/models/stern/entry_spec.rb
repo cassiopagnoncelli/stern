@@ -29,15 +29,6 @@ module Stern
       end
     end
 
-    describe "times, timezones" do
-      it "properly sorts entries by the end of the summertime"
-
-      it "keeps ending balance consistent when summertime ends"
-
-      # https://chat.openai.com/chat/674f0ea8-728c-49df-b993-2d320228574b
-      it "asserts timestamp delta is minimum"
-    end
-
     context "scopes" do
       before do
         entry_a
