@@ -31,7 +31,7 @@ module Stern
     end
 
     def execute_query
-      ActiveRecord::Base.connection.execute(sql)
+      ApplicationRecord.connection.execute(sql)
     end
 
     def sql
@@ -49,7 +49,7 @@ module Stern
         GROUP BY time_window, code
         ORDER BY time_window, code
       }
-      ActiveRecord::Base.sanitize_sql_array([sql,
+      ApplicationRecord.sanitize_sql_array([sql,
         { time_grouping:, gid:, book_id:, start_date:, end_date: }
       ])
     end

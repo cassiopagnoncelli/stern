@@ -23,7 +23,7 @@ module Stern
     end
 
     def execute_query
-      ActiveRecord::Base.connection.execute(sql)
+      ApplicationRecord.connection.execute(sql)
     end
 
     def sql
@@ -36,7 +36,7 @@ module Stern
         FROM stern_entries
         WHERE book_id = :book_id AND timestamp <= :timestamp
       }
-      ActiveRecord::Base.sanitize_sql_array([sql, {book_id:, timestamp:}])      
+      ApplicationRecord.sanitize_sql_array([sql, {book_id:, timestamp:}])
     end
   end
 end

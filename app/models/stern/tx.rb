@@ -62,7 +62,7 @@ module Stern
     end
 
     def self.generate_tx_credit_id
-      self.connection.execute("SELECT nextval('credit_tx_id_seq')").first.values.first
+      ApplicationRecord.connection.execute("SELECT nextval('credit_tx_id_seq')").first.values.first
     end
 
     def cascade_gid_balance

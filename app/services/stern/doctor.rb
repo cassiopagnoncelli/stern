@@ -50,8 +50,8 @@ module Stern
         ) inconsistencies_results
         WHERE inconsistent = 1
       }
-      sanitized_sql = ActiveRecord::Base.sanitize_sql_array([sql, {book_id:, gid:}])
-      results = ActiveRecord::Base.connection.execute(sanitized_sql)
+      sanitized_sql = ApplicationRecord.sanitize_sql_array([sql, {book_id:, gid:}])
+      results = ApplicationRecord.connection.execute(sanitized_sql)
       results.to_a.flatten
     end
 
@@ -72,8 +72,8 @@ module Stern
         ) l
         WHERE stern_entries.id = l.id
       }
-      sanitized_sql = ActiveRecord::Base.sanitize_sql_array([sql, {book_id:, gid:}])
-      ActiveRecord::Base.connection.execute(sanitized_sql)
+      sanitized_sql = ApplicationRecord.sanitize_sql_array([sql, {book_id:, gid:}])
+      ApplicationRecord.connection.execute(sanitized_sql)
     end
 
     def self.rebuild_gid_balance(gid)
