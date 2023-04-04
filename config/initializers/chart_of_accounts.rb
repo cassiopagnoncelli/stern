@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-STERN_DEFS = YAML.load_file("#{Rails.root}/config/chart_of_accounts.yml").deep_symbolize_keys!
+chart_of_accounts_path = File.expand_path("../../chart_of_accounts.yml", __FILE__).freeze
+STERN_DEFS = YAML.load_file(chart_of_accounts_path).deep_symbolize_keys!
 
 module Stern
   TIMESTAMP_DELTA = 2 * (1.second / 1e6)
