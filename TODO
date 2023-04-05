@@ -1,0 +1,10 @@
+# TODO
+
+A) Testar se os table LOCK funcionam mesmo na leitura:
+
+1. Travar a tabela para leitura via lock_tables + timeout de 1 minuto.
+2. Enviar um SELECT naquela tabela (table-level lock), que só pode ser
+   destravada quando liberar o lock.
+3. Enviar o commit para terminar a transação e liberar o lock.
+
+Fazer um teste de stress com 5 clientes e 1m de transações.

@@ -6,7 +6,6 @@ module Stern
     validates_presence_of :gid
     validates_presence_of :tx_id
     validates_presence_of :amount
-    # validates_presence_of :timestamp
     validates_uniqueness_of :tx_id, scope: [:book_id, :gid]
     validates_uniqueness_of :timestamp, scope: [:book_id, :gid]
 

@@ -10,6 +10,22 @@ module Stern
       DateTime.current
     end
 
+    context "consistent balance" do
+      let(:gid) { 1101 }
+      let(:book_id) { BOOKS[:merchant_balance] }
+      let(:entries) { Entry.where(book_id:, gid:).order(:timestamp) }
+
+      before do
+        PayBoleto.new(payment_id: 101, merchant_id: gid, amount: 100, fee: 0).call
+        PayBoleto.new(payment_id: 102, merchant_id: gid, amount: 100, fee: 0).call
+        PayBoleto.new(payment_id: 103, merchant_id: gid, amount: 100, fee: 0).call
+      end
+
+      it "has consistent balance" do
+        expect(described_class.ending_balance_consistent?(book_id:, gid:)).to be_truthy
+      end
+    end
+
     context "inconsistent balance" do
       let(:gid) { 1101 }
       let(:book_id) { BOOKS[:merchant_balance] }
