@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Stern
   # Charges a merchant subscription from credits and/or merchant balance.
   #

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Stern
   # Pay a merchant pix.
   # 

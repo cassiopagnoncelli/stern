@@ -4,10 +4,10 @@ module Stern
       case direction
       when :do, :redo, :forward, :forwards, :perform
         fun = lambda { perform }
-        transaction ? ApplicationRecord.transaction { fun.call } : fun.call
+        transaction ? ApplicationRecord.transaction { lock_tables; fun.call } : fun.call
       when :undo, :backward, :backwards
         fun = lambda { undo }
-        transaction ? ApplicationRecord.transaction { fun.call } : fun.call
+        transaction ? ApplicationRecord.transaction { lock_tables; fun.call } : fun.call
       else
         raise ArgumentError, "provide `direction` with :do or :undo"
       end
@@ -44,6 +44,13 @@ module Stern
       credit_tx_id = new_credit_tx_id
       Tx.add_credit(credit_tx_id, merchant_id, -charged_credits)
       credit_tx_id
+    end
+
+    private
+
+    def lock_tables
+      ApplicationRecord.lock_table(table: Tx.table_name)
+      ApplicationRecord.lock_table(table: Entry.table_name)
     end
   end
 end

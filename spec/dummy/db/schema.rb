@@ -27,7 +27,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_02_223428) do
     t.bigint "tx_id", null: false
     t.bigint "amount", null: false
     t.bigint "ending_balance", null: false
-    t.datetime "timestamp", null: false
+    t.datetime "timestamp", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["book_id", "gid", "timestamp"], name: "index_stern_entries_on_book_id_and_gid_and_timestamp", unique: true
@@ -38,7 +38,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_02_223428) do
     t.integer "code", null: false
     t.bigint "uid", null: false
     t.bigint "amount", null: false
-    t.datetime "timestamp", null: false
+    t.datetime "timestamp", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.bigint "credit_tx_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

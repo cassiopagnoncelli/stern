@@ -10,16 +10,19 @@ module Stern
     validates_presence_of :code
     validates_presence_of :uid
     validates_presence_of :amount
-    validates_presence_of :timestamp
     validates_uniqueness_of :uid, scope: [:code]
     validate :no_future_timestamp, on: :create
+
+    before_create do
+      self.timestamp ||= DateTime.current
+    end
 
     before_update do
       raise StandardError, "Ledger is append-only" unless Rails.env.test?
     end
 
     STERN_DEFS[:txs].each do |name, defs|
-      define_singleton_method "add_#{name}".to_sym do |uid, gid, amount, credit_tx_id = nil, timestamp: DateTime.current, cascade: false|
+      define_singleton_method "add_#{name}".to_sym do |uid, gid, amount, credit_tx_id = nil, timestamp: nil, cascade: false|
         double_entry_add("add_#{name}", gid, uid,
                           defs[:book_add], defs[:book_sub], amount, credit_tx_id, timestamp, cascade)
       end
@@ -73,7 +76,9 @@ module Stern
     private
 
     def no_future_timestamp
-      errors.add(:timestamp, 'cannot be in the future') if timestamp > DateTime.current
+      if timestamp.presence && timestamp > DateTime.current
+        errors.add(:timestamp, 'cannot be in the future')
+      end
     end
   end
 end

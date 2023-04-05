@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Stern
   # Give merchant away balance.
   #

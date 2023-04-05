@@ -6,7 +6,7 @@ module Stern
     validates_presence_of :gid
     validates_presence_of :tx_id
     validates_presence_of :amount
-    validates_presence_of :timestamp
+    # validates_presence_of :timestamp
     validates_uniqueness_of :tx_id, scope: [:book_id, :gid]
     validates_uniqueness_of :timestamp, scope: [:book_id, :gid]
 
@@ -14,10 +14,10 @@ module Stern
     belongs_to :book, class_name: 'Stern::Book', optional: true
 
     before_save do
-      eb = self.class.last_entry(book_id, gid, timestamp).last&.ending_balance || 0
+      self.timestamp ||= DateTime.current
+      eb = self.class.previous_entries(book_id, gid, timestamp).last&.ending_balance || 0
       self.amount = amount
       self.ending_balance = eb + amount
-      self.timestamp ||= DateTime.current
     end
 
     before_update do
@@ -26,16 +26,22 @@ module Stern
 
     scope :last_entry, ->(book_id, gid, timestamp) do
       where(book_id: book_id, gid: gid)
-        .where('timestamp <= ?', timestamp)
+        .where('timestamp <= ?', timestamp || DateTime.current)
         .order(:timestamp, :id)
         .last(1)
+    end
+
+    scope :previous_entries, ->(book_id, gid, timestamp) do
+      where(book_id: book_id, gid: gid)
+        .where('timestamp < ?', timestamp)
+        .order(:timestamp, :id)
     end
 
     scope :next_entries, ->(book_id, gid, id, timestamp) do
       where(book_id: book_id, gid: gid)
         .where.not(id: id)
         .where('timestamp > ?', timestamp)
-        .order(:timestamp)
+        .order(:timestamp, :id)
     end
 
     def show
@@ -49,7 +55,7 @@ module Stern
     def previous_entry
       self.class.where(book_id:, gid:)
         .where('timestamp < ?', timestamp)
-        .order(timestamp: :desc)
+        .order(timestamp: :desc, id: :desc)
         .limit(1)
         .first
     end
