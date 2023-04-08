@@ -6,7 +6,7 @@ class CreateSternEntries < ActiveRecord::Migration[7.0]
       t.bigint :tx_id, null: false
       t.bigint :amount, null: false
       t.bigint :ending_balance, null: false
-      t.datetime :timestamp, null: false, default: -> { 'CURRENT_TIMESTAMP' }
+      t.datetime :timestamp, null: false
 
       t.timestamps
     end

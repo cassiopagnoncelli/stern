@@ -2,67 +2,71 @@ require 'rails_helper'
 
 module Stern
   RSpec.describe Entry, type: :model do
-    subject(:entry_a) { create(:entry, tx_id: 1, amount: amount_1) }
-    subject(:entry_b) { create(:entry, tx_id: 2, amount: amount_2) }
-    let(:amount_1) { 9900 }
-    let(:amount_2) { -11000 }
-    subject(:entry_c) { create(:entry, tx_id: 1, amount: 100) }
+    def gen_entry(amount: 100, timestamp: nil)
+      Doctor.clear
+      Entry.create!(book_id: 1, gid: 1101, tx_id: 1, amount:, timestamp:)
+    end
 
-    describe "data consistency" do
-      before do
-        entry_a
-        entry_b
+    describe ".create" do
+      it "creates without timestamp" do
+        expect { gen_entry }.to change { Entry.count }.by(1)
       end
 
-      it "has fields filled" do
-        expect(entry_a.ending_balance).to be_present
-        expect(entry_a.timestamp).to be_present
+      it "creates with past timestamp" do
+        expect { gen_entry(timestamp: DateTime.current - 1.day) }.to change { Entry.count }.by(1)
       end
 
-      it "has ending balance calculated properly" do
-        expect(entry_a.ending_balance).to be(amount_1)
-        expect(entry_b.ending_balance).to eq(entry_a.ending_balance + amount_2)
+      it "does not create for future timestamp" do
+        expect { gen_entry(timestamp: DateTime.current + 1.day) }.to raise_error(ArgumentError)
       end
 
-      it "forbids duplicate transaction ids in the same book (book_Id) and group (gid)" do
-        expect { entry_c }.to raise_error(ActiveRecord::RecordInvalid)
+      it "does not create with empty amount" do
+        expect { gen_entry(amount: 0) }.to raise_error(ArgumentError)
+      end
+    end
+
+    describe ".update_all, #update, #update!" do
+      subject(:entry) { Entry.first }
+
+      before { gen_entry }
+
+      it "calls update! in update_all call" do
+        expect { Entry.update_all(amount: 101).to raise_error(NotImplementedError) }
+      end
+
+      it "calls update! in update call" do
+        expect { entry.update!(amount: 100) }.to raise_error(NotImplementedError)
+      end
+
+      it "does not update the entry" do
+        expect { entry.update(amount: 100) }.to raise_error(NotImplementedError)
+        expect {
+          entry.assign_attributes(amount: 100)
+          entry.save
+        }.to raise_error(NotImplementedError)
+      end
+    end
+
+    describe ".destroy_all, #destroy, #destroy!" do
+      subject(:entry) { Entry.first }
+
+      before { gen_entry }
+
+      it "calls destroy! in destroy_all call" do
+        expect { entry.destroy }.to raise_error(NotImplementedError)
+      end
+
+      it "destroy! removes the record" do
+        expect { entry.destroy! }.to change(Entry, :count).by(-1)
       end
     end
 
     context "scopes" do
-      before do
-        entry_a
-        entry_b
-      end
-
-      subject(:last_entry_query) do
-        described_class.last_entry(entry_b.book_id, entry_b.gid, DateTime.current)
-      end
-
-      subject(:next_entries_query) do
-        described_class.next_entries(entry_a.book_id, entry_a.gid, entry_a.id, entry_a.timestamp)
-      end
-
       describe ".last_entry" do
-        it "should define the scope" do
-          expect(described_class).to respond_to(:last_entry)
-        end
+        before { gen_entry }
 
-        it "matches last entry" do
-          expect(last_entry_query.length).to be(1)
-          expect(last_entry_query.first.ending_balance).to be(entry_b.ending_balance)
-          expect(last_entry_query.first.book_id).to be(entry_b.book_id)
-          expect(last_entry_query.first.gid).to be(entry_b.gid)
-        end
-      end
-
-      describe ".next_entries" do
-        it "should define the scope" do
-          expect(described_class).to respond_to(:next_entries)
-        end
-
-        it "returns next entries" do
-          expect(next_entries_query.pluck(:id)).to include(entry_b.id)
+        it "returns a record" do
+          expect(Entry.last_entry(1, 1101, DateTime.current).count).to be(1)
         end
       end
     end

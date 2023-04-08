@@ -10,7 +10,7 @@ module Stern
     end
 
     def self.lock_table(table:)
-      connection.execute(sql = "LOCK TABLE #{table.strip} IN ACCESS SHARE MODE;")
+      connection.execute("LOCK TABLE #{table.strip} IN ACCESS SHARE MODE;")
     end
   end
 end

@@ -13,18 +13,22 @@ module Stern
     validates_uniqueness_of :uid, scope: [:code]
     validate :no_future_timestamp, on: :create
 
-    before_create do
-      self.timestamp ||= DateTime.current
+    before_save do
+      raise ArgumentError, "timestamp was set" if timestamp.present? && timestamp > DateTime.current
     end
 
     before_update do
       raise StandardError, "Ledger is append-only" unless Rails.env.test?
     end
 
+    before_destroy do
+      entries.each(&:destroy!)
+    end
+
     STERN_DEFS[:txs].each do |name, defs|
-      define_singleton_method "add_#{name}".to_sym do |uid, gid, amount, credit_tx_id = nil, timestamp: nil, cascade: false|
+      define_singleton_method "add_#{name}".to_sym do |uid, gid, amount, credit_tx_id = nil, timestamp: nil|
         double_entry_add("add_#{name}", gid, uid,
-                          defs[:book_add], defs[:book_sub], amount, credit_tx_id, timestamp, cascade)
+                          defs[:book_add], defs[:book_sub], amount, credit_tx_id, timestamp)
       end
 
       define_singleton_method "remove_#{name}".to_sym do |uid|
@@ -32,33 +36,18 @@ module Stern
       end
     end
 
-    # Double-entry operations.
-    # 
-    # Note: when timestamp is not the immediate current time therefore implying this transaction
-    # will not be the latest by timestamp, the ending balances for all transactions after this
-    # timestamp will be incorrect. Hence, *always* set cascade = true in these operations.
-    def self.double_entry_add(code, gid, uid, book_add, book_sub, amount, credit_tx_id, timestamp, cascade)
+    def self.double_entry_add(code, gid, uid, book_add, book_sub, amount, credit_tx_id, timestamp)
       tx = Tx.find_or_create_by!(code: codes[code], uid:, amount:, credit_tx_id:, timestamp:)
       e1 = Entry.create!(book_id: Book.code(book_add), gid:, tx_id: tx.id, amount:, timestamp:)
       e2 = Entry.create!(book_id: Book.code(book_sub), gid:, tx_id: tx.id, amount: -amount, timestamp:)
-      [e1.cascade_gid_balance, e2.cascade_gid_balance] if cascade
       tx.id
     end
 
     def self.double_entry_remove(code, uid, book_add, book_sub)
       tx = Tx.find_by!(code: codes[code], uid:)
       tx_id = tx.id
-      e1 = Entry.find_by!(book_id: Book.code(book_add), tx_id:)
-      e2 = Entry.find_by!(book_id: Book.code(book_sub), tx_id:)
-
-      e1.update(amount: 0, ending_balance: e1.ending_balance - e1.amount)
-      e2.update(amount: 0, ending_balance: e2.ending_balance - e2.amount)
-
-      e1.cascade_gid_balance
-      e2.cascade_gid_balance
-
-      e1.destroy
-      e2.destroy
+      e1 = Entry.find_by!(book_id: Book.code(book_add), tx_id:).destroy!
+      e2 = Entry.find_by!(book_id: Book.code(book_sub), tx_id:).destroy!
 
       tx.destroy
       tx_id
@@ -68,9 +57,16 @@ module Stern
       ApplicationRecord.connection.execute("SELECT nextval('credit_tx_id_seq')").first.values.first
     end
 
-    def cascade_gid_balance
-      entries.each(&:cascade_gid_balance)
-      entries.reload
+    def update
+      raise NotImplementedError, "Tx records cannot be updated by design"
+    end
+
+    def update!
+      raise NotImplementedError, "Tx reccords cannot be updated by design"
+    end
+
+    def update_all
+      raise NotImplementedError, "Tx reccords cannot be updated by design"
     end
 
     private

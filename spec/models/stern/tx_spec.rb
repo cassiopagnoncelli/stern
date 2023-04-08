@@ -2,10 +2,11 @@ require 'rails_helper'
 
 module Stern
   RSpec.describe Tx, type: :model do
-    subject(:tx_id) do
-      described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, timestamp, false)
-    end
     subject(:tx) { described_class.find_by!(id: tx_id, code: code, uid: uid) }
+    subject(:tx_id) do
+      described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, timestamp)
+    end
+
     let(:code) { "add_#{STERN_DEFS[:txs].keys.first}" }
     let(:gid) { 1 }
     let(:uid) { Integer(rand * 1e5) }
@@ -15,9 +16,11 @@ module Stern
     let(:timestamp) { DateTime.current }
 
     describe ".double_entry_add" do
-      it "created a tx and two entries" do
-        expect { tx_id }.to change(described_class, :count).by(1)
-        expect(tx.entries.length).to eq(2)
+      it "created two entries" do
+        expect {
+          tx_id
+        }.to change(Entry, :count).by(2)
+         .and change(described_class, :count).by(1)
       end
 
       it "stores positive and negative values for the transaction" do
