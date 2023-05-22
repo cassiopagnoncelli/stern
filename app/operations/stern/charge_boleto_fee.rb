@@ -4,7 +4,7 @@ module Stern
   # Charge merchant a boleto fee.
   #
   # - apply_credits
-  # - add_boleto_feez
+  # - add_boleto_fee
   class ChargeBoletoFee < BaseOperation
     attr_accessor :payment_id, :merchant_id, :fee
 

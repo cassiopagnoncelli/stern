@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_04_08_022903) do
+ActiveRecord::Schema[7.0].define(version: 2023_05_20_060107) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -32,6 +32,14 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_08_022903) do
     t.datetime "updated_at", null: false
     t.index ["book_id", "gid", "timestamp"], name: "index_stern_entries_on_book_id_and_gid_and_timestamp", unique: true
     t.index ["book_id", "gid", "tx_id"], name: "index_stern_entries_on_book_id_and_gid_and_tx_id", unique: true
+  end
+
+  create_table "stern_operations", force: :cascade do |t|
+    t.string "name"
+    t.boolean "active"
+    t.boolean "undo_capability"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "stern_txs", force: :cascade do |t|

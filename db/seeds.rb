@@ -1,3 +1,5 @@
-Stern::BOOKS.each do |name, id|
-  Stern::Book.find_or_create_by!(id:, name:)
-end
+require Rails.root.join('..', '..', 'db', 'seeds', 'books.rb')
+require Rails.root.join('..', '..', 'db', 'seeds', 'operations.rb')
+
+seed_books
+seed_operations

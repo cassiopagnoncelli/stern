@@ -33,3 +33,9 @@ rails plugin new stern \
 
 ## License
 You need written authorization from the author for any type of usage.
+
+## To do
+
+1. Register operations (task in seeds)
+2. Log operations (bind to BaseOperation)
+3. Scheduled operations

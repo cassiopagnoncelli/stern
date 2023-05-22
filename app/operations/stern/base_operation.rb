@@ -1,4 +1,9 @@
 module Stern
+  # Operations are top-level API commands to handle txs and therefore entries.
+  # Use cases are all thought in terms of operations. A direct consequence is models
+  # should never be used or manipulated directly, instead operations should be used.
+  #
+  # All operations have to be backwards compatible.
   class BaseOperation
     def call(direction: :do, transaction: true)
       case direction

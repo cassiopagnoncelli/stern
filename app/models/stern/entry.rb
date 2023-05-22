@@ -13,7 +13,7 @@ module Stern
     belongs_to :book, class_name: 'Stern::Book', optional: true
 
     before_update do
-      raise NotImplementedError, "Entry reccords cannot be updated by design"
+      raise NotImplementedError, "Entry records cannot be updated by design"
     end
 
     scope :last_entry, ->(book_id, gid, timestamp) do
