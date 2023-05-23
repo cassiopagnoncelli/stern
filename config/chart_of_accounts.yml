@@ -70,6 +70,22 @@ txs:
     code: 11003
     book_add: boleto_refund
     book_sub: boleto_refund_processing
+  pix_payment:
+    code: 12000
+    book_add: merchant_balance
+    book_sub: pix
+  pix_fee:
+    code: 12001
+    book_add: pix_fee
+    book_sub: merchant_balance
+  pix_refund_processing:
+    code: 12002
+    book_add: pix_refund_processing
+    book_sub: merchant_balance
+  pix_refund:
+    code: 12003
+    book_add: pix_refund
+    book_sub: pix_refund_processing
   cc:
     code: 13000
     book_add: merchant_withholding_balance
