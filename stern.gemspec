@@ -28,4 +28,5 @@ Gem::Specification.new do |spec|
   # Development.
   spec.add_development_dependency "rspec-rails"
   spec.add_development_dependency "factory_bot_rails"
+  spec.add_development_dependency "shoulda-matchers", ">= 5.0"
 end
