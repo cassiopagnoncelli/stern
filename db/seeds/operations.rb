@@ -10,8 +10,12 @@ def seed_operations
   operation_classes.each do |op|
     name = op.name.gsub('Stern::', '')
     unless Stern::Operation.find_by(name:)
-      record = Stern::Operation.create!(name:)
-      record.update!(active: true, undo_capability: op.new.respond_to?(:undo))
+      Stern::Operation.create!(
+        name:,
+        active: true,
+        undo_capability: op.new.respond_to?(:undo)
+      )
+      Rails.logger.info "Registered operation #{name}"
     end
   end
 end
