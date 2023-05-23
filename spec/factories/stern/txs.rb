@@ -5,5 +5,6 @@ FactoryBot.define do
     amount { 100 }
     timestamp { DateTime.current }
     credit_tx_id { nil }
+    operation_id { 1 }
   end
 end

@@ -8,10 +8,16 @@ module Stern
     def call(direction: :do, transaction: true)
       case direction
       when :do, :redo, :forward, :forwards, :perform
-        fun = lambda { perform }
+        fun = lambda {
+          operation = Operation.create!(name: get_name, direction: :do, params: get_params)
+          perform(operation.id)
+        }
         transaction ? ApplicationRecord.transaction { lock_tables; fun.call } : fun.call
       when :undo, :backward, :backwards
-        fun = lambda { undo }
+        fun = lambda {
+          Operation.create!(name: get_name, direction: :undo, params: get_params)
+          perform_undo
+        }
         transaction ? ApplicationRecord.transaction { lock_tables; fun.call } : fun.call
       else
         raise ArgumentError, "provide `direction` with :do or :undo"
@@ -26,7 +32,7 @@ module Stern
       raise NotImplementedError
     end
 
-    def undo
+    def perform_undo
       raise NotImplementedError
     end
 
@@ -47,7 +53,7 @@ module Stern
       return nil unless charged_credits.present? && charged_credits.abs.positive?
 
       credit_tx_id = new_credit_tx_id
-      Tx.add_credit(credit_tx_id, merchant_id, -charged_credits)
+      Tx.add_credit(credit_tx_id, merchant_id, -charged_credits, operation_id:)
       credit_tx_id
     end
 
@@ -56,6 +62,14 @@ module Stern
     def lock_tables
       ApplicationRecord.lock_table(table: Tx.table_name)
       ApplicationRecord.lock_table(table: Entry.table_name)
+    end
+
+    def get_name
+      self.class.to_s.gsub('Stern::', '')
+    end
+
+    def get_params
+      {}
     end
   end
 end

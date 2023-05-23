@@ -19,7 +19,8 @@ module Stern
       @amount = amount
     end
 
-    def perform
+    def perform(operation_id)
+      raise ArgumentError unless operation_id.present?
       raise ArgumentError unless subs_charge_id.present? && subs_charge_id.is_a?(Numeric)
       raise ArgumentError unless merchant_id.present? && merchant_id.is_a?(Numeric)
       raise ArgumentError unless amount.present? && amount.is_a?(Numeric)
@@ -30,10 +31,10 @@ module Stern
       charged_subs = amount - charged_credits
 
       credit_tx_id = apply_credits(charged_credits, merchant_id)
-      Tx.add_subscription(subs_charge_id, merchant_id, charged_subs, credit_tx_id)
+      Tx.add_subscription(subs_charge_id, merchant_id, charged_subs, credit_tx_id, operation_id:)
     end
 
-    def undo
+    def perform_undo
       raise ArgumentError unless subs_charge_id.present? && subs_charge_id.is_a?(Numeric)
 
       credit_tx_id = Tx.find_by!(code: TXS[:add_subscription], uid: subs_charge_id).credit_tx_id

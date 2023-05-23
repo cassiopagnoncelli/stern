@@ -2,6 +2,9 @@ require 'rails_helper'
 
 module Stern
   RSpec.describe Operation, type: :model do
-    pending "add some examples to (or delete) #{__FILE__}"
+    subject(:operation) { create :operation }
+
+    it { should validate_presence_of(:direction) }
+    it { should have_many(:txs) }
   end
 end

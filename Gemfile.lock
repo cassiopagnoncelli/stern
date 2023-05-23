@@ -187,7 +187,7 @@ DEPENDENCIES
   dotenv-rails
   factory_bot_rails
   rspec-rails
-  shoulda-matchers (>= 5.0)
+  shoulda-matchers
   stern!
 
 BUNDLED WITH

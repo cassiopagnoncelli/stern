@@ -6,11 +6,13 @@ module Stern
     enum code: TXS
 
     has_many :entries, class_name: 'Stern::Entry'
+    belongs_to :operation, class_name: 'Stern::Operation' #, foreign_key: :operation_id
 
     validates_presence_of :code
     validates_presence_of :uid
     validates_presence_of :amount
     validates_uniqueness_of :uid, scope: [:code]
+    validates_presence_of :operation_id
     validate :no_future_timestamp, on: :create
 
     before_save do
@@ -26,9 +28,9 @@ module Stern
     end
 
     STERN_DEFS[:txs].each do |name, defs|
-      define_singleton_method "add_#{name}".to_sym do |uid, gid, amount, credit_tx_id = nil, timestamp: nil|
+      define_singleton_method "add_#{name}".to_sym do |uid, gid, amount, credit_tx_id = nil, timestamp: nil, operation_id: nil|
         double_entry_add("add_#{name}", gid, uid,
-                          defs[:book_add], defs[:book_sub], amount, credit_tx_id, timestamp)
+                          defs[:book_add], defs[:book_sub], amount, credit_tx_id, timestamp, operation_id)
       end
 
       define_singleton_method "remove_#{name}".to_sym do |uid|
@@ -36,8 +38,8 @@ module Stern
       end
     end
 
-    def self.double_entry_add(code, gid, uid, book_add, book_sub, amount, credit_tx_id, timestamp)
-      tx = Tx.find_or_create_by!(code: codes[code], uid:, amount:, credit_tx_id:, timestamp:)
+    def self.double_entry_add(code, gid, uid, book_add, book_sub, amount, credit_tx_id, timestamp, operation_id)
+      tx = Tx.find_or_create_by!(code: codes[code], uid:, amount:, credit_tx_id:, timestamp:, operation_id:)
       e1 = Entry.create!(book_id: Book.code(book_add), gid:, tx_id: tx.id, amount:, timestamp:)
       e2 = Entry.create!(book_id: Book.code(book_sub), gid:, tx_id: tx.id, amount: -amount, timestamp:)
       tx.id

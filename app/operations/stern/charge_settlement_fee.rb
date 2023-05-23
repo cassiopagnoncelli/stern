@@ -19,7 +19,8 @@ module Stern
       @fee = fee
     end
 
-    def perform
+    def perform(operation_id)
+      raise ArgumentError unless operation_id.present?
       raise ArgumentError unless settlement_id.present? && settlement_id.is_a?(Numeric)
       raise ArgumentError unless merchant_id.present? && merchant_id.is_a?(Numeric)
       raise ArgumentError unless fee.present? && fee.is_a?(Numeric)
@@ -30,10 +31,10 @@ module Stern
       charged_fees = fee - charged_credits
 
       credit_tx_id = apply_credits(charged_credits, merchant_id)
-      Tx.add_settlement_fee(settlement_id, merchant_id, charged_fees, credit_tx_id)
+      Tx.add_settlement_fee(settlement_id, merchant_id, charged_fees, credit_tx_id, operation_id:)
     end
 
-    def undo
+    def perform_undo
       raise ArgumentError unless payment_id.present? && payment_id.is_a?(Numeric)
 
       credit_tx_id = Tx.find_by!(code: TXS[:add_boleto_fee], uid: payment_id).credit_tx_id

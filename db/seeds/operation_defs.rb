@@ -1,4 +1,4 @@
-def seed_operations
+def seed_operation_defs
   operation_files = Dir[Rails.root.join('..', '..', 'app', 'operations', 'stern', '*.rb')]
   operation_files.each { |file| require file }
 
@@ -9,11 +9,11 @@ def seed_operations
 
   operation_classes.each do |op|
     name = op.name.gsub('Stern::', '')
-    unless Stern::Operation.find_by(name:)
-      Stern::Operation.create!(
+    unless Stern::OperationDef.find_by(name:)
+      Stern::OperationDef.create!(
         name:,
         active: true,
-        undo_capability: op.new.respond_to?(:undo)
+        undo_capability: op.new.respond_to?(:perform_undo),
       )
       Rails.logger.info "Registered operation #{name}"
     end

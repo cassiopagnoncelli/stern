@@ -44,7 +44,7 @@ module Stern
           in_timestamp_utc := :timestamp,
           verbose_mode := FALSE
         )
-      }
+      }.squish
       sanitized_sql = ApplicationRecord.sanitize_sql_array([sql, 
         {book_id:, gid:, tx_id:, amount:, timestamp:}])
       ApplicationRecord.connection.execute(sanitized_sql)
@@ -60,7 +60,7 @@ module Stern
           in_id := :id,
           verbose_mode := FALSE
         )
-      }
+      }.squish
       sanitized_sql = ApplicationRecord.sanitize_sql_array([sql, {id:}])
       ApplicationRecord.connection.execute(sanitized_sql)
     end

@@ -4,7 +4,7 @@ module Stern
   RSpec.describe Tx, type: :model do
     subject(:tx) { described_class.find_by!(id: tx_id, code: code, uid: uid) }
     subject(:tx_id) do
-      described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, timestamp)
+      described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, timestamp, operation_id)
     end
 
     let(:code) { "add_#{STERN_DEFS[:txs].keys.first}" }
@@ -14,6 +14,7 @@ module Stern
     let(:book_sub) { STERN_DEFS[:txs].values.first[:book_sub] }
     let(:amount) { 100 }
     let(:timestamp) { DateTime.current }
+    let(:operation_id) { (create(:operation)).id }
 
     describe ".double_entry_add" do
       it "created two entries" do

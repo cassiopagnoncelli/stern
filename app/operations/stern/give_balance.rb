@@ -18,16 +18,17 @@ module Stern
       @amount = amount
     end
 
-    def perform
+    def perform(operation_id)
+      raise ArgumentError unless operation_id.present?
       raise ArgumentError unless uid.present? && uid.is_a?(Numeric)
       raise ArgumentError unless merchant_id.present? && merchant_id.is_a?(Numeric)
       raise ArgumentError unless amount.present? && amount.is_a?(Numeric)
       raise ArgumentError, "amount should not be zero" if amount.zero?
 
-      Tx.add_balance(uid, merchant_id, amount)
+      Tx.add_balance(uid, merchant_id, amount, operation_id:)
     end
 
-    def undo
+    def perform_undo
       raise ArgumentError unless uid.present? && uid.is_a?(Numeric)
 
       tx = Tx.find_by!(code: TXS[:add_balance], uid:)

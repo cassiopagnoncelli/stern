@@ -1,6 +1,6 @@
 FactoryBot.define do
   factory :book, class: 'Stern::Book' do
-    id { 1 }
-    name { "balance" }
+    id { 0 }
+    name { "especial_balance" }
   end
 end

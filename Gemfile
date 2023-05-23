@@ -12,6 +12,7 @@ group :development, :test do
   gem "byebug"
   gem "awesome_print"
   gem "dotenv-rails"
+  gem "shoulda-matchers"
 end
 
 # Start debugger with binding.b [https://github.com/ruby/debug]

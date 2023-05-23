@@ -18,16 +18,17 @@ module Stern
       @amount = amount
     end
 
-    def perform
+    def perform(operation_id)
+      raise ArgumentError unless operation_id.present?
       raise ArgumentError unless settlement_id.present? && settlement_id.is_a?(Numeric)
       raise ArgumentError unless merchant_id.present? && merchant_id.is_a?(Numeric)
       raise ArgumentError unless amount.present? && amount.is_a?(Numeric)
       raise ArgumentError, "amount should not be zero" if amount.zero?
 
-      Tx.add_settlement_processing(settlement_id, merchant_id, amount, nil)
+      Tx.add_settlement_processing(settlement_id, merchant_id, amount, nil, operation_id:)
     end
 
-    def undo
+    def perform_undo
       raise ArgumentError unless settlement_id.present? && settlement_id.is_a?(Numeric)
 
       Tx.remove_settlement(settlement_id)
