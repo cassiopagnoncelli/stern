@@ -44,11 +44,12 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_22_052219) do
   end
 
   create_table "stern_operations", force: :cascade do |t|
-    t.string "name", null: false
+    t.integer "operation_def_id", null: false
     t.integer "direction", null: false
     t.json "params", default: "{}", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["operation_def_id"], name: "index_stern_operations_on_operation_def_id"
   end
 
   create_table "stern_txs", force: :cascade do |t|

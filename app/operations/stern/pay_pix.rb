@@ -7,6 +7,8 @@ module Stern
   # - add_pix_fee
   # - add_pix_payment
   class PayPix < BaseOperation
+    UID = 9
+
     attr_accessor :payment_id, :merchant_id, :amount, :fee
 
     # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.

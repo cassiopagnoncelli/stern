@@ -5,6 +5,8 @@ module Stern
   #
   # - add_balance
   class GiveBalance < BaseOperation
+    UID = 5
+
     attr_accessor :uid, :merchant_id, :amount
 
     # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.

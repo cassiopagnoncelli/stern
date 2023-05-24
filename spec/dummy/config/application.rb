@@ -39,5 +39,7 @@ module Dummy
 
     # Set timezone so DateTime/Time.current works properly
     config.time_zone = 'America/Sao_Paulo'
+
+    # config.active_record.schema_format = :sql
   end
 end

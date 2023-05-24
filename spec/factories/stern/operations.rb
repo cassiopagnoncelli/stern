@@ -1,6 +1,6 @@
 FactoryBot.define do
   factory :operation, class: 'Stern::Operation' do
-    name { "PayPix" }
+    operation_def_id { 1 }
     direction { :do }
     params { {} }
   end

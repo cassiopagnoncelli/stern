@@ -6,16 +6,19 @@ module Stern
   # All operations have to be backwards compatible.
   class BaseOperation
     def call(direction: :do, transaction: true)
+      raise NotImplementedError unless get_uid.is_a?(Integer)
+
       case direction
       when :do, :redo, :forward, :forwards, :perform
         fun = lambda {
-          operation = Operation.create!(name: get_name, direction: :do, params: get_params)
+          operation = Operation.build(name: get_name, direction: :do, params: get_params)
+          operation.save!
           perform(operation.id)
         }
         transaction ? ApplicationRecord.transaction { lock_tables; fun.call } : fun.call
       when :undo, :backward, :backwards
         fun = lambda {
-          Operation.create!(name: get_name, direction: :undo, params: get_params)
+          Operation.build(name: get_name, direction: :undo, params: get_params).save!
           perform_undo
         }
         transaction ? ApplicationRecord.transaction { lock_tables; fun.call } : fun.call
@@ -62,6 +65,10 @@ module Stern
     def lock_tables
       ApplicationRecord.lock_table(table: Tx.table_name)
       ApplicationRecord.lock_table(table: Entry.table_name)
+    end
+
+    def get_uid
+      self.class::UID
     end
 
     def get_name

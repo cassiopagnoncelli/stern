@@ -6,6 +6,8 @@ module Stern
   #
   # - add_credit
   class GiveCredit < BaseOperation
+    UID = 6
+
     attr_accessor :uid, :merchant_id, :amount
 
     # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.

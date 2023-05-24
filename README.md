@@ -108,19 +108,24 @@ In fact, TXs should never be used directly; instead, use operations.
 Refer to `app/operations` to implement operations.
 Following name conventions, always start with a verb.
 
-# Testing the app
+## Testing the app
 
 Use RSpec to run specs.
 
 To do it, have a clean database and prepare it first.
 
 ```sh
-RAILS_ENV=test rails db:drop
-RAILS_ENV=test rails db:create db:schema:load app:db:migrate:functions
+RAILS_ENV=test rails db:drop db:setup_env
 ```
 
 then run RSpec as usual
 
 ```sh
 rspec
+```
+
+## Preparing the database for development
+
+```sh
+RAILS_ENV=development rails db:drop db:setup_env
 ```

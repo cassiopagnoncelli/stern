@@ -1,3 +1,6 @@
+-- SET client_min_messages = 'WARNING';
+-- RESET client_min_messages;
+
 --
 -- db/migrate/20230326215510_create_credit_tx_id_sequence.rb
 --

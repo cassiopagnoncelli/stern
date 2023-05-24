@@ -6,6 +6,8 @@ module Stern
   # - apply_credits
   # - add_boleto_fee
   class ChargeBoletoFee < BaseOperation
+    UID = 1
+
     attr_accessor :payment_id, :merchant_id, :fee
 
     # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.

@@ -5,6 +5,8 @@ module Stern
   #
   # - add_settlement_processing
   class OpenSettlement < BaseOperation
+    UID = 7
+
     attr_accessor :settlement_id, :merchant_id, :amount
 
     # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.

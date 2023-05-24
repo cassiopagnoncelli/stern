@@ -7,6 +7,8 @@ module Stern
   # - add_settlement_fee
   # - add_settlement
   class ChargeSettlement < BaseOperation
+    UID = 3
+
     attr_accessor :settlement_id, :merchant_id, :amount, :fee
 
     # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.

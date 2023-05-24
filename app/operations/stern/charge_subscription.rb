@@ -6,6 +6,8 @@ module Stern
   # - apply credits
   # - add_subscription
   class ChargeSubscription < BaseOperation
+    UID = 4
+
     attr_accessor :subs_charge_id, :merchant_id, :amount
 
     # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.
