@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_05_22_052219) do
+ActiveRecord::Schema[7.0].define(version: 2023_05_24_123950) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -50,6 +50,20 @@ ActiveRecord::Schema[7.0].define(version: 2023_05_22_052219) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["operation_def_id"], name: "index_stern_operations_on_operation_def_id"
+  end
+
+  create_table "stern_scheduled_operations", force: :cascade do |t|
+    t.integer "operation_def_id", null: false
+    t.json "params", default: {}, null: false
+    t.datetime "after_time", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "status_time", null: false
+    t.string "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["after_time"], name: "index_stern_scheduled_operations_on_after_time"
+    t.index ["operation_def_id"], name: "index_stern_scheduled_operations_on_operation_def_id"
+    t.index ["status"], name: "index_stern_scheduled_operations_on_status"
   end
 
   create_table "stern_txs", force: :cascade do |t|

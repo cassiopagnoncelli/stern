@@ -101,5 +101,10 @@ module Stern
       Tx.delete_all
       Operation.delete_all
     end
+
+    # Queue.
+    def self.requeue
+      ScheduledOperation.requeue
+    end
   end
 end
