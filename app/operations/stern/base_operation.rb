@@ -76,7 +76,15 @@ module Stern
     end
 
     def get_params
-      {}
+      attr_accessor_hash = {}
+
+      self.instance_variables.each do |ivar|
+        attr_name = ivar.to_s.gsub('@', '')
+        attr_value = self.instance_variable_get(ivar)
+        attr_accessor_hash[attr_name] = attr_value
+      end
+
+      attr_accessor_hash
     end
   end
 end

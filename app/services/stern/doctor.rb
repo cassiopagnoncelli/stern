@@ -99,6 +99,7 @@ module Stern
   
       Entry.delete_all
       Tx.delete_all
+      Operation.delete_all
     end
   end
 end
