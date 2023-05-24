@@ -2,7 +2,14 @@ require 'rails_helper'
 
 module Stern
   RSpec.describe Book, type: :model do
+    subject(:book) { create :book }
+
     let(:book_name) { BOOKS.keys.first.to_sym }
+
+    describe "validations" do
+      it { should validate_presence_of(:name) }
+      it { should have_many(:entries) }
+    end
 
     describe ".code" do
       it "fetches the book code" do

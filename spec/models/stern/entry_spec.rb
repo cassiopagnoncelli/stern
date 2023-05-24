@@ -7,6 +7,16 @@ module Stern
       Entry.create!(book_id: 1, gid: 1101, tx_id: 1, amount:, timestamp:)
     end
 
+    describe "validations" do
+      it { should validate_presence_of(:book_id) }
+      it { should validate_presence_of(:gid) }
+      it { should validate_presence_of(:tx_id) }
+      it { should validate_presence_of(:amount) }
+      it { should allow_value(DateTime.current.last_week).for(:timestamp) }
+      it { should belong_to(:tx).class_name('Stern::Tx').optional }
+      it { should belong_to(:book).class_name('Stern::Book').optional }
+    end
+
     describe ".create" do
       it "creates without timestamp" do
         expect { gen_entry }.to change { Entry.count }.by(1)
