@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+SCHEMA_PATH="./spec/dummy/db/schema.rb"
+if [ -e ${SCHEMA_PATH} ]; then
+  echo "Removing schema"
+  rm ${SCHEMA_PATH}
+else
+  echo "No schema found in ${SCHEMA_PATH}"
+fi
+
+RAILS_ENV=development bundle exec rails db:drop app:db:setup_env
+RAILS_ENV=test bundle exec rails db:drop app:db:setup_env
