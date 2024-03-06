@@ -13,6 +13,7 @@ group :development, :test do
   gem "awesome_print"
   gem "dotenv-rails"
   gem "shoulda-matchers"
+  gem "rubocop"
 end
 
 # Start debugger with binding.b [https://github.com/ruby/debug]
