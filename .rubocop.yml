@@ -1,0 +1,183 @@
+inherit_from: .rubocop_todo.yml
+
+require:
+  - rubocop-rails
+  - rubocop-rspec
+
+AllCops:
+  NewCops: enable
+
+# Trailing spaces are easily missed visually. By enforcing leading spaces the visual indentation
+# helps so that the text continues from above. Further, when there is no leading indentation it can
+# help someone double check that no space as in fact the intended behavior.
+Layout/LineContinuationLeadingSpace:
+  Enabled: true
+  EnforcedStyle: leading
+
+Layout/LineLength:
+  Enabled: true
+  Max: 100
+
+Lint/SymbolConversion:
+  EnforcedStyle: consistent
+
+Metrics/AbcSize:
+  Exclude:
+    - "db/dataverse_migrate/*.rb" # Tables can be large
+    - "db/migrate/*.rb" # Tables can be large
+
+# We often prefer multi-lining arrays and hashes for readability. For us, those are viewed as "one
+# line of code" so we are letting Rubocop know we won't want to be forced into unnecessary
+# extraction refactors because of them.
+Metrics/BlockLength:
+  AllowedMethods: ["describe", "context", "fdescribe", "fcontext", "fit"]
+  Exclude:
+    - "app/admin/**/*" # this library relies on huge blocks
+    - "config/routes.rb" # routes can get long
+    - "db/dataverse_migrate/*.rb" # Tables can be large
+    - "db/migrate/*.rb" # Tables can be large
+    - "lib/tasks/**/*" # one-off procedural rake tasks can have large blocks
+    - "spec/factories/**/*" # factories use large blocks
+    - "spec/support/shared_examples/**/*" # Shared examples can easily go over limit
+  CountAsOne: ["array", "hash", "heredoc"]
+
+Metrics/ClassLength:
+  CountAsOne: ["array", "hash", "heredoc", "method_call"]
+  Exclude:
+    - "db/dataverse_migrate/*.rb" # Tables can be large
+    - "db/migrate/*.rb" # Tables can be large
+
+Metrics/MethodLength:
+  CountAsOne: ["array", "hash", "heredoc"]
+  Exclude:
+    - "db/dataverse_migrate/*.rb" # Tables can be large
+    - "db/migrate/*.rb" # Tables can be large
+
+Metrics/ModuleLength:
+  CountAsOne: ["array", "hash", "heredoc"]
+
+# Be consistent in the I18n look-up style to avoid confusion on where a look-up is occuring. This
+# will treat default and non-default look-ups the same and make it clear where in configs a
+# translation needs to be modified.
+Rails/I18nLazyLookup:
+  Enabled: true
+  EnforcedStyle: explicit
+
+Rails/I18nLocaleTexts:
+  Enabled: false
+
+# We prefer the verbosity of this style over `to_fs`
+Rails/ToFormattedS:
+  EnforcedStyle: to_formatted_s
+
+# Exclude spec types which often require a string description as they are not necessarily testing a
+# specific class or there is no class at all (e.g. Rake tasks).
+RSpec/DescribeClass:
+  IgnoredMetadata:
+    type:
+      - feature
+      - pipeline
+      - rake
+      - request
+      - routing
+      - system
+      - task
+
+# We often prefer multi-lining arrays and hashes for readability. It is not uncommon for test data
+# to be specific to a single example block. We want to treat these inline variable declarations as
+# "one line" to discourage the unnecessary extraction of them into a `let`.
+#
+# `let` instances should indicate intentional state that is used across many or all specs in a given
+# context. Unnecessarily refactoring a variable into a `let` just to satisfy a block length check
+# will produce less reabable specs as they will muddy quick comprehension of the shared context
+# state.
+RSpec/ExampleLength:
+  Enabled: true
+  CountAsOne: ["array", "hash", "heredoc"]
+
+# Per rubocop-rspec CHANGELOG 2.24.1 we should disable this as we are now using SpecFilePathFormat
+RSpec/FilePath:
+  Enabled: false
+
+# RSpec does not recommend inferring spec types by location. While this is the default config it
+# remains in place largely for backwards compatibility. The preferred approach is to be specific
+# about the spec type via metadata.
+RSpec/Rails/InferredSpecType:
+  Enabled: false
+
+# When writing block expectations in specs, we always are going to chain a method on the end of the
+# block. To improve readability we want to use braces over `do`/`end` to avoid chaining methods on
+# `end`.
+#
+#     # Good: Block behaviors are cleanly highlighted and chained methods are easy to spot.
+#     # Usage of `{}` here has stylistic parity with `()` for multiline method chains.
+#     expect {
+#       # something
+#     }.to change {
+#       # something
+#     }.from(1).to(4)
+#
+#     # Bad: While the block segments are cleanly highlighted, chained methods get lost between
+#     # `end` and `do` text
+#     expect do
+#       # something
+#     end.to change do
+#       # something
+#     end.from(1).to(4)
+#
+#     # Bad: Standard style indentations make this odd to attempt to read
+#     expect do
+#       # something
+#     end
+#       .to change do
+#         # something
+#       end
+#       .from(1).to(4)
+#
+Style/BlockDelimiters:
+  EnforcedStyle: braces_for_chaining
+
+# We agree with the premise that it is generally easier to understand `if` checks than `unless`
+# checks. Rails already enforces some version of this with `if blank?` over `unless present?`.
+#
+# One exception to this is `unless any?`. This reads naturally for us and is easily understood
+# when compared with the inverse of `if none?`.
+Style/InvertibleUnlessCondition:
+  Enabled: true
+  InverseMethods:
+    :any?: ~
+
+# While we generally support multiline blocks using `do`/`end`, it can be harder to read such blocks
+# when part of a chain; since we are support multiline block chains. To improve readability we want
+# to ensure we are not allowing `end.method` as the `method` call is often easy to miss.
+Style/MethodCalledOnDoEndBlock:
+  Enabled: true
+
+# While we agree that in some cases avoiding multiline block chains are easier to read, we do not
+# feel it is a universal rule (e.g. something that could easily be a oneline block but was forced to
+# be a multiline single LOC block due to line length limits).
+Style/MultilineBlockChain:
+  Enabled: false
+
+Style/StringLiterals:
+  Enabled: true
+  EnforcedStyle: double_quotes
+
+# Enforce trailing commas for multiline code to reduce diff noise
+Style/TrailingCommaInArguments:
+  Enabled: true
+  EnforcedStyleForMultiline: consistent_comma
+
+# Enforce trailing commas for multiline code to reduce diff noise
+Style/TrailingCommaInArrayLiteral:
+  Enabled: true
+  EnforcedStyleForMultiline: consistent_comma
+
+# Enforce trailing commas for multiline code to reduce diff noise
+Style/TrailingCommaInHashLiteral:
+  Enabled: true
+  EnforcedStyleForMultiline: consistent_comma
+
+# We don't mind the double negation (!!nil) so we disable it
+Style/DoubleNegation:
+  Enabled: false
