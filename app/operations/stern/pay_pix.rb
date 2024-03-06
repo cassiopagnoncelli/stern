@@ -2,7 +2,7 @@
 
 module Stern
   # Pay a merchant pix.
-  # 
+  #
   # - apply credits
   # - add_pix_fee
   # - add_pix_payment
@@ -25,7 +25,7 @@ module Stern
     end
 
     def perform(operation_id)
-      raise ArgumentError unless operation_id.present?
+      raise ArgumentError if operation_id.blank?
       raise ArgumentError unless payment_id.present? && payment_id.is_a?(Numeric)
       raise ArgumentError unless merchant_id.present? && merchant_id.is_a?(Numeric)
       raise ArgumentError unless amount.present? && amount.is_a?(Numeric)
@@ -37,7 +37,10 @@ module Stern
       charged_fees = fee - charged_credits
 
       credit_tx_id = apply_credits(charged_credits, merchant_id) if charged_credits.abs.positive?
-      Tx.add_pix_fee(payment_id, merchant_id, charged_fees, operation_id:) if charged_fees.abs.positive?
+      if charged_fees.abs.positive?
+        Tx.add_pix_fee(payment_id, merchant_id, charged_fees,
+                       operation_id:,)
+      end
       Tx.add_pix_payment(payment_id, merchant_id, amount, credit_tx_id, operation_id:)
     end
 

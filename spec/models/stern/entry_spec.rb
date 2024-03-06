@@ -1,4 +1,4 @@
-require 'rails_helper'
+require "rails_helper"
 
 module Stern
   RSpec.describe Entry, type: :model do
@@ -13,17 +13,19 @@ module Stern
       it { should validate_presence_of(:tx_id) }
       it { should validate_presence_of(:amount) }
       it { should allow_value(DateTime.current.last_week).for(:timestamp) }
-      it { should belong_to(:tx).class_name('Stern::Tx').optional }
-      it { should belong_to(:book).class_name('Stern::Book').optional }
+      it { should belong_to(:tx).class_name("Stern::Tx").optional }
+      it { should belong_to(:book).class_name("Stern::Book").optional }
     end
 
     describe ".create" do
       it "creates without timestamp" do
-        expect { gen_entry }.to change { Entry.count }.by(1)
+        expect { gen_entry }.to change(described_class, :count).by(1)
       end
 
       it "creates with past timestamp" do
-        expect { gen_entry(timestamp: DateTime.current - 1.day) }.to change { Entry.count }.by(1)
+        expect {
+          gen_entry(timestamp: DateTime.current - 1.day)
+        }.to change(described_class, :count).by(1)
       end
 
       it "does not create for future timestamp" do
@@ -36,12 +38,12 @@ module Stern
     end
 
     describe ".update_all, #update, #update!" do
-      subject(:entry) { Entry.first }
+      subject(:entry) { described_class.first }
 
       before { gen_entry }
 
       it "calls update! in update_all call" do
-        expect { Entry.update_all(amount: 101).to raise_error(NotImplementedError) }
+        expect { described_class.update_all(amount: 101).to raise_error(NotImplementedError) }
       end
 
       it "calls update! in update call" do
@@ -58,7 +60,7 @@ module Stern
     end
 
     describe ".destroy_all, #destroy, #destroy!" do
-      subject(:entry) { Entry.first }
+      subject(:entry) { described_class.first }
 
       before { gen_entry }
 
@@ -67,7 +69,7 @@ module Stern
       end
 
       it "destroy! removes the record" do
-        expect { entry.destroy! }.to change(Entry, :count).by(-1)
+        expect { entry.destroy! }.to change(described_class, :count).by(-1)
       end
     end
 
@@ -76,7 +78,7 @@ module Stern
         before { gen_entry }
 
         it "returns a record" do
-          expect(Entry.last_entry(1, 1101, DateTime.current).count).to be(1)
+          expect(described_class.last_entry(1, 1101, DateTime.current).count).to be(1)
         end
       end
     end

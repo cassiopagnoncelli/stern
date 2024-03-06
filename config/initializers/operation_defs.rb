@@ -1,5 +1,5 @@
 def list_operations
-  operation_files = Dir[Rails.root.join('..', '..', 'app', 'operations', 'stern', '*.rb')]
+  operation_files = Dir[Rails.root.join("..", "..", "app", "operations", "stern", "*.rb")]
   operation_files.each { |file| require file }
 
   operation_classes = []

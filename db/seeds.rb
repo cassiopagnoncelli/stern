@@ -1,3 +1,3 @@
-require_relative 'seeds/books'
+require_relative "seeds/books"
 
 seed_books

@@ -21,7 +21,7 @@ module Stern
     end
 
     def perform(operation_id)
-      raise ArgumentError unless operation_id.present?
+      raise ArgumentError if operation_id.blank?
       raise ArgumentError unless settlement_id.present? && settlement_id.is_a?(Numeric)
       raise ArgumentError unless merchant_id.present? && merchant_id.is_a?(Numeric)
       raise ArgumentError unless amount.present? && amount.is_a?(Numeric)

@@ -10,13 +10,14 @@ module Stern
     end
 
     def self.amount_consistent?
-      Entry.sum(:amount) == 0
+      Entry.sum(:amount).zero?
     end
 
     def self.ending_balance_consistent?(book_id:, gid:)
       current_ending_balance = 0
       Entry.where(book_id:, gid:).order(:timestamp).each do |e|
         return false unless e.ending_balance == e.amount + current_ending_balance
+
         current_ending_balance += e.amount
       end
 
@@ -25,7 +26,7 @@ module Stern
 
     def self.ending_balances_inconsistencies_across_books(gid:)
       entry_ids = []
-      BOOKS.values.each do |book_id|
+      BOOKS.each_value do |book_id|
         entry_ids += ending_balances_inconsistencies(book_id:, gid:)
       end
       entry_ids
@@ -50,13 +51,16 @@ module Stern
         ) inconsistencies_results
         WHERE inconsistent = 1
       }
-      sanitized_sql = ApplicationRecord.sanitize_sql_array([sql, {book_id:, gid:}])
+      sanitized_sql = ApplicationRecord.sanitize_sql_array([sql, { book_id:, gid: }])
       results = ApplicationRecord.connection.execute(sanitized_sql)
       results.to_a.flatten
     end
 
     def self.rebuild_book_gid_balance(book_id, gid)
-      raise ArgumentError, "book is not valid" unless book_id.is_a?(Numeric) && book_id.in?(BOOKS.values)
+      unless book_id.is_a?(Numeric) && book_id.in?(BOOKS.values)
+        raise ArgumentError,
+              "book is not valid"
+      end
       raise ArgumentError, "gid is not valid" unless gid.is_a?(Numeric)
 
       sql = %{
@@ -72,22 +76,20 @@ module Stern
         ) l
         WHERE stern_entries.id = l.id
       }
-      sanitized_sql = ApplicationRecord.sanitize_sql_array([sql, {book_id:, gid:}])
+      sanitized_sql = ApplicationRecord.sanitize_sql_array([sql, { book_id:, gid: }])
       ApplicationRecord.connection.execute(sanitized_sql)
     end
 
     def self.rebuild_gid_balance(gid)
-      BOOKS.values.each do |book_id|
+      BOOKS.each_value do |book_id|
         rebuild_book_gid_balance(book_id, gid)
       end
     end
 
     def self.rebuild_balances(confirm = false)
-      unless confirm
-        raise ArgumentError, "You must confirm the operation"
-      end
+      raise ArgumentError, "You must confirm the operation" unless confirm
 
-      Entry.pluck(:gid).uniq.each do |gid|
+      Entry.distinct.pluck(:gid).each do |gid|
         rebuild_gid_balance(gid)
       end
     end
@@ -96,7 +98,7 @@ module Stern
       if Rails.env.production?
         raise StandardError, "for security reasons this operation cannot be performed in production"
       end
-  
+
       Entry.delete_all
       Tx.delete_all
       Operation.delete_all

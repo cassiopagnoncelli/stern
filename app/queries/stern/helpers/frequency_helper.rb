@@ -6,15 +6,15 @@ module Stern
       def self.frequency_in_sql(param)
         case param
         when :hourly
-          'HOUR'
+          "HOUR"
         when :daily
-          'DAY'
+          "DAY"
         when :weekly
-          'WEEK'
+          "WEEK"
         when :monthly
-          'MONTH'
+          "MONTH"
         when :yearly
-          'YEAR'
+          "YEAR"
         else
           raise ArgumentError, "invalid grouping date precision error"
         end

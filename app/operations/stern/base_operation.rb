@@ -15,13 +15,27 @@ module Stern
           operation.save!
           perform(operation.id)
         }
-        transaction ? ApplicationRecord.transaction { lock_tables; fun.call } : fun.call
+        if transaction
+          ApplicationRecord.transaction do
+            lock_tables
+            fun.call
+          end
+        else
+          fun.call
+        end
       when :undo, :backward, :backwards
         fun = lambda {
           Operation.build(name: get_name, direction: :undo, params: get_params).save!
           perform_undo
         }
-        transaction ? ApplicationRecord.transaction { lock_tables; fun.call } : fun.call
+        if transaction
+          ApplicationRecord.transaction do
+            lock_tables
+            fun.call
+          end
+        else
+          fun.call
+        end
       else
         raise ArgumentError, "provide `direction` with :do or :undo"
       end
@@ -44,7 +58,9 @@ module Stern
     end
 
     def new_credit_tx_id(remaining_tries = 10)
-      raise RuntimeError, "remaining tries exhausted while generating credit_tx_id" unless remaining_tries.positive?
+      unless remaining_tries.positive?
+        raise "remaining tries exhausted while generating credit_tx_id"
+      end
 
       seq = ::Stern::Tx.generate_tx_credit_id
 
@@ -72,15 +88,15 @@ module Stern
     end
 
     def get_name
-      self.class.to_s.gsub('Stern::', '')
+      self.class.to_s.gsub("Stern::", "")
     end
 
     def get_params
       attr_accessor_hash = {}
 
-      self.instance_variables.each do |ivar|
-        attr_name = ivar.to_s.gsub('@', '')
-        attr_value = self.instance_variable_get(ivar)
+      instance_variables.each do |ivar|
+        attr_name = ivar.to_s.gsub("@", "")
+        attr_value = instance_variable_get(ivar)
         attr_accessor_hash[attr_name] = attr_value
       end
 

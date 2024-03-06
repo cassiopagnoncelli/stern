@@ -13,23 +13,24 @@ module Stern
       runtime_error: 12,
     }
 
-    validates_presence_of :operation_def_id
+    validates :operation_def_id, presence: true
     validates :params, presence: true, allow_blank: true
-    validates_presence_of :after_time
-    validates_presence_of :status
-    validates_presence_of :status_time
+    validates :after_time, presence: true
+    validates :status, presence: true
+    validates :status_time, presence: true
 
-    belongs_to :operation_def, class_name: 'Stern::OperationDef', optional: true, primary_key: :operation_def_id, foreign_key: :id
+    belongs_to :operation_def, class_name: "Stern::OperationDef", optional: true,
+                               primary_key: :operation_def_id, foreign_key: :id
 
     after_initialize do
-      params ||= {}
-      status ||= :pending
-      status_time ||= DateTime.current.utc
+      params || {}
+      status || :pending
+      status_time || DateTime.current.utc
     end
 
-    scope :next_batch, ->(size = BATCH_SIZE) do
+    scope :next_batch, lambda { |_size = BATCH_SIZE|
       pending.limit(BATCH_SIZE)
-    end
+    }
 
     def self.execute_item(scheduled_op)
       scheduled_op.update!(status: :in_progress, status_time: DateTime.current.utc)
@@ -42,15 +43,17 @@ module Stern
 
         scheduled_op.update!(status: :finished, status_time: DateTime.current.utc)
       rescue ArgumentError => e
-        scheduled_op.update!(status: :argument_error, status_time: DateTime.current.utc, error_message: e.message)
+        scheduled_op.update!(status: :argument_error, status_time: DateTime.current.utc,
+                             error_message: e.message,)
       rescue StandardError => e
-        scheduled_op.update!(status: :runtime_error, status_time: DateTime.current.utc, error_message: e.message)
+        scheduled_op.update!(status: :runtime_error, status_time: DateTime.current.utc,
+                             error_message: e.message,)
       end
     end
 
     def self.requeue
       in_progress.where("status_time < ?", QUEUE_ITEM_TIMEOUT_IN_SECONDS.seconds.ago.utc)
-        .update_all(status: :pending)
+                 .update_all(status: :pending)
     end
 
     def self.build(name:, params:, after_time:, status: :pending, status_time: DateTime.current.utc)
@@ -60,7 +63,7 @@ module Stern
 
     # Effectively replaces delegation to OperationDef saving a database query.
     def name
-      OperationDef::Definitions.operation_classes_by_id[operation_def_id].name.gsub('Stern::', '')
+      OperationDef::Definitions.operation_classes_by_id[operation_def_id].name.gsub("Stern::", "")
     end
   end
 end

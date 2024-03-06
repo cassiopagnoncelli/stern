@@ -1,4 +1,4 @@
-require 'rails_helper'
+require "rails_helper"
 
 module Stern
   RSpec.describe Doctor, type: :model do
@@ -22,7 +22,7 @@ module Stern
       end
 
       it "has consistent balance" do
-        expect(described_class.ending_balance_consistent?(book_id:, gid:)).to be_truthy
+        expect(described_class).to be_ending_balance_consistent(book_id:, gid:)
       end
     end
 
@@ -40,13 +40,13 @@ module Stern
       end
 
       it "has amount and ending balances inconsistent" do
-        expect(described_class.amount_consistent?).to be_falsey
-        expect(described_class.ending_balance_consistent?(book_id:, gid:)).to be_falsey
+        expect(described_class).not_to be_amount_consistent
+        expect(described_class).not_to be_ending_balance_consistent(book_id:, gid:)
       end
 
       describe ".rebuild_balances" do
         it "raises error if not confirmed" do
-          expect{ described_class.rebuild_balances }.to raise_error(ArgumentError)
+          expect { described_class.rebuild_balances }.to raise_error(ArgumentError)
         end
 
         it "rebuilds if confirmed" do
@@ -57,7 +57,7 @@ module Stern
 
       describe ".rebuild_gid_balance" do
         it "rebuilds based on gid" do
-          expect(described_class).to receive(:rebuild_book_gid_balance).at_least(1).times
+          expect(described_class).to receive(:rebuild_book_gid_balance).at_least(:once)
           described_class.rebuild_gid_balance(1)
         end
       end
@@ -65,11 +65,11 @@ module Stern
       describe ".rebuild_book_gid_balance" do
         it "fixes ending balances" do
           described_class.rebuild_book_gid_balance(book_id, gid)
-          expect(described_class.ending_balance_consistent?(book_id:, gid:)).to be_truthy
+          expect(described_class).to be_ending_balance_consistent(book_id:, gid:)
         end
 
         it "does not fix previously spoiled amounts" do
-          expect(described_class.amount_consistent?).to be_falsey
+          expect(described_class).not_to be_amount_consistent
         end
       end
     end

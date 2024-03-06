@@ -9,8 +9,14 @@ module Stern
     # @param book_id [Bignum] book, eg. merchant balance
     # @param timestamp [DateTime] balance at the given time
     def initialize(book_id:, timestamp: DateTime.current)
-      raise ArgumentError, "book does not exist" unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
-      raise ArgumentError, "should be Date or DateTime" unless timestamp.is_a?(Date) || timestamp.is_a?(DateTime)
+      unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
+        raise ArgumentError,
+              "book does not exist"
+      end
+      unless timestamp.is_a?(Date) || timestamp.is_a?(DateTime)
+        raise ArgumentError,
+              "should be Date or DateTime"
+      end
 
       self.book_id = book_id.is_a?(Symbol) || book_id.is_a?(String) ? BOOKS[book_id] : book_id
       self.timestamp = Helpers::NormalizeTimeHelper.normalize_time(timestamp, true)
@@ -18,7 +24,7 @@ module Stern
 
     def call
       @results = execute_query
-      @results.first['outstanding'].to_i
+      @results.first["outstanding"].to_i
     end
 
     def execute_query
@@ -39,7 +45,7 @@ module Stern
           WHERE book_id = :book_id AND timestamp <= :timestamp
         ) ending_balances
       }
-      ApplicationRecord.sanitize_sql_array([sql, {book_id:, timestamp:}])
+      ApplicationRecord.sanitize_sql_array([sql, { book_id:, timestamp: }])
     end
   end
 end
