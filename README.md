@@ -94,7 +94,22 @@ will not be embed in `db/schema.rb`.
 To circumvent this limitation, you have add functions to migrations with
 
 ```sh
-rails app:db:migrate:functions
+bin/rails app:db:migrate:functions
+```
+
+## Standalone setup
+
+Create the databases and setup the app
+
+```sh
+bin/rails db:create
+RAILS_ENV=test bin/rails app:db:setup_env
+```
+
+You may test with RSpec locally
+
+```sh
+rspec
 ```
 
 ## Operatons
