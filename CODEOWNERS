@@ -1,0 +1,8 @@
+# CODEOWNERS
+#
+# https://help.github.com/en/github/creating-cloning-and-archiving-repositories/about-code-owners
+#
+# tl;dr Changes in pull requests to the files listed below will automatically request review from the code owner
+# and will require the code owner's approval before merging.
+
+* @cassiopagnoncelli
