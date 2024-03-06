@@ -2,7 +2,9 @@ require 'rails_helper'
 
 module Stern
   RSpec.describe Book, type: :model do
-    subject(:book) { create :book }
+    subject(:book) { build :book }
+
+    before { book.save! }
 
     let(:book_name) { BOOKS.keys.first.to_sym }
 
