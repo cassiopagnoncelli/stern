@@ -29,7 +29,7 @@ module Stern
     end
 
     describe "#perform" do
-      subject(:perform_payment) { pay_boleto.perform(operation_id) }
+      subject(:perform_operation) { pay_boleto.perform(operation_id) }
 
       let(:pay_boleto) { build(:pay_boleto) }
 
@@ -41,7 +41,7 @@ module Stern
         let(:operation_id) { 1 }
 
         it "calls the external services to process payment" do
-          perform_payment
+          perform_operation
           expect(Tx).to have_received(:add_boleto_fee)
           expect(Tx).to have_received(:add_boleto_payment)
         end
@@ -51,7 +51,7 @@ module Stern
         let(:operation_id) { nil }
 
         it "raises ArgumentError" do
-          expect { perform_payment }.to raise_error(ArgumentError)
+          expect { perform_operation }.to raise_error(ArgumentError)
         end
       end
     end

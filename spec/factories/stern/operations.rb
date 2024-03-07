@@ -5,6 +5,28 @@ FactoryBot.define do
     params { {} }
   end
 
+  factory :give_balance, class: "Stern::GiveBalance" do
+    uid { 12002 }
+    merchant_id { 1_101 }
+    amount { 7_500 }
+
+    trait :undo do
+      merchant_id { nil }
+      amount { nil }
+    end
+  end
+
+  factory :give_credit, class: "Stern::GiveCredit" do
+    uid { 12001 }
+    merchant_id { 1_101 }
+    amount { 6_000 }
+
+    trait :undo do
+      merchant_id { nil }
+      amount { nil }
+    end
+  end
+
   factory :open_settlement, class: "Stern::OpenSettlement" do
     settlement_id { 33_000 }
     merchant_id { 1_101 }

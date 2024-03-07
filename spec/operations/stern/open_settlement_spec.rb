@@ -27,7 +27,7 @@ module Stern
     end
 
     describe "#perform" do
-      subject(:perform_settlement) { open_settlement.perform(operation_id) }
+      subject(:perform_operation) { open_settlement.perform(operation_id) }
 
       let(:open_settlement) { build(:open_settlement) }
 
@@ -39,7 +39,7 @@ module Stern
         let(:operation_id) { 1 }
 
         it "calls the external services to process payment" do
-          perform_settlement
+          perform_operation
           expect(Tx).to have_received(:add_settlement_processing)
         end
       end
@@ -48,7 +48,7 @@ module Stern
         let(:operation_id) { nil }
 
         it "raises ArgumentError" do
-          expect { perform_settlement }.to raise_error(ArgumentError)
+          expect { perform_operation }.to raise_error(ArgumentError)
         end
       end
     end
