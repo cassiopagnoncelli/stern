@@ -10,6 +10,7 @@ module Stern
     # @param book_id [Bignum] book, eg. merchant balance
     # @param timestamp [DateTime] balance at the given time
     def initialize(book_id:, timestamp: DateTime.current)
+      super
       unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
         raise ArgumentError,
               "book does not exist"

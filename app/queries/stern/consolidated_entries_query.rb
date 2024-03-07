@@ -12,6 +12,7 @@ module Stern
     # @param start_date [DateTime] report starting date/time
     # @param end_date [DateTime] report ending date/time
     def initialize(gid:, book_id:, time_grouping:, start_date:, end_date:)
+      super
       unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
         raise ArgumentError,
               "book does not exist"
