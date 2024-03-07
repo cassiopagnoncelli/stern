@@ -63,8 +63,19 @@ RSpec.configure do |config|
   # arbitrary gems may also be filtered via:
   # config.filter_gems_from_backtrace("gem name")
 
+  #--
   #-- Custom code.
+  #--
+
+  # Deprecations turn errors.
   config.raise_errors_for_deprecations!
+
+  # Factory Bot.
+  config.include FactoryBot::Syntax::Methods
+  config.before(:suite) do
+    FactoryBot.definition_file_paths = [File.expand_path("factories/stern", __dir__)]
+    FactoryBot.find_definitions
+  end
 
   # Shoulda matchers.
   Shoulda::Matchers.configure do |config|
