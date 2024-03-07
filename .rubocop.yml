@@ -6,6 +6,9 @@ require:
 
 AllCops:
   NewCops: enable
+  Exclude:
+    - 'db/migrate/*'
+    - 'db/migrate/**/*'
 
 # Trailing spaces are easily missed visually. By enforcing leading spaces the visual indentation
 # helps so that the text continues from above. Further, when there is no leading indentation it can
