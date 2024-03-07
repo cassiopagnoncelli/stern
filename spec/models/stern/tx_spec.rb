@@ -36,6 +36,13 @@ module Stern
       it "stores positive and negative values for the transaction" do
         expect(tx.entries.pluck(:amount)).to include(amount, -amount)
       end
+
+      it "forbids duplicates" do
+        expect {
+          described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, timestamp, operation_id)
+          described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, timestamp, operation_id)
+        }.to raise_error(ActiveRecord::RecordNotUnique)
+      end
     end
 
     describe ".double_entry_remove" do
