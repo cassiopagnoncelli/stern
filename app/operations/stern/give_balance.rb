@@ -5,9 +5,17 @@ module Stern
   #
   # - add_balance
   class GiveBalance < BaseOperation
+    include ActiveModel::Validations
+
     UID = 5
 
     attr_accessor :uid, :merchant_id, :amount
+
+    validates :uid, presence: true, numericality: { other_than: 0 }
+    validates :merchant_id, presence: true, numericality: { other_than: 0 },
+                            unless: -> { validation_context == :undo }
+    validates :amount, presence: true, numericality: { other_than: 0 },
+                       unless: -> { validation_context == :undo }
 
     # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.
     #
@@ -21,17 +29,13 @@ module Stern
     end
 
     def perform(operation_id)
-      raise ArgumentError if operation_id.blank?
-      raise ArgumentError unless uid.present? && uid.is_a?(Numeric)
-      raise ArgumentError unless merchant_id.present? && merchant_id.is_a?(Numeric)
-      raise ArgumentError unless amount.present? && amount.is_a?(Numeric)
-      raise ArgumentError, "amount should not be zero" if amount.zero?
+      raise ArgumentError if invalid? || operation_id.blank?
 
       Tx.add_balance(uid, merchant_id, amount, operation_id:)
     end
 
     def perform_undo
-      raise ArgumentError unless uid.present? && uid.is_a?(Numeric)
+      raise ArgumentError if invalid?(:undo)
 
       tx = Tx.find_by!(code: TXS[:add_balance], uid:)
       Tx.remove_balance(tx.id)
