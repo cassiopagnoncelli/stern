@@ -7,9 +7,18 @@ module Stern
   # - add_settlement_fee
   # - add_settlement
   class ChargeSettlement < BaseOperation
+    include ActiveModel::Validations
+
     UID = 3
 
     attr_accessor :settlement_id, :merchant_id, :amount, :fee
+
+    validates :settlement_id, presence: true, numericality: { other_than: 0 }
+    validates :merchant_id, presence: true, numericality: { other_than: 0 },
+                            unless: -> { validation_context == :undo }
+    validates :amount, presence: true, numericality: { other_than: 0 },
+                       unless: -> { validation_context == :undo }
+    validates :fee, presence: true, numericality: true, unless: -> { validation_context == :undo }
 
     # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.
     #
@@ -25,12 +34,7 @@ module Stern
     end
 
     def perform(operation_id)
-      raise ArgumentError if operation_id.blank?
-      raise ArgumentError unless settlement_id.present? && settlement_id.is_a?(Numeric)
-      raise ArgumentError unless merchant_id.present? && merchant_id.is_a?(Numeric)
-      raise ArgumentError unless amount.present? && amount.is_a?(Numeric)
-      raise ArgumentError unless fee.present? && fee.is_a?(Numeric)
-      raise ArgumentError, "amount should not be zero" if amount.zero?
+      raise ArgumentError if invalid? || operation_id.blank?
 
       credits = ::Stern.balance(merchant_id, :merchant_credit)
       charged_credits = [fee, credits].min
@@ -42,10 +46,9 @@ module Stern
     end
 
     def perform_undo
-      raise ArgumentError unless settlement_id.present? && settlement_id.is_a?(Numeric)
+      raise ArgumentError if invalid?(:undo)
 
       credit_tx_id = Tx.find_by!(code: TXS[:add_settlement], uid: settlement_id).credit_tx_id
-
       Tx.remove_credit(credit_tx_id) if credit_tx_id.present?
       Tx.remove_settlement_fee(settlement_id)
       Tx.remove_settlement(settlement_id)
