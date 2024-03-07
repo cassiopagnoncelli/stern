@@ -2,11 +2,6 @@ require "rails_helper"
 
 module Stern
   RSpec.describe ScheduledOperation, type: :model do
-    subject(:scheduled_operation) { create(:scheduled_operation) }
-
-    let(:name) { "PayPix" }
-    let(:status) { :pending }
-
     describe "validations" do
       it { should validate_presence_of(:operation_def_id) }
       it { should validate_presence_of(:after_time) }
@@ -18,10 +13,12 @@ module Stern
 
     describe "#build" do
       subject(:build) { described_class.build(name:, params:, after_time:, status:, status_time:) }
-
+      let(:name) { "PayPix" }
       let(:params) { scheduled_operation.params }
       let(:after_time) { scheduled_operation.after_time }
+      let(:status) { :pending }
       let(:status_time) { scheduled_operation.status_time }
+      let(:scheduled_operation) { create(:scheduled_operation) }
 
       it { should be_an_instance_of described_class }
     end
