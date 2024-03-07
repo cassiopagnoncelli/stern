@@ -54,53 +54,9 @@ module Stern
     end
 
     describe "#call" do
-      subject(:open_settlement) { build(:open_settlement, settlement_id:, merchant_id:, amount:) }
+      subject(:operation) { build(:open_settlement) }
 
-      let(:settlement_id) { 777 }
-      let(:merchant_id) { 1101 }
-      let(:amount) { 9900 }
-
-      before do
-        allow(open_settlement).to receive(:lock_tables)
-        allow(open_settlement).to receive(:perform)
-        allow(open_settlement).to receive(:perform_undo)
-      end
-
-      it "performs the do operation within a transaction locking tables" do
-        open_settlement.call(direction: :do, transaction: true)
-        expect(open_settlement).to have_received(:perform)
-        expect(open_settlement).to have_received(:lock_tables)
-      end
-
-      it "performs the undo operation within a transaction locking tables" do
-        open_settlement.call(direction: :undo, transaction: true)
-        expect(open_settlement).to have_received(:perform_undo)
-        expect(open_settlement).to have_received(:lock_tables)
-      end
-
-      it "raises an ArgumentError when an invalid direction is given" do
-        expect {
-          open_settlement.call(direction: :invalid)
-        }.to raise_error(ArgumentError, "provide `direction` with :do or :undo")
-      end
-
-      describe "linked operation" do
-        context "when direction is forwards" do
-          it "records the operation" do
-            expect {
-              open_settlement.call(direction: :do, transaction: true)
-            }.to change(Operation, :count).by(1)
-          end
-        end
-
-        context "when direction is backwards" do
-          it "records the operation" do
-            expect {
-              open_settlement.call(direction: :undo, transaction: true)
-            }.to change(Operation, :count).by(1)
-          end
-        end
-      end
+      it_behaves_like "an operation call"
     end
   end
 end

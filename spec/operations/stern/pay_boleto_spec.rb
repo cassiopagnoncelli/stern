@@ -75,54 +75,9 @@ module Stern
     end
 
     describe "#call" do
-      subject(:pay_boleto) { build(:pay_boleto, payment_id:, merchant_id:, amount:, fee:) }
+      subject(:operation) { build(:pay_boleto) }
 
-      let(:payment_id) { 777 }
-      let(:merchant_id) { 1101 }
-      let(:amount) { 9900 }
-      let(:fee) { 100 }
-
-      before do
-        allow(pay_boleto).to receive(:lock_tables)
-        allow(pay_boleto).to receive(:perform)
-        allow(pay_boleto).to receive(:perform_undo)
-      end
-
-      it "performs the do operation within a transaction locking tables" do
-        pay_boleto.call(direction: :do, transaction: true)
-        expect(pay_boleto).to have_received(:perform)
-        expect(pay_boleto).to have_received(:lock_tables)
-      end
-
-      it "performs the undo operation within a transaction locking tables" do
-        pay_boleto.call(direction: :undo, transaction: true)
-        expect(pay_boleto).to have_received(:perform_undo)
-        expect(pay_boleto).to have_received(:lock_tables)
-      end
-
-      it "raises an ArgumentError when an invalid direction is given" do
-        expect {
-          pay_boleto.call(direction: :invalid)
-        }.to raise_error(ArgumentError, "provide `direction` with :do or :undo")
-      end
-
-      describe "linked operation" do
-        context "when direction is forwards" do
-          it "records the operation" do
-            expect {
-              pay_boleto.call(direction: :do, transaction: true)
-            }.to change(Operation, :count).by(1)
-          end
-        end
-
-        context "when direction is backwards" do
-          it "records the operation" do
-            expect {
-              pay_boleto.call(direction: :undo, transaction: true)
-            }.to change(Operation, :count).by(1)
-          end
-        end
-      end
+      it_behaves_like "an operation call"
     end
   end
 end
