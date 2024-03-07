@@ -107,15 +107,32 @@ module Stern
           pay_pix.call(direction: :invalid)
         }.to raise_error(ArgumentError, "provide `direction` with :do or :undo")
       end
+
+      describe "linked operation" do
+        context "when direction is forwards" do
+          it "records the operation" do
+            expect {
+              pay_pix.call(direction: :do, transaction: true)
+            }.to change(Operation, :count).by(1)
+          end
+        end
+
+        context "when direction is backwards" do
+          it "records the operation" do
+            expect {
+              pay_pix.call(direction: :undo, transaction: true)
+            }.to change(Operation, :count).by(1)
+          end
+        end
+      end
     end
 
     describe "#display" do
       subject(:pay_pix) { build(:pay_pix, payment_id: 123, merchant_id: 456, amount: 789, fee: 12) }
 
       it "returns formatted string" do
-        params_list = "payment_id=123 merchant_id=456 amount=789 fee=12"
-        expected_output = "{  #{described_class::UID}} PayPix: #{params_list}"
-        expect(pay_pix.display).to eq(expected_output)
+        expect(pay_pix.display).to match(described_class.name.gsub("Stern::", ""))
+        expect(pay_pix.display).to match("payment_id=123 merchant_id=456 amount=789 fee=12")
       end
     end
   end

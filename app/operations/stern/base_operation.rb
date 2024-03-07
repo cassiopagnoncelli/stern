@@ -5,16 +5,22 @@ module Stern
   #
   # All operations have to be backwards compatible.
   class BaseOperation
+    attr_accessor :operation
+
     def call(direction: :do, transaction: true)
       raise NotImplementedError unless operation_uid.is_a?(Integer)
 
+      base_operation = self
       case direction
       when :do, :redo, :forward, :forwards, :perform
         fun = lambda {
-          operation = Operation.build(name: operation_name, direction: :do,
-                                      params: operation_params,)
-          operation.save!
-          perform(operation.id)
+          base_operation.operation = Operation.build(
+            name: operation_name,
+            direction: :do,
+            params: operation_params,
+          )
+          base_operation.operation.save!
+          perform(base_operation.operation.id)
         }
         if transaction
           ApplicationRecord.transaction do
@@ -26,7 +32,12 @@ module Stern
         end
       when :undo, :backward, :backwards
         fun = lambda {
-          Operation.build(name: operation_name, direction: :undo, params: operation_params).save!
+          base_operation.operation = Operation.build(
+            name: operation_name,
+            direction: :undo,
+            params: operation_params,
+          )
+          base_operation.operation.save!
           perform_undo
         }
         if transaction
