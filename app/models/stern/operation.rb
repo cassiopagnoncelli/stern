@@ -6,9 +6,10 @@ module Stern
     validates :direction, presence: true
     validates :params, presence: true, allow_blank: true
 
-    has_many :txs, class_name: "Stern::Tx"
+    has_many :txs, class_name: "Stern::Tx", dependent: :restrict_with_exception
     belongs_to :operation_def, class_name: "Stern::OperationDef", optional: true,
-                               primary_key: :operation_def_id, foreign_key: :id
+                               primary_key: :operation_def_id, foreign_key: :id,
+                               inverse_of: :operations
 
     def self.build(name:, direction: :do, params: {})
       operation_def_id = OperationDef.get_id_by_name!(name)

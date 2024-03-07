@@ -5,7 +5,7 @@ module Stern
     validates :undo_capability, presence: true
 
     has_many :operations, class_name: "Stern::Operation", primary_key: :operation_def_id,
-                          foreign_key: :id
+                          foreign_key: :id, dependent: :restrict_with_exception
 
     def self.get_id_by_name!(name)
       if Definitions.operation_classes_by_name.keys.include?(name)

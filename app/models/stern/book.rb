@@ -2,7 +2,7 @@
 
 module Stern
   class Book < ApplicationRecord
-    has_many :entries, class_name: "Stern::Entry"
+    has_many :entries, class_name: "Stern::Entry", dependent: :restrict_with_exception
 
     validates :name, presence: true, uniqueness: true
 
