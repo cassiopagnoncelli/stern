@@ -10,7 +10,7 @@ module Stern
       DateTime.current
     end
 
-    context "consistent balance" do
+    context "when consistent balance" do
       let(:gid) { 1101 }
       let(:book_id) { BOOKS[:merchant_balance] }
       let(:entries) { Entry.where(book_id:, gid:).order(:timestamp) }
@@ -26,7 +26,7 @@ module Stern
       end
     end
 
-    context "inconsistent balance" do
+    context "when inconsistent balance" do
       let(:gid) { 1101 }
       let(:book_id) { BOOKS[:merchant_balance] }
       let(:entries) { Entry.where(book_id:, gid:).order(:timestamp) }
@@ -35,8 +35,12 @@ module Stern
         PayBoleto.new(payment_id: 101, merchant_id: gid, amount: 100, fee: 0).call
         PayBoleto.new(payment_id: 102, merchant_id: gid, amount: 100, fee: 0).call
         PayBoleto.new(payment_id: 103, merchant_id: gid, amount: 100, fee: 0).call
+
+        # Using update_column to circumvent validations.
+        # rubocop:disable Rails/SkipsModelValidations
         entries.second.update_column(:amount, 50)
         entries.second.update_column(:ending_balance, 9999)
+        # rubocop:enable Rails/SkipsModelValidations
       end
 
       it "has amount and ending balances inconsistent" do
@@ -51,14 +55,15 @@ module Stern
 
         it "rebuilds if confirmed" do
           allow(described_class).to receive(:rebuild_gid_balance)
-          described_class.rebuild_balances(true)
+          expect { described_class.rebuild_balances(confirm: true) }.not_to raise_error
         end
       end
 
       describe ".rebuild_gid_balance" do
         it "rebuilds based on gid" do
-          expect(described_class).to receive(:rebuild_book_gid_balance).at_least(:once)
-          described_class.rebuild_gid_balance(1)
+          allow(described_class).to receive(:rebuild_book_gid_balance)
+          described_class.rebuild_gid_balance(1)          
+          expect(described_class).to have_received(:rebuild_book_gid_balance).with(anything, 1).at_least(:once)
         end
       end
 

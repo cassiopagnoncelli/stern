@@ -32,14 +32,18 @@ module Stern
       entry_ids
     end
 
-    def self.ending_balances_inconsistencies(book_id:, gid:)
+    def self.ending_balances_inconsistencies(book_id:, gid:) # rubocop:disable Metrics/MethodLength
       sql = %{
         SELECT entry_id
         FROM (
           SELECT
             se.id AS entry_id,
             CASE WHEN ending_balance = checked_ending_balance THEN 0 ELSE 1 END AS inconsistent
-          FROM (SELECT id, ending_balance FROM stern_entries WHERE book_id = :book_id AND gid = :gid) se
+          FROM (
+            SELECT id, ending_balance
+            FROM stern_entries
+            WHERE book_id = :book_id AND gid = :gid
+          ) se
           LEFT JOIN (
             SELECT
               id,
@@ -63,6 +67,15 @@ module Stern
       end
       raise ArgumentError, "gid is not valid" unless gid.is_a?(Numeric)
 
+      ApplicationRecord.connection.execute(
+        rebuild_book_gid_balance_sanitized_sql(
+          book_id,
+          gid,
+        ),
+      )
+    end
+
+    def self.rebuild_book_gid_balance_sanitized_sql(book_id, gid)
       sql = %{
         UPDATE stern_entries
         SET ending_balance = l.new_ending_balance
@@ -76,8 +89,7 @@ module Stern
         ) l
         WHERE stern_entries.id = l.id
       }
-      sanitized_sql = ApplicationRecord.sanitize_sql_array([sql, { book_id:, gid: }])
-      ApplicationRecord.connection.execute(sanitized_sql)
+      ApplicationRecord.sanitize_sql_array([sql, { book_id:, gid: }])
     end
 
     def self.rebuild_gid_balance(gid)
@@ -86,7 +98,7 @@ module Stern
       end
     end
 
-    def self.rebuild_balances(confirm = false)
+    def self.rebuild_balances(confirm: false)
       raise ArgumentError, "You must confirm the operation" unless confirm
 
       Entry.distinct.pluck(:gid).each do |gid|
@@ -96,7 +108,7 @@ module Stern
 
     def self.clear
       if Rails.env.production?
-        raise StandardError, "for security reasons this operation cannot be performed in production"
+        raise StandardError, "cannot perform in production for security reasons"
       end
 
       Entry.delete_all
