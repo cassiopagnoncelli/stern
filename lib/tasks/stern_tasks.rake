@@ -31,7 +31,7 @@ namespace :db do
     desc "seed OperationDef model"
     task :refresh => :environment do
       printf "Persisting operation definitions... "
-      Stern::OperationDef::Definitions.persist
+      Stern::OperationDef::Definitions.persist!
       puts "OK"
     end
   end
