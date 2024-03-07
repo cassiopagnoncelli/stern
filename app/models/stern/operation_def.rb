@@ -4,8 +4,16 @@ module Stern
     validates :active, presence: true
     validates :undo_capability, presence: true
 
-    has_many :operations, class_name: "Stern::Operation", primary_key: :operation_def_id,
-                          foreign_key: :id, dependent: :restrict_with_exception
+    has_many :operations, class_name: "Stern::Operation",
+                          primary_key: :operation_def_id,
+                          foreign_key: :id,
+                          dependent: :restrict_with_exception,
+                          inverse_of: :operation_def
+    has_many :scheduled_operations, class_name: "Stern::ScheduledOperation",
+                                    primary_key: :operation_def_id,
+                                    foreign_key: :id,
+                                    dependent: :restrict_with_exception,
+                                    inverse_of: :operation_def
 
     def self.get_id_by_name!(name)
       if Definitions.operation_classes_by_name.keys.include?(name)
