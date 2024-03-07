@@ -13,8 +13,8 @@ module Stern
 
     attr_accessor :payment_id, :merchant_id, :amount, :fee
 
-    validates :payment_id, presence: true, numericality: true
-    validates :merchant_id, presence: true, numericality: true,
+    validates :payment_id, presence: true, numericality: { other_than: 0 }
+    validates :merchant_id, presence: true, numericality: { other_than: 0 },
                             unless: -> { validation_context == :undo }
     validates :amount, presence: true, numericality: { other_than: 0 },
                        unless: -> { validation_context == :undo }

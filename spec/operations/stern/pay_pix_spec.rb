@@ -7,9 +7,9 @@ module Stern
         subject(:pay_pix) { build(:pay_pix) }
 
         it { should validate_presence_of(:payment_id) }
-        it { should validate_numericality_of(:payment_id) }
+        it { should validate_numericality_of(:payment_id).is_other_than(0) }
         it { should validate_presence_of(:merchant_id) }
-        it { should validate_numericality_of(:merchant_id) }
+        it { should validate_numericality_of(:merchant_id).is_other_than(0) }
         it { should validate_presence_of(:amount) }
         it { should validate_numericality_of(:amount).is_other_than(0) }
         it { should validate_presence_of(:fee) }

@@ -5,9 +5,17 @@ module Stern
   #
   # - add_settlement_processing
   class OpenSettlement < BaseOperation
+    include ActiveModel::Validations
+
     UID = 7
 
     attr_accessor :settlement_id, :merchant_id, :amount
+
+    validates :settlement_id, presence: true, numericality: { other_than: 0 }
+    validates :merchant_id, presence: true, numericality: { other_than: 0 },
+                            unless: -> { validation_context == :undo }
+    validates :amount, presence: true, numericality: { other_than: 0 },
+                       unless: -> { validation_context == :undo }
 
     # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.
     #
@@ -21,17 +29,13 @@ module Stern
     end
 
     def perform(operation_id)
-      raise ArgumentError if operation_id.blank?
-      raise ArgumentError unless settlement_id.present? && settlement_id.is_a?(Numeric)
-      raise ArgumentError unless merchant_id.present? && merchant_id.is_a?(Numeric)
-      raise ArgumentError unless amount.present? && amount.is_a?(Numeric)
-      raise ArgumentError, "amount should not be zero" if amount.zero?
+      raise ArgumentError if invalid? || operation_id.blank?
 
       Tx.add_settlement_processing(settlement_id, merchant_id, amount, nil, operation_id:)
     end
 
     def perform_undo
-      raise ArgumentError unless settlement_id.present? && settlement_id.is_a?(Numeric)
+      raise ArgumentError if invalid?(:undo)
 
       Tx.remove_settlement(settlement_id)
     end
