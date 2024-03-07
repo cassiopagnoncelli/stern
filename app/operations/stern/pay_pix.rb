@@ -13,9 +13,10 @@ module Stern
 
     attr_accessor :payment_id, :merchant_id, :amount, :fee
 
-    validates :payment_id, :merchant_id, :amount, :fee, presence: true
-    validates :payment_id, :merchant_id, :amount, :fee, numericality: true
-    validates :amount, numericality: { other_than: 0 }
+    validates :payment_id, presence: true, numericality: true
+    validates :merchant_id, presence: true, numericality: true, unless: -> { validation_context == :undo }
+    validates :amount, presence: true, numericality: { other_than: 0 }, unless: -> { validation_context == :undo }
+    validates :fee, presence: true, numericality: true, unless: -> { validation_context == :undo }
 
     # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.
     #
@@ -31,9 +32,7 @@ module Stern
     end
 
     def perform(operation_id)
-      @performing = true
-      raise ArgumentError if operation_id.blank?
-      raise ArgumentError unless valid?
+      raise ArgumentError if invalid? || operation_id.blank?
 
       credits = ::Stern.balance(merchant_id, :merchant_credit)
       charged_credits = [fee, credits].min
@@ -47,7 +46,7 @@ module Stern
     end
 
     def perform_undo
-      raise ArgumentError unless payment_id.present? && payment_id.is_a?(Numeric)
+      raise ArgumentError if invalid?(:undo)
 
       credit_tx_id = Tx.find_by!(code: TXS[:add_pix_payment], uid: payment_id).credit_tx_id
       Tx.remove_credit(credit_tx_id) if credit_tx_id.present?
