@@ -16,6 +16,18 @@ module Stern
       raise NotImplementedError, "Entry records cannot be updated by design"
     end
 
+    before_create do
+      if timestamp.presence && timestamp > DateTime.current
+        raise(ArgumentError,
+              "timestamp cannot be in the future",)
+      end
+      raise ArgumentError, "amount must be non-zero integer" if amount.blank? || amount.zero?
+      raise ArgumentError, "book_id undefined" if book_id.blank?
+      raise ArgumentError, "book_id undefined" if book_id.blank?
+      raise ArgumentError, "gid undefined" if gid.blank?
+      raise ArgumentError, "tx_id undefined" if tx_id.blank?
+    end
+
     scope :last_entry, lambda { |book_id, gid, timestamp|
       where(book_id:, gid:)
         .where("timestamp <= ?", timestamp || DateTime.current)
@@ -23,21 +35,27 @@ module Stern
         .last(1)
     }
 
+    def self.update_all(*_args)
+      raise NotImplementedError, "Entry records cannot be updated by design"
+    end
+
     def self.create(**params)
       raise NotImplementedError, "Use create! instead"
     end
 
     def self.create!(book_id:, gid:, tx_id:, amount:, timestamp: nil)
-      if timestamp.presence && timestamp > DateTime.current
-        raise ArgumentError,
-              "timestamp cannot be in the future"
-      end
-      raise ArgumentError, "amount must be non-zero integer" if amount.blank? || amount.zero?
-      raise ArgumentError, "book_id undefined" if book_id.blank?
-      raise ArgumentError, "book_id undefined" if book_id.blank?
-      raise ArgumentError, "gid undefined" if gid.blank?
-      raise ArgumentError, "tx_id undefined" if tx_id.blank?
+      ApplicationRecord.connection.execute(
+        sanitized_sql(
+          book_id:,
+          gid:,
+          tx_id:,
+          amount:,
+          timestamp:,
+        ),
+      )
+    end
 
+    def self.sanitized_sql(book_id:, gid:, tx_id:, amount:, timestamp:)
       sql = %{
         SELECT * FROM create_entry(
           in_book_id := :book_id,
@@ -48,10 +66,7 @@ module Stern
           verbose_mode := FALSE
         )
       }.squish
-      sanitized_sql = ApplicationRecord.sanitize_sql_array([sql,
-                                                            { book_id:, gid:, tx_id:, amount:,
-                                                              timestamp:, },])
-      ApplicationRecord.connection.execute(sanitized_sql)
+      ApplicationRecord.sanitize_sql_array([sql, { book_id:, gid:, tx_id:, amount:, timestamp: }])
     end
 
     def destroy
@@ -70,8 +85,14 @@ module Stern
     end
 
     def display
-      format("%d-%s %.2f =%.2f {id:%s}", gid, book_name, amount.to_f / 100,
-             ending_balance.to_f / 100, id,)
+      format(
+        "id:%<id>s gid:%<gid>d book:%<book_name>s amount:%<amount>.2f balance:%<ending_balance>.2f",
+        gid:,
+        book_name:,
+        amount: amount.to_f / 100,
+        ending_balance: ending_balance.to_f / 100,
+        id:,
+      )
     end
 
     def book_name

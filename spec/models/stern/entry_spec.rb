@@ -17,7 +17,7 @@ module Stern
       it { should belong_to(:book).class_name("Stern::Book").optional }
     end
 
-    describe ".create" do
+    context "when creating" do
       it "creates without timestamp" do
         expect { gen_entry }.to change(described_class, :count).by(1)
       end
@@ -36,6 +36,12 @@ module Stern
 
       it "does not create with empty amount" do
         expect { gen_entry(amount: 0) }.to raise_error(ActiveRecord::StatementInvalid)
+      end
+
+      it "does not create without bang operator" do
+        expect {
+          described_class.create(book_id: 1, gid: 1101, tx_id: 1, amount: 100, timestamp: nil)
+        }.to raise_error(NotImplementedError, "Use create! instead")
       end
     end
 
@@ -57,7 +63,7 @@ module Stern
         }.to raise_error(NotImplementedError, message)
       end
 
-      it "errors error with update_all" do
+      it "raises error with update_all" do
         expect {
           described_class.update_all(amount: 101) # rubocop:disable Rails/SkipsModelValidations
         }.to raise_error(NotImplementedError, message)
