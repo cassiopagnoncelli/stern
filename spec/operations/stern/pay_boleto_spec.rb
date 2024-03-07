@@ -33,6 +33,8 @@ module Stern
 
       let(:pay_boleto) { build(:pay_boleto) }
 
+      before { pay_boleto.log_operation(:do) }
+
       context "with valid attributes and operation_id" do
         before { allow(Tx).to receive_messages(add_boleto_fee: true, add_boleto_payment: true) }
 

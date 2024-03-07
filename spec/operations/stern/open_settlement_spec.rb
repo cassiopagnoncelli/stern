@@ -31,6 +31,19 @@ module Stern
 
       let(:open_settlement) { build(:open_settlement) }
 
+      before { open_settlement.log_operation(:do) }
+
+      context "with valid attributes and operation_id" do
+        before { allow(Tx).to receive_messages(add_settlement_processing: true) }
+
+        let(:operation_id) { 1 }
+
+        it "calls the external services to process payment" do
+          perform_settlement
+          expect(Tx).to have_received(:add_settlement_processing)
+        end
+      end
+
       context "with invalid operation_id" do
         let(:operation_id) { nil }
 

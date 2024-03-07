@@ -33,6 +33,8 @@ module Stern
 
       let(:pay_pix) { build(:pay_pix) }
 
+      before { pay_pix.log_operation(:do) }
+
       context "with valid attributes and operation_id" do
         before { allow(Tx).to receive_messages(add_pix_fee: true, add_pix_payment: true) }
 

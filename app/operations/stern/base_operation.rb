@@ -14,12 +14,7 @@ module Stern
       case direction
       when :do, :redo, :forward, :forwards, :perform
         fun = lambda {
-          base_operation.operation = Operation.build(
-            name: operation_name,
-            direction: :do,
-            params: operation_params,
-          )
-          base_operation.operation.save!
+          log_operation(:do, base_operation)
           perform(base_operation.operation.id)
         }
         if transaction
@@ -32,12 +27,7 @@ module Stern
         end
       when :undo, :backward, :backwards
         fun = lambda {
-          base_operation.operation = Operation.build(
-            name: operation_name,
-            direction: :undo,
-            params: operation_params,
-          )
-          base_operation.operation.save!
+          log_operation(:undo, base_operation)
           perform_undo
         }
         if transaction
@@ -96,6 +86,18 @@ module Stern
         operation_name:,
         params_str:,
       )
+    end
+
+    def log_operation(direction, base_operation = self)
+      raise ArgumentError unless direction.in?([:do, :undo])
+
+      base_operation.operation = Operation.build(
+        name: operation_name,
+        direction:,
+        params: operation_params,
+      )
+      base_operation.operation.save!
+      base_operation.operation
     end
 
     private
