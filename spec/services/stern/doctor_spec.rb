@@ -62,8 +62,9 @@ module Stern
       describe ".rebuild_gid_balance" do
         it "rebuilds based on gid" do
           allow(described_class).to receive(:rebuild_book_gid_balance)
-          described_class.rebuild_gid_balance(1)          
-          expect(described_class).to have_received(:rebuild_book_gid_balance).with(anything, 1).at_least(:once)
+          described_class.rebuild_gid_balance(1)
+          expect(described_class).to have_received(:rebuild_book_gid_balance)
+            .with(anything, 1).at_least(:once)
         end
       end
 
