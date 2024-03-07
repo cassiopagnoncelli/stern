@@ -27,10 +27,13 @@ module Stern
     end
 
     STERN_DEFS[:txs].each do |name, defs|
+      # rubocop:disable Metrics/ParameterLists, Layout/LineLength
       define_singleton_method :"add_#{name}" do |uid, gid, amount, credit_tx_id = nil, timestamp: nil, operation_id: nil|
         double_entry_add("add_#{name}", gid, uid,
-                         defs[:book_add], defs[:book_sub], amount, credit_tx_id, timestamp, operation_id,)
+                         defs[:book_add], defs[:book_sub], amount, credit_tx_id, timestamp,
+                         operation_id,)
       end
+      # rubocop:enable Metrics/ParameterLists, Layout/LineLength
 
       define_singleton_method :"remove_#{name}" do |uid|
         double_entry_remove(:"add_#{name}", uid, defs[:book_add].to_sym,
@@ -38,7 +41,9 @@ module Stern
       end
     end
 
-    def self.double_entry_add(code, gid, uid, book_add, book_sub, amount, credit_tx_id, timestamp, operation_id)
+    # rubocop:disable Metrics/ParameterLists
+    def self.double_entry_add(code, gid, uid, book_add, book_sub, amount, credit_tx_id, timestamp,
+                              operation_id)
       tx = Tx.find_or_create_by!(code: codes[code], uid:, amount:, credit_tx_id:, timestamp:,
                                  operation_id:,)
       Entry.create!(book_id: Book.code(book_add), gid:, tx_id: tx.id, amount:, timestamp:)
@@ -46,6 +51,7 @@ module Stern
                     timestamp:,)
       tx.id
     end
+    # rubocop:enable Metrics/ParameterLists
 
     def self.double_entry_remove(code, uid, book_add, book_sub)
       tx = Tx.find_by!(code: codes[code], uid:)

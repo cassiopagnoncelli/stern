@@ -15,9 +15,9 @@ module Stern
     # @param merchant_id [Bigint] merchant id
     # @param amount [Bigint] amount in cents
     def initialize(uid: nil, merchant_id: nil, amount: nil)
-      @uid = uid
-      @merchant_id = merchant_id
-      @amount = amount
+      self.uid = uid
+      self.merchant_id = merchant_id
+      self.amount = amount
     end
 
     def perform(operation_id)

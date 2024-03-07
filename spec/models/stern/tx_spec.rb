@@ -2,7 +2,7 @@ require "rails_helper"
 
 module Stern
   RSpec.describe Tx, type: :model do
-    subject(:tx) { described_class.find_by!(id: tx_id, code: code, uid: uid) }
+    subject(:tx) { described_class.find_by!(id: tx_id, code:, uid:) }
     let(:tx_id) do
       described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, timestamp, operation_id)
     end
@@ -21,7 +21,7 @@ module Stern
       it { should validate_presence_of(:uid) }
       it { should validate_presence_of(:amount) }
       it { should validate_presence_of(:uid) }
-      it { should validate_presence_of(:operation_id) }
+      it { should belong_to(:operation) }
       it { should have_many(:entries) }
       it { should belong_to(:operation) }
     end
