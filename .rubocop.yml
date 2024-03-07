@@ -57,6 +57,8 @@ Metrics/MethodLength:
 
 Metrics/ModuleLength:
   CountAsOne: ["array", "hash", "heredoc"]
+  Exclude:
+    - "spec/operations/stern/**/*.rb"
 
 # Be consistent in the I18n look-up style to avoid confusion on where a look-up is occuring. This
 # will treat default and non-default look-ups the same and make it clear where in configs a
