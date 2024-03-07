@@ -1,4 +1,4 @@
-require 'rails_helper'
+require "rails_helper"
 
 module Stern
   RSpec.describe Operation, type: :model do

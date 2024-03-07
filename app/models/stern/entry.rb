@@ -2,25 +2,41 @@
 
 module Stern
   class Entry < ApplicationRecord
-    validates_presence_of :book_id
-    validates_presence_of :gid
-    validates_presence_of :tx_id
+    validates :book_id, presence: true
+    validates :gid, presence: true
+    validates :tx_id, presence: true
     validates :amount, presence: true, exclusion: { in: [0] }
-    validates_uniqueness_of :tx_id, scope: [:book_id, :gid]
-    validates_uniqueness_of :timestamp, scope: [:book_id, :gid]
+    validates :tx_id, uniqueness: { scope: [:book_id, :gid] }
+    validates :timestamp, uniqueness: { scope: [:book_id, :gid] }
 
-    belongs_to :tx, class_name: 'Stern::Tx', optional: true
-    belongs_to :book, class_name: 'Stern::Book', optional: true
+    belongs_to :tx, class_name: "Stern::Tx", optional: true
+    belongs_to :book, class_name: "Stern::Book", optional: true
 
     before_update do
       raise NotImplementedError, "Entry records cannot be updated by design"
     end
 
-    scope :last_entry, ->(book_id, gid, timestamp) do
-      where(book_id: book_id, gid: gid)
-        .where('timestamp <= ?', timestamp || DateTime.current)
+    before_create do
+      if timestamp.presence && timestamp > DateTime.current
+        raise(ArgumentError,
+              "timestamp cannot be in the future",)
+      end
+      raise ArgumentError, "amount must be non-zero integer" if amount.blank? || amount.zero?
+      raise ArgumentError, "book_id undefined" if book_id.blank?
+      raise ArgumentError, "book_id undefined" if book_id.blank?
+      raise ArgumentError, "gid undefined" if gid.blank?
+      raise ArgumentError, "tx_id undefined" if tx_id.blank?
+    end
+
+    scope :last_entry, lambda { |book_id, gid, timestamp|
+      where(book_id:, gid:)
+        .where("timestamp <= ?", timestamp || DateTime.current)
         .order(:timestamp, :id)
         .last(1)
+    }
+
+    def self.update_all(*_args)
+      raise NotImplementedError, "Entry records cannot be updated by design"
     end
 
     def self.create(**params)
@@ -28,13 +44,18 @@ module Stern
     end
 
     def self.create!(book_id:, gid:, tx_id:, amount:, timestamp: nil)
-      raise ArgumentError, "timestamp cannot be in the future" if timestamp.presence && timestamp > DateTime.current
-      raise ArgumentError, "amount must be non-zero integer" if amount.blank? || amount.zero?
-      raise ArgumentError, "book_id undefined" unless book_id.present?
-      raise ArgumentError, "book_id undefined" unless book_id.present?
-      raise ArgumentError, "gid undefined" unless gid.present?
-      raise ArgumentError, "tx_id undefined" unless tx_id.present?
+      ApplicationRecord.connection.execute(
+        sanitized_sql(
+          book_id:,
+          gid:,
+          tx_id:,
+          amount:,
+          timestamp:,
+        ),
+      )
+    end
 
+    def self.sanitized_sql(book_id:, gid:, tx_id:, amount:, timestamp:)
       sql = %{
         SELECT * FROM create_entry(
           in_book_id := :book_id,
@@ -45,9 +66,7 @@ module Stern
           verbose_mode := FALSE
         )
       }.squish
-      sanitized_sql = ApplicationRecord.sanitize_sql_array([sql, 
-        {book_id:, gid:, tx_id:, amount:, timestamp:}])
-      ApplicationRecord.connection.execute(sanitized_sql)
+      ApplicationRecord.sanitize_sql_array([sql, { book_id:, gid:, tx_id:, amount:, timestamp: }])
     end
 
     def destroy
@@ -61,12 +80,19 @@ module Stern
           verbose_mode := FALSE
         )
       }.squish
-      sanitized_sql = ApplicationRecord.sanitize_sql_array([sql, {id:}])
+      sanitized_sql = ApplicationRecord.sanitize_sql_array([sql, { id: }])
       ApplicationRecord.connection.execute(sanitized_sql)
     end
 
     def display
-      "%d-%s %.2f =%.2f {id:%s}" % [gid, book_name, amount.to_f/100, ending_balance.to_f/100, id]
+      format(
+        "id:%<id>s gid:%<gid>d book:%<book_name>s amount:%<amount>.2f balance:%<ending_balance>.2f",
+        gid:,
+        book_name:,
+        amount: amount.to_f / 100,
+        ending_balance: ending_balance.to_f / 100,
+        id:,
+      )
     end
 
     def book_name

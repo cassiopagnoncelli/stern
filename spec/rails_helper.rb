@@ -1,10 +1,10 @@
 # This file is copied to spec/ when you run 'rails generate rspec:install'
-require 'spec_helper'
-ENV['RAILS_ENV'] ||= 'test'
-require_relative 'dummy/config/environment'
+require "spec_helper"
+ENV["RAILS_ENV"] ||= "test"
+require_relative "dummy/config/environment"
 # Prevent database truncation if the environment is production
 abort("The Rails environment is running in production mode!") if Rails.env.production?
-require 'rspec/rails'
+require "rspec/rails"
 # Add additional requires below this line. Rails is not loaded until this point!
 
 # Requires supporting ruby files with custom matchers and macros, etc, in
@@ -20,7 +20,7 @@ require 'rspec/rails'
 # directory. Alternatively, in the individual `*_spec.rb` files, manually
 # require only the support files necessary.
 #
-Dir[Rails.root.join('spec', 'support', '**', '*.rb')].sort.each { |f| require f }
+Dir[Rails.root.join("spec", "support", "**", "*.rb")].each { |f| require f }
 
 require_relative "support/stern/factory_bot.rb"
 
@@ -63,8 +63,19 @@ RSpec.configure do |config|
   # arbitrary gems may also be filtered via:
   # config.filter_gems_from_backtrace("gem name")
 
+  #--
   #-- Custom code.
+  #--
+
+  # Deprecations turn errors.
   config.raise_errors_for_deprecations!
+
+  # Factory Bot.
+  config.include FactoryBot::Syntax::Methods
+  config.before(:suite) do
+    FactoryBot.definition_file_paths = [File.expand_path("factories/stern", __dir__)]
+    FactoryBot.find_definitions
+  end
 
   # Shoulda matchers.
   Shoulda::Matchers.configure do |config|

@@ -12,7 +12,11 @@ module Stern
     # @param start_date [DateTime] report starting date/time
     # @param end_date [DateTime] report ending date/time
     def initialize(gid:, book_id:, time_grouping:, start_date:, end_date:)
-      raise ArgumentError, "book does not exist" unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
+      super
+      unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
+        raise ArgumentError,
+              "book does not exist"
+      end
 
       self.gid = gid
       self.book_id = book_id.is_a?(Symbol) || book_id.is_a?(String) ? BOOKS[book_id] : book_id
@@ -24,8 +28,8 @@ module Stern
     def call
       @results = execute_query
       @results.map do |record|
-        record['code'] = TXS.invert[record['code']]
-        record['time_window'] = record['time_window'].in_time_zone.to_datetime
+        record["code"] = TXS.invert[record["code"]]
+        record["time_window"] = record["time_window"].in_time_zone.to_datetime
         record
       end
     end
@@ -50,8 +54,8 @@ module Stern
         ORDER BY time_window, code
       }
       ApplicationRecord.sanitize_sql_array([sql,
-        { time_grouping:, gid:, book_id:, start_date:, end_date: }
-      ])
+                                            { time_grouping:, gid:, book_id:, start_date:,
+                                              end_date:, },])
     end
   end
 end

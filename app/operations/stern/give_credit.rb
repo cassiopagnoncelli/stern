@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-
 module Stern
   # Give away merchant credit.
   #
@@ -16,13 +15,13 @@ module Stern
     # @param merchant_id [Bigint] merchant id
     # @param amount [Bigint] amount in cents
     def initialize(uid: nil, merchant_id: nil, amount: nil)
-      @uid = uid
-      @merchant_id = merchant_id
-      @amount = amount
+      self.uid = uid
+      self.merchant_id = merchant_id
+      self.amount = amount
     end
 
     def perform(operation_id)
-      raise ArgumentError unless operation_id.present?
+      raise ArgumentError if operation_id.blank?
       raise ArgumentError unless uid.present? && uid.is_a?(Numeric)
       raise ArgumentError unless merchant_id.present? && merchant_id.is_a?(Numeric)
       raise ArgumentError unless amount.present? && amount.is_a?(Numeric)

@@ -7,7 +7,6 @@ gemspec
 
 # gem "pg"
 # gem "rspec-rails"
-# gem "factory_bot_rails"
 
 group :development, :test do
   gem "byebug"
@@ -15,6 +14,7 @@ group :development, :test do
   gem "dotenv-rails"
   gem "shoulda-matchers"
   gem "rubocop"
+  gem "factory_bot_rails"
 end
 
 # Start debugger with binding.b [https://github.com/ruby/debug]

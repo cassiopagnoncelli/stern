@@ -1,6 +1,6 @@
 class CreateSternOperationDefs < ActiveRecord::Migration[7.0]
   def change
-    create_table :stern_operation_defs do |t|
+    create_table :stern_operation_defs, if_not_exists: true do |t|
       t.string :name, null: false, index: true
       t.boolean :active, null: false
       t.boolean :undo_capability, null: false

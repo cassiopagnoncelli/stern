@@ -1,10 +1,10 @@
-require 'rails_helper'
+require "rails_helper"
 
 module Stern
   RSpec.describe Entry, type: :model do
     def gen_entry(amount: 100, timestamp: nil)
       Doctor.clear
-      Entry.create!(book_id: 1, gid: 1101, tx_id: 1, amount:, timestamp:)
+      described_class.create!(book_id: 1, gid: 1101, tx_id: 1, amount:, timestamp:)
     end
 
     describe "validations" do
@@ -13,71 +13,84 @@ module Stern
       it { should validate_presence_of(:tx_id) }
       it { should validate_presence_of(:amount) }
       it { should allow_value(DateTime.current.last_week).for(:timestamp) }
-      it { should belong_to(:tx).class_name('Stern::Tx').optional }
-      it { should belong_to(:book).class_name('Stern::Book').optional }
+      it { should belong_to(:tx).class_name("Stern::Tx").optional }
+      it { should belong_to(:book).class_name("Stern::Book").optional }
     end
 
-    describe ".create" do
+    context "when creating" do
       it "creates without timestamp" do
-        expect { gen_entry }.to change { Entry.count }.by(1)
+        expect { gen_entry }.to change(described_class, :count).by(1)
       end
 
       it "creates with past timestamp" do
-        expect { gen_entry(timestamp: DateTime.current - 1.day) }.to change { Entry.count }.by(1)
+        expect {
+          gen_entry(timestamp: DateTime.current - 1.day)
+        }.to change(described_class, :count).by(1)
       end
 
       it "does not create for future timestamp" do
-        expect { gen_entry(timestamp: DateTime.current + 1.day) }.to raise_error(ArgumentError)
+        expect {
+          gen_entry(timestamp: DateTime.current + 1.day)
+        }.to raise_error(ActiveRecord::StatementInvalid)
       end
 
       it "does not create with empty amount" do
-        expect { gen_entry(amount: 0) }.to raise_error(ArgumentError)
-      end
-    end
-
-    describe ".update_all, #update, #update!" do
-      subject(:entry) { Entry.first }
-
-      before { gen_entry }
-
-      it "calls update! in update_all call" do
-        expect { Entry.update_all(amount: 101).to raise_error(NotImplementedError) }
+        expect { gen_entry(amount: 0) }.to raise_error(ActiveRecord::StatementInvalid)
       end
 
-      it "calls update! in update call" do
-        expect { entry.update!(amount: 100) }.to raise_error(NotImplementedError)
-      end
-
-      it "does not update the entry" do
-        expect { entry.update(amount: 100) }.to raise_error(NotImplementedError)
+      it "does not create without bang operator" do
         expect {
-          entry.assign_attributes(amount: 100)
-          entry.save
-        }.to raise_error(NotImplementedError)
+          described_class.create(book_id: 1, gid: 1101, tx_id: 1, amount: 100, timestamp: nil)
+        }.to raise_error(NotImplementedError, "Use create! instead")
       end
     end
 
-    describe ".destroy_all, #destroy, #destroy!" do
-      subject(:entry) { Entry.first }
+    context "when updating" do
+      subject(:entry) { described_class.first }
+      let(:message) { "Entry records cannot be updated by design" }
+
+      before { gen_entry(amount: 100) }
+
+      it "raises error with update!" do
+        expect { entry.update!(amount: 150) }.to raise_error(NotImplementedError, message)
+      end
+
+      it "raises error with update" do
+        expect { entry.update(amount: 120) }.to raise_error(NotImplementedError, message)
+        expect {
+          entry.assign_attributes(amount: 140)
+          entry.save
+        }.to raise_error(NotImplementedError, message)
+      end
+
+      it "raises error with update_all" do
+        expect {
+          described_class.update_all(amount: 101) # rubocop:disable Rails/SkipsModelValidations
+        }.to raise_error(NotImplementedError, message)
+      end
+    end
+
+    context "when destroying" do
+      subject(:entry) { described_class.first }
 
       before { gen_entry }
 
-      it "calls destroy! in destroy_all call" do
-        expect { entry.destroy }.to raise_error(NotImplementedError)
+      it "raises error with destroy" do
+        expect { entry.destroy }.to raise_error(NotImplementedError, "Use destroy! instead")
       end
 
       it "destroy! removes the record" do
-        expect { entry.destroy! }.to change(Entry, :count).by(-1)
+        expect { entry.destroy! }.to change(described_class, :count).by(-1)
       end
+
+      pending "destroy_all is unopinionated"
     end
 
-    context "scopes" do
-      describe ".last_entry" do
-        before { gen_entry }
+    describe ".last_entry" do
+      before { gen_entry }
 
-        it "returns a record" do
-          expect(Entry.last_entry(1, 1101, DateTime.current).count).to be(1)
-        end
+      it "returns a record" do
+        expect(described_class.last_entry(1, 1101, DateTime.current).count).to be(1)
       end
     end
   end

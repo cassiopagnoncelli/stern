@@ -16,13 +16,13 @@ module Stern
     # @param merchant_id [Bigint] merchant id
     # @param amount [Bigint] amount in cents
     def initialize(subs_charge_id: nil, merchant_id: nil, amount: nil)
-      @subs_charge_id = subs_charge_id
-      @merchant_id = merchant_id
-      @amount = amount
+      self.subs_charge_id = subs_charge_id
+      self.merchant_id = merchant_id
+      self.amount = amount
     end
 
     def perform(operation_id)
-      raise ArgumentError unless operation_id.present?
+      raise ArgumentError if operation_id.blank?
       raise ArgumentError unless subs_charge_id.present? && subs_charge_id.is_a?(Numeric)
       raise ArgumentError unless merchant_id.present? && merchant_id.is_a?(Numeric)
       raise ArgumentError unless amount.present? && amount.is_a?(Numeric)

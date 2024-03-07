@@ -12,7 +12,7 @@ performed in a given account.
 
 This ledger provides double-entry transactions under an operations layer.
 
-Queries are also available to power a variety of routine outputs like outstanding balances,
+Queries are available to power a variety of routine outputs like outstanding balances,
 reports, consistency checks, and so on.
 
 ## License
@@ -97,33 +97,18 @@ To circumvent this limitation, you have add functions to migrations with
 bin/rails app:db:migrate:functions
 ```
 
-## Standalone setup
-
-Create the databases and setup the app
-
-```sh
-bin/rails db:create
-RAILS_ENV=test bin/rails app:db:setup_env
-```
-
-You may test with RSpec locally
-
-```sh
-rspec
-```
-
-## Operatons
-Operations are an abstraction layer defining how transactions take place.
+## Operations
+Operations are an abstraction layer defining how **book transactions** (TXs) take place.
 In fact, TXs should never be used directly; instead, use operations.
 
-> Example. `PayCreditCard` rebates fees from existing credits before registering
-> the fee via `add_credit_card_fee` transaction, then registered the captured amount
-> via `add_credit_card_capture` transaction.
+**Example**. `PayCreditCard` rebates fees from existing credits before registering
+the fee via `add_credit_card_fee` transaction, then registered the captured amount
+via `add_credit_card_capture` transaction.
 
 Refer to `app/operations` to implement operations.
 Following name conventions, always start with a verb.
 
-## Testing the app
+## Testing the app, standalone setup
 
 Use RSpec to run specs.
 
