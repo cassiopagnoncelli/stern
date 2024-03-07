@@ -7,8 +7,13 @@ module Stern
       it { should validate_presence_of(:after_time) }
       it { should validate_presence_of(:status) }
       it { should validate_presence_of(:status_time) }
-      it { should belong_to(:operation_def).class_name("Stern::OperationDef").optional }
       it { should define_enum_for(:status) }
+
+      it {
+        should belong_to(:operation_def).class_name("Stern::OperationDef") # rubocop:disable RSpec/ImplicitSubject
+                                        .optional
+                                        .inverse_of(:scheduled_operations)
+      }
     end
 
     describe "#build" do

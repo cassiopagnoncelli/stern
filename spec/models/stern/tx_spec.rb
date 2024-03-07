@@ -20,7 +20,6 @@ module Stern
       it { should validate_presence_of(:code) }
       it { should validate_presence_of(:uid) }
       it { should validate_presence_of(:amount) }
-      it { should validate_presence_of(:uid) }
       it { should belong_to(:operation) }
       it { should have_many(:entries) }
       it { should belong_to(:operation) }

@@ -9,9 +9,8 @@ module Stern
     belongs_to :operation, class_name: "Stern::Operation"
 
     validates :code, presence: true
-    validates :uid, presence: true
+    validates :uid, presence: true, uniqueness: { scope: [:code] }
     validates :amount, presence: true
-    validates :uid, uniqueness: { scope: [:code] }
     validate :no_future_timestamp, on: :create
 
     before_save do
