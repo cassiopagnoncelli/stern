@@ -7,8 +7,8 @@ require:
 AllCops:
   NewCops: enable
   Exclude:
-    - 'db/migrate/*'
     - 'db/migrate/**/*'
+    - 'spec/dummy/db/schema.db'
 
 # Trailing spaces are easily missed visually. By enforcing leading spaces the visual indentation
 # helps so that the text continues from above. Further, when there is no leading indentation it can
@@ -26,8 +26,9 @@ Lint/SymbolConversion:
 
 Metrics/AbcSize:
   Exclude:
-    - "db/dataverse_migrate/*.rb" # Tables can be large
     - "db/migrate/*.rb" # Tables can be large
+    - "app/operations/stern/**/*" # Operations can be complicated.
+    - "app/queries/stern/**/*" # Queries can be complicated.
 
 # We often prefer multi-lining arrays and hashes for readability. For us, those are viewed as "one
 # line of code" so we are letting Rubocop know we won't want to be forced into unnecessary
@@ -35,9 +36,7 @@ Metrics/AbcSize:
 Metrics/BlockLength:
   AllowedMethods: ["describe", "context", "fdescribe", "fcontext", "fit"]
   Exclude:
-    - "app/admin/**/*" # this library relies on huge blocks
     - "config/routes.rb" # routes can get long
-    - "db/dataverse_migrate/*.rb" # Tables can be large
     - "db/migrate/*.rb" # Tables can be large
     - "lib/tasks/**/*" # one-off procedural rake tasks can have large blocks
     - "spec/factories/**/*" # factories use large blocks
@@ -47,14 +46,14 @@ Metrics/BlockLength:
 Metrics/ClassLength:
   CountAsOne: ["array", "hash", "heredoc", "method_call"]
   Exclude:
-    - "db/dataverse_migrate/*.rb" # Tables can be large
     - "db/migrate/*.rb" # Tables can be large
 
 Metrics/MethodLength:
   CountAsOne: ["array", "hash", "heredoc"]
   Exclude:
-    - "db/dataverse_migrate/*.rb" # Tables can be large
     - "db/migrate/*.rb" # Tables can be large
+    - "app/operations/stern/**/*" # Operations can be complicated.
+    - "app/queries/stern/**/*" # Queries can be complicated.
 
 Metrics/ModuleLength:
   CountAsOne: ["array", "hash", "heredoc"]
@@ -184,3 +183,23 @@ Style/TrailingCommaInHashLiteral:
 # We don't mind the double negation (!!nil) so we disable it
 Style/DoubleNegation:
   Enabled: false
+
+Style/NumericLiterals:
+  Exclude:
+    - 'spec/dummy/db/schema.rb'
+
+# Relax cops for operations and queries.
+Metrics/PerceivedComplexity:
+  Exclude:
+    - "app/operations/stern/**/*"
+    - "app/queries/stern/**/*"
+
+Metrics/CyclomaticComplexity:
+  Exclude:
+    - "app/operations/stern/**/*"
+    - "app/queries/stern/**/*"
+
+Lint/MissingSuper:
+  Exclude:
+    - "app/operations/stern/**/*"
+    - "app/queries/stern/**/*"
