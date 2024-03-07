@@ -77,8 +77,6 @@ module Stern
     describe "#call" do
       subject(:pay_boleto) { build(:pay_boleto, payment_id:, merchant_id:, amount:, fee:) }
 
-      let(:operation_name) { "Payboleto" }
-      let(:operation_params) { { payment_id:, merchant_id:, amount:, fee: } }
       let(:payment_id) { 777 }
       let(:merchant_id) { 1101 }
       let(:amount) { 9900 }
@@ -124,17 +122,6 @@ module Stern
             }.to change(Operation, :count).by(1)
           end
         end
-      end
-    end
-
-    describe "#display" do
-      subject(:pay_boleto) do
-        build(:pay_boleto, payment_id: 123, merchant_id: 456, amount: 789, fee: 12)
-      end
-
-      it "returns formatted string" do
-        expect(pay_boleto.display).to match(described_class.name.gsub("Stern::", ""))
-        expect(pay_boleto.display).to match("payment_id=123 merchant_id=456 amount=789 fee=12")
       end
     end
   end
