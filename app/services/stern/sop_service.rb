@@ -2,11 +2,25 @@
 
 module Stern
   # Scheduled Operations Service.
+  #
+  # Scheduled operations are Operations to be executed in the future, immediately `after_time`.
+  # This service is intended to be integrated with an at-least-once-delivery background job.
+  #
+  # Ideally items are reserved with `enqueue_list` providing a list of ServiceOperation ids which
+  # should then be passed on to individual jobs each calling `preprocess_sop` on the id.
+  #
+  # Eventually reserved scheduled operations (marked `picked`) not executed may be reset via
+  # `clear_picked`, thus having these items reappearing in `enqueue_list`. This routine can be
+  # placed in a periodic job.
+  #
   module SopService
     module_function
 
     BATCH_SIZE = 100
     QUEUE_ITEM_TIMEOUT_IN_SECONDS = 300
+
+    CannotProcessNonPickedSopError = Class.new(StandardError)
+    CannotProcessAheadOfTimeError = Class.new(StandardError)
 
     def enqueue_list(size = BATCH_SIZE)
       ScheduledOperation.next_batch(size).then do |batch|
@@ -22,8 +36,19 @@ module Stern
         .each_update!(status: :pending, status_time: DateTime.current.utc)
     end
 
-    def process_sop(scheduled_op_id)
-      scheduled_op = ScheduledOperation.find_by!(id: scheduled_op_id)
+    def preprocess_sop(scheduled_op_id)
+      scheduled_op = ScheduledOperation.find(scheduled_op_id)
+
+      raise ArgumentError unless scheduled_op
+      raise CannotProcessNonPickedSopError unless scheduled_op.picked?
+
+      process_sop(scheduled_op)
+    end
+
+    def process_sop(scheduled_op)
+      raise CannotProcessNonPickedSopError unless scheduled_op.picked?
+      raise CannotProcessAheadOfTimeError if scheduled_op.after_time >= DateTime.current.utc
+
       scheduled_op.update!(status: :in_progress, status_time: DateTime.current.utc)
 
       op_klass = Object.const_get "Stern::#{scheduled_op.name}"
@@ -32,7 +57,10 @@ module Stern
     end
 
     def process_operation(operation, scheduled_op)
+      raise ArgumentError, "sop not in progress" unless scheduled_op.in_progress?
+
       operation.call
+
       scheduled_op.update!(status: :finished, status_time: DateTime.current.utc)
     rescue ArgumentError => e
       scheduled_op.update!(

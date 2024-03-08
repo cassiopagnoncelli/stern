@@ -16,9 +16,12 @@ module Stern
     validates :status, presence: true
     validates :status_time, presence: true
 
-    belongs_to :operation_def, class_name: "Stern::OperationDef", optional: true,
-                               primary_key: :operation_def_id, foreign_key: :id,
-                               inverse_of: :scheduled_operations
+    belongs_to :operation_def,
+               class_name: "Stern::OperationDef",
+               optional: true,
+               primary_key: :operation_def_id,
+               foreign_key: :id,
+               inverse_of: :scheduled_operations
 
     after_initialize do
       self.params ||= {}
