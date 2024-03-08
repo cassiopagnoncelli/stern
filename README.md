@@ -1,9 +1,5 @@
 Double-entry ledger Rails engine.
 
-## To do
-
-1. Scheduled operations
-
 ## Description
 
 A ledger is the source of truth for all entries in accounting books, this can include
