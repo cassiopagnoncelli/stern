@@ -24,6 +24,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "rails", ">= 7.0.4.3"
   spec.add_dependency "pg", ">= 1.4.5"
+  spec.add_dependency "nokogiri", ">= 1.15.6"
 
   # Development.
   spec.add_development_dependency "rspec-rails"
