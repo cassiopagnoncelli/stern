@@ -3,7 +3,7 @@
 # Stern engine.
 module Stern
   class Tx < ApplicationRecord
-    enum code: TXS
+    enum :code, TXS
 
     has_many :entries, class_name: "Stern::Entry", dependent: :restrict_with_exception
     belongs_to :operation, class_name: "Stern::Operation"
