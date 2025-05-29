@@ -10,9 +10,17 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2023_05_24_123950) do
+ActiveRecord::Schema[8.0].define(version: 2023_05_24_123950) do
   # These are extensions that must be enabled in order to support this database
-  enable_extension "plpgsql"
+  enable_extension "pg_catalog.plpgsql"
+
+  create_table "documents", id: :serial, force: :cascade do |t|
+    t.text "content"
+    t.tsvector "content_tsv"
+    t.tsvector "content_vector"
+    t.index ["content_tsv"], name: "idx_content_tsv", using: :gin
+    t.index ["content_vector"], name: "idx_content_vector", using: :gin
+  end
 
   create_table "stern_books", force: :cascade do |t|
     t.string "name", null: false
@@ -78,5 +86,4 @@ ActiveRecord::Schema[7.1].define(version: 2023_05_24_123950) do
     t.index ["code", "uid"], name: "index_stern_txs_on_code_and_uid", unique: true
     t.index ["operation_id"], name: "index_stern_txs_on_operation_id"
   end
-
 end

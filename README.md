@@ -90,7 +90,7 @@ will not be embed in `db/schema.rb`.
 To circumvent this limitation, you have add functions to migrations with
 
 ```sh
-bin/rails app:db:migrate:functions
+bin/rails "db:migrate:functions[development]"
 ```
 
 ## Operations
