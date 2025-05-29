@@ -5,19 +5,14 @@ ruby File.read(File.expand_path(File.join(__dir__, ".ruby-version"))).chomp
 # Specify your gem's dependencies in stern.gemspec.
 gemspec
 
-# gem "pg"
-# gem "rspec-rails"
-
 group :development, :test do
   gem "pry"
   gem "awesome_print"
   gem "dotenv-rails"
-  gem "shoulda-matchers"
+  gem "shoulda-matchers", ">= 5.0"
   gem "rubocop"
   gem "rubocop-rails"
   gem "rubocop-rspec"
   gem "factory_bot_rails"
 end
 
-# Start debugger with binding.b [https://github.com/ruby/debug]
-# gem "debug", ">= 1.0.0"

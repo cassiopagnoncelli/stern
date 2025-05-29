@@ -22,7 +22,7 @@ Gem::Specification.new do |spec|
     Dir["{app,config,db,lib}/**/*", "Rakefile", "README.md"]
   end
 
-  spec.add_dependency "rails", ">= 7.2.2.1"
+  spec.add_dependency "rails", ">= 8.0"
   spec.add_dependency "pg", ">= 1.4.5"
   spec.add_dependency "nokogiri", ">= 1.15.6"
 
