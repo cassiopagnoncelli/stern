@@ -58,7 +58,7 @@ module Stern
 
     describe ".generate_tx_credit_id" do
       it "returns a number" do
-        expect(described_class.generate_tx_credit_id).to be_a_kind_of(Bignum)
+        expect(described_class.generate_tx_credit_id).to be_a_kind_of(Integer)
       end
     end
   end
