@@ -41,6 +41,9 @@ For further examples, you may find
 [this guide](https://dev.to/szaszolak/extracting-rails-engine-by-example-vikings-social-media-4014)
 useful.
 
+When referring to operations, you might want to consider to `include Stern` to avoid
+prefixing `Stern::` in front of operations and queries.
+
 ### Timezone
 The ledger uses the versatile `DateTime` to handle events.
 Make sure it is configured in your application
