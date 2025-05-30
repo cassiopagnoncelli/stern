@@ -103,7 +103,9 @@ Following name conventions, always start with a verb.
 
 ## Testing
 
-Use RSpec to run specs.
+Use RSpec to run specs. Setup the app with `bin/setup` then `bundle exec rspec`.
+
+
 
 ```sh
 RAILS_ENV=test bundle exec rails app:db:drop app:db:setup_env
@@ -117,14 +119,21 @@ rspec
 
 ## Standalone setup
 
-```sh
-RAILS_ENV=development bundle exec rails app:db:drop app:db:setup_env
-```
-
 Then drop to console to use the ledger standalone.
 
 _Tip: You may benefit from `include Stern` so you do not need to prefix commands with
 `Stern::` for every call._
+
+## Troubleshooting
+
+Stern requires multistep setup to accommodate for engine migrations and low-level
+database PL/pgSQL.
+
+In some scenarios you may be require to
+
+```sh
+RAILS_ENV=development bundle exec rails app:db:drop app:db:setup_env
+```
 
 ## Technical notes
 
