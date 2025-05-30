@@ -36,14 +36,14 @@ module Stern
       before { pay_pix.log_operation(:do) }
 
       context "with valid attributes and operation_id" do
-        before { allow(Tx).to receive_messages(add_pix_fee: true, add_pix_payment: true) }
+        before { allow(EntryPair).to receive_messages(add_pix_fee: true, add_pix_payment: true) }
 
         let(:operation_id) { 1 }
 
         it "calls the external services to process payment" do
           perform_operation
-          expect(Tx).to have_received(:add_pix_fee)
-          expect(Tx).to have_received(:add_pix_payment)
+          expect(EntryPair).to have_received(:add_pix_fee)
+          expect(EntryPair).to have_received(:add_pix_payment)
         end
       end
 
@@ -59,20 +59,20 @@ module Stern
     describe "#perform_undo" do
       subject(:pay_pix) { build(:pay_pix, :undo) }
 
-      let(:credit_tx_id_double) { instance_double(Tx, credit_tx_id: 987) }
+      let(:credit_entry_pair_id_double) { instance_double(EntryPair, credit_entry_pair_id: 987) }
 
       before do
-        allow(Tx).to receive(:find_by!).and_return(credit_tx_id_double)
-        allow(Tx).to receive(:remove_credit)
-        allow(Tx).to receive(:remove_pix_fee)
-        allow(Tx).to receive(:remove_pix_payment)
+        allow(EntryPair).to receive(:find_by!).and_return(credit_entry_pair_id_double)
+        allow(EntryPair).to receive(:remove_credit)
+        allow(EntryPair).to receive(:remove_pix_fee)
+        allow(EntryPair).to receive(:remove_pix_payment)
       end
 
       it "reverses the payment by calling the appropriate services" do # rubocop:disable RSpec/MultipleExpectations
         pay_pix.perform_undo
-        expect(Tx).to have_received(:remove_credit)
-        expect(Tx).to have_received(:remove_pix_fee)
-        expect(Tx).to have_received(:remove_pix_payment)
+        expect(EntryPair).to have_received(:remove_credit)
+        expect(EntryPair).to have_received(:remove_pix_fee)
+        expect(EntryPair).to have_received(:remove_pix_payment)
       end
     end
 

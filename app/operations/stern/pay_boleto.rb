@@ -40,21 +40,21 @@ module Stern
       charged_credits = [fee, credits].min
       charged_fees = fee - charged_credits
 
-      credit_tx_id = apply_credits(charged_credits, merchant_id) if charged_credits.abs.positive?
+      credit_entry_pair_id = apply_credits(charged_credits, merchant_id) if charged_credits.abs.positive?
       if charged_fees.abs.positive?
-        Tx.add_boleto_fee(payment_id, merchant_id, charged_fees,
+        EntryPair.add_boleto_fee(payment_id, merchant_id, charged_fees,
                           operation_id:,)
       end
-      Tx.add_boleto_payment(payment_id, merchant_id, amount, credit_tx_id, operation_id:)
+      EntryPair.add_boleto_payment(payment_id, merchant_id, amount, credit_entry_pair_id, operation_id:)
     end
 
     def perform_undo
       raise ArgumentError if invalid?(:undo)
 
-      credit_tx_id = Tx.find_by!(code: TXS[:add_boleto_payment], uid: payment_id).credit_tx_id
-      Tx.remove_credit(credit_tx_id) if credit_tx_id.present?
-      Tx.remove_boleto_fee(payment_id)
-      Tx.remove_boleto_payment(payment_id)
+      credit_entry_pair_id = EntryPair.find_by!(code: ENTRY_PAIRS[:add_boleto_payment], uid: payment_id).credit_entry_pair_id
+      EntryPair.remove_credit(credit_entry_pair_id) if credit_entry_pair_id.present?
+      EntryPair.remove_boleto_fee(payment_id)
+      EntryPair.remove_boleto_payment(payment_id)
     end
   end
 end

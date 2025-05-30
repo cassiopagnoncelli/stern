@@ -29,7 +29,7 @@ books:
   cc_anticipation: 13501
   cc_anticipation_fee: 13502
 
-txs:
+entry_pairs:
   balance:
     code: 1000
     book_add: merchant_balance

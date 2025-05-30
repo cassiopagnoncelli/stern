@@ -31,14 +31,14 @@ module Stern
     def perform(operation_id)
       raise ArgumentError if invalid? || operation_id.blank?
 
-      Tx.add_balance(uid, merchant_id, amount, operation_id:)
+      EntryPair.add_balance(uid, merchant_id, amount, operation_id:)
     end
 
     def perform_undo
       raise ArgumentError if invalid?(:undo)
 
-      tx = Tx.find_by!(code: TXS[:add_balance], uid:)
-      Tx.remove_balance(tx.id)
+      entry_pair = EntryPair.find_by!(code: ENTRY_PAIRS[:add_balance], uid:)
+      EntryPair.remove_balance(entry_pair.id)
     end
   end
 end

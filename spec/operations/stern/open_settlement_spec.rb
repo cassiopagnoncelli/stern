@@ -34,13 +34,13 @@ module Stern
       before { open_settlement.log_operation(:do) }
 
       context "with valid attributes and operation_id" do
-        before { allow(Tx).to receive_messages(add_settlement_processing: true) }
+        before { allow(EntryPair).to receive_messages(add_settlement_processing: true) }
 
         let(:operation_id) { 1 }
 
         it "calls the external services to process payment" do
           perform_operation
-          expect(Tx).to have_received(:add_settlement_processing)
+          expect(EntryPair).to have_received(:add_settlement_processing)
         end
       end
 
@@ -57,12 +57,12 @@ module Stern
       subject(:open_settlement) { build(:open_settlement, :undo) }
 
       before do
-        allow(Tx).to receive(:remove_settlement)
+        allow(EntryPair).to receive(:remove_settlement)
       end
 
       it "reverses the payment by calling the appropriate services" do
         open_settlement.perform_undo
-        expect(Tx).to have_received(:remove_settlement)
+        expect(EntryPair).to have_received(:remove_settlement)
       end
     end
 

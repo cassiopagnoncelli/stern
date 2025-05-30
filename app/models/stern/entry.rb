@@ -4,12 +4,12 @@ module Stern
   class Entry < ApplicationRecord
     validates :book_id, presence: true
     validates :gid, presence: true
-    validates :tx_id, presence: true
+    validates :entry_pair_id, presence: true
     validates :amount, presence: true, exclusion: { in: [0] }
-    validates :tx_id, uniqueness: { scope: [:book_id, :gid] }
+    validates :entry_pair_id, uniqueness: { scope: [:book_id, :gid] }
     validates :timestamp, uniqueness: { scope: [:book_id, :gid] }
 
-    belongs_to :tx, class_name: "Stern::Tx", optional: true
+    belongs_to :entry_pair, class_name: "Stern::EntryPair", optional: true
     belongs_to :book, class_name: "Stern::Book", optional: true
 
     before_update do
@@ -25,7 +25,7 @@ module Stern
       raise ArgumentError, "book_id undefined" if book_id.blank?
       raise ArgumentError, "book_id undefined" if book_id.blank?
       raise ArgumentError, "gid undefined" if gid.blank?
-      raise ArgumentError, "tx_id undefined" if tx_id.blank?
+      raise ArgumentError, "entry_pair_id undefined" if entry_pair_id.blank?
     end
 
     scope :last_entry, lambda { |book_id, gid, timestamp|
@@ -43,30 +43,30 @@ module Stern
       raise NotImplementedError, "Use create! instead"
     end
 
-    def self.create!(book_id:, gid:, tx_id:, amount:, timestamp: nil)
+    def self.create!(book_id:, gid:, entry_pair_id:, amount:, timestamp: nil)
       ApplicationRecord.connection.execute(
         sanitized_sql(
           book_id:,
           gid:,
-          tx_id:,
+          entry_pair_id:,
           amount:,
           timestamp:,
         ),
       )
     end
 
-    def self.sanitized_sql(book_id:, gid:, tx_id:, amount:, timestamp:)
+    def self.sanitized_sql(book_id:, gid:, entry_pair_id:, amount:, timestamp:)
       sql = %{
         SELECT * FROM create_entry(
           in_book_id := :book_id,
           in_gid := :gid,
-          in_tx_id := :tx_id,
+          in_entry_pair_id := :entry_pair_id,
           in_amount := :amount,
           in_timestamp_utc := :timestamp,
           verbose_mode := FALSE
         )
       }.squish
-      ApplicationRecord.sanitize_sql_array([sql, { book_id:, gid:, tx_id:, amount:, timestamp: }])
+      ApplicationRecord.sanitize_sql_array([sql, { book_id:, gid:, entry_pair_id:, amount:, timestamp: }])
     end
 
     def destroy

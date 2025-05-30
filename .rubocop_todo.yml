@@ -94,7 +94,7 @@ Layout/LineLength:
     - 'app/queries/stern/balance_query.rb'
     - 'app/queries/stern/helpers/normalize_time_helper.rb'
     - 'spec/dummy/db/schema.rb'
-    - 'spec/models/stern/tx_spec.rb'
+    - 'spec/models/stern/entry_pair_spec.rb'
 
 # Offense count: 2
 # This cop supports safe autocorrection (--autocorrect).
@@ -176,7 +176,7 @@ Lint/SymbolConversion:
 # This cop supports safe autocorrection (--autocorrect).
 Lint/UnifiedInteger:
   Exclude:
-    - 'spec/models/stern/tx_spec.rb'
+    - 'spec/models/stern/entry_pair_spec.rb'
 
 # Offense count: 1
 # This cop supports safe autocorrection (--autocorrect).
@@ -208,7 +208,7 @@ Naming/MethodParameterName:
 # SupportedStyles: be_a, be_kind_of
 RSpec/ClassCheck:
   Exclude:
-    - 'spec/models/stern/tx_spec.rb'
+    - 'spec/models/stern/entry_pair_spec.rb'
 
 # Offense count: 17
 # This cop supports safe autocorrection (--autocorrect).
@@ -236,7 +236,7 @@ RSpec/NoExpectationExample:
 # Offense count: 2
 RSpec/RepeatedExample:
   Exclude:
-    - 'spec/models/stern/tx_spec.rb'
+    - 'spec/models/stern/entry_pair_spec.rb'
 
 # Offense count: 4
 # This cop supports safe autocorrection (--autocorrect).
@@ -267,7 +267,7 @@ Rails/HasManyOrHasOneDependent:
 # This cop supports unsafe autocorrection (--autocorrect-all).
 Rails/SquishedSQLHeredocs:
   Exclude:
-    - 'db/migrate/20230326215510_create_credit_tx_id_sequence.rb'
+    - 'db/migrate/20230326215510_create_credit_entry_pair_id_sequence.rb'
     - 'db/migrate/20230402223428_create_gid_sequence.rb'
     - 'db/migrate/20230407233646_create_entry_function.rb'
     - 'db/migrate/20230408022903_destroy_entry_function.rb'
@@ -397,7 +397,7 @@ Style/RedundantInterpolation:
 # This cop supports safe autocorrection (--autocorrect).
 Style/RedundantParentheses:
   Exclude:
-    - 'spec/models/stern/tx_spec.rb'
+    - 'spec/models/stern/entry_pair_spec.rb'
 
 # Offense count: 1
 # This cop supports safe autocorrection (--autocorrect).

@@ -1,7 +1,7 @@
 CREATE OR REPLACE FUNCTION create_entry(
   IN in_book_id INTEGER,
   IN in_gid INTEGER,
-  IN in_tx_id BIGINT,
+  IN in_entry_pair_id BIGINT,
   IN in_amount BIGINT,
   IN in_timestamp_utc TIMESTAMP(6) DEFAULT NULL,
   IN verbose_mode BOOLEAN DEFAULT FALSE
@@ -12,8 +12,8 @@ DECLARE
   ts TIMESTAMP(6) WITHOUT TIME ZONE;
   cascade BOOLEAN;
 BEGIN
-  IF in_book_id IS NULL OR in_gid IS NULL OR in_tx_id IS NULL OR in_amount IS NULL THEN
-    RAISE EXCEPTION 'book_id, gid, tx_id, and amount should be defined';
+  IF in_book_id IS NULL OR in_gid IS NULL OR in_entry_pair_id IS NULL OR in_amount IS NULL THEN
+    RAISE EXCEPTION 'book_id, gid, entry_pair_id, and amount should be defined';
   END IF;
 
   ts := CAST(timezone('UTC', clock_timestamp()) AS TIMESTAMP(6) WITHOUT TIME ZONE);
@@ -24,7 +24,7 @@ BEGIN
 
   entry.book_id := in_book_id;
   entry.gid := in_gid;
-  entry.tx_id := in_tx_id;
+  entry.entry_pair_id := in_entry_pair_id;
   entry.amount := in_amount;
   entry.created_at := ts;
   entry.updated_at := ts;
@@ -67,7 +67,7 @@ BEGIN
   INSERT INTO stern_entries (
     book_id,
     gid,
-    tx_id,
+    entry_pair_id,
     amount,
     ending_balance,
     timestamp,
@@ -76,7 +76,7 @@ BEGIN
   ) VALUES (
     entry.book_id,
     entry.gid,
-    entry.tx_id,
+    entry.entry_pair_id,
     entry.amount,
     entry.ending_balance,
     entry.timestamp,

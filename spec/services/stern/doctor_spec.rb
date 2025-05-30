@@ -81,10 +81,10 @@ module Stern
     end
 
     describe ".clear" do
-      it "clears entries and txs" do
+      it "clears entries and entry pairs" do
         described_class.clear
         expect(Entry.count).to eq(0)
-        expect(Tx.count).to eq(0)
+        expect(EntryPair.count).to eq(0)
       end
     end
   end

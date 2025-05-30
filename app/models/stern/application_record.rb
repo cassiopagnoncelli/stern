@@ -4,7 +4,7 @@ module Stern
 
     establish_connection "stern_#{Rails.env}".to_sym
 
-    # Generates an unique gid to be used across operations, txs, and entries.
+    # Generates an unique gid to be used across entries, entry_pairs, and operations.
     def self.generate_gid
       connection.execute("SELECT nextval('gid_seq')").first.values.first
     end

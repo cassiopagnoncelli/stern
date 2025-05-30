@@ -28,7 +28,7 @@ module Stern
     def call
       @results = execute_query
       @results.map do |record|
-        record["code"] = TXS.invert[record["code"]]
+        record["code"] = ENTRY_PAIRS.invert[record["code"]]
         record["time_window"] = record["time_window"].in_time_zone.to_datetime
         record
       end
@@ -41,15 +41,15 @@ module Stern
     def sql
       sql = %{
         SELECT
-          DATE_TRUNC(:time_grouping, txs.timestamp) AS time_window,
-          txs.code,
-          SUM(txs.amount) AS amount
+          DATE_TRUNC(:time_grouping, entry_pairs.timestamp) AS time_window,
+          entry_pairs.code,
+          SUM(entry_pairs.amount) AS amount
         FROM stern_entries es
-        JOIN stern_txs txs ON es.tx_id = txs.id
+        JOIN stern_entry_pairs entry_pairs ON es.entry_pair_id = entry_pairs.id
         WHERE
           gid = :gid
           AND es.book_id = :book_id
-          AND (txs.timestamp BETWEEN :start_date AND :end_date)
+          AND (entry_pairs.timestamp BETWEEN :start_date AND :end_date)
         GROUP BY time_window, code
         ORDER BY time_window, code
       }

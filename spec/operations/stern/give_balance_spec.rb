@@ -34,13 +34,13 @@ module Stern
       before { give_balance.log_operation(:do) }
 
       context "with valid attributes and operation_id" do
-        before { allow(Tx).to receive_messages(add_balance: true) }
+        before { allow(EntryPair).to receive_messages(add_balance: true) }
 
         let(:operation_id) { 1 }
 
         it "calls the external services to process payment" do
           perform_operation
-          expect(Tx).to have_received(:add_balance)
+          expect(EntryPair).to have_received(:add_balance)
         end
       end
 
@@ -56,16 +56,16 @@ module Stern
     describe "#perform_undo" do
       subject(:give_balance) { build(:give_balance, :undo) }
 
-      let(:credit_tx_id_double) { instance_double(Tx, id: 123) }
+      let(:credit_entry_pair_id_double) { instance_double(EntryPair, id: 123) }
 
       before do
-        allow(Tx).to receive(:find_by!).and_return(credit_tx_id_double)
-        allow(Tx).to receive(:remove_balance)
+        allow(EntryPair).to receive(:find_by!).and_return(credit_entry_pair_id_double)
+        allow(EntryPair).to receive(:remove_balance)
       end
 
       it "reverses the payment by calling the appropriate services" do
         give_balance.perform_undo
-        expect(Tx).to have_received(:remove_balance)
+        expect(EntryPair).to have_received(:remove_balance)
       end
     end
 

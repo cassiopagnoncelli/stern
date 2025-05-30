@@ -8,17 +8,7 @@ module Stern
 
   BOOKS = STERN_DEFS[:books].with_indifferent_access.freeze
 
-  TXS = STERN_DEFS[:txs].map { |k, v| ["add_#{k}".to_sym, v[:code]] }.to_h.merge(
-    STERN_DEFS[:txs].map { |k, v| ["remove_#{k}".to_sym, -v[:code]] }.to_h
+  ENTRY_PAIRS = STERN_DEFS[:entry_pairs].map { |k, v| ["add_#{k}".to_sym, v[:code]] }.to_h.merge(
+    STERN_DEFS[:entry_pairs].map { |k, v| ["remove_#{k}".to_sym, -v[:code]] }.to_h
   ).with_indifferent_access.freeze
-  
-  TX_ENTRIES = STERN_DEFS[:txs].with_indifferent_access.freeze
-
-  TX_ENTRIES_CODES = STERN_DEFS[:txs].map { |_k, g|
-    [g[:code],
-    [
-      STERN_DEFS[:books][g[:book_add].to_sym],
-      STERN_DEFS[:books][g[:book_sub].to_sym]]
-    ]
-  }.to_h.with_indifferent_access.freeze
 end

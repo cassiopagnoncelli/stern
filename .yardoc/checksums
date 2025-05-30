@@ -1,7 +1,6 @@
 lib/stern.rb 156fa2f2e52717b0fd8cc21c1f5f4e9a26993444
 lib/stern/engine.rb 4f9656e7cb5f1365c31332b0c437a37a0fd3fc0d
 lib/stern/version.rb 50fefe16d0f717278fb797928fd4572400b62512
-app/models/stern/tx.rb 6f0a7da96619250fb8772add0cc1e10e1b99b839
 app/models/stern/book.rb 506412316f06c18cc914b80dcc66a8c6db007fb6
 app/models/stern/entry.rb a3ef43de952ca9be95ae104cf01f137dbbeefa2a
 app/models/stern/stern.rb 4005bc7ec9d9aad955c4e90d827f81cb1ab69b02

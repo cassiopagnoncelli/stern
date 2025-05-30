@@ -112,7 +112,7 @@ module Stern
       end
 
       Entry.delete_all
-      Tx.delete_all
+      EntryPair.delete_all
       Operation.delete_all
     end
 

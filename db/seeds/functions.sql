@@ -2,9 +2,9 @@
 -- RESET client_min_messages;
 
 --
--- db/migrate/20230326215510_create_credit_tx_id_sequence.rb
+-- db/migrate/20230326215510_create_credit_entry_pair_id_sequence.rb
 --
-CREATE SEQUENCE IF NOT EXISTS credit_tx_id_seq;
+CREATE SEQUENCE IF NOT EXISTS credit_entry_pair_id_seq;
 
 --
 -- db/migrate/20230402223428_create_gid_sequence.rb
@@ -17,7 +17,7 @@ CREATE SEQUENCE IF NOT EXISTS gid_seq START 1201;
 CREATE OR REPLACE FUNCTION create_entry(
   IN in_book_id INTEGER,
   IN in_gid INTEGER,
-  IN in_tx_id BIGINT,
+  IN in_entry_pair_id BIGINT,
   IN in_amount BIGINT,
   IN in_timestamp_utc TIMESTAMP(6) DEFAULT NULL,
   IN verbose_mode BOOLEAN DEFAULT FALSE
@@ -28,8 +28,8 @@ DECLARE
   ts TIMESTAMP(6) WITHOUT TIME ZONE;
   cascade BOOLEAN;
 BEGIN
-  IF in_book_id IS NULL OR in_gid IS NULL OR in_tx_id IS NULL OR in_amount IS NULL OR in_amount = 0 THEN
-    RAISE EXCEPTION 'book_id, gid, tx_id should be defined, amount should be non-zero integer';
+  IF in_book_id IS NULL OR in_gid IS NULL OR in_entry_pair_id IS NULL OR in_amount IS NULL OR in_amount = 0 THEN
+    RAISE EXCEPTION 'book_id, gid, entry_pair_id should be defined, amount should be non-zero integer';
   END IF;
 
   ts := CAST(timezone('UTC', clock_timestamp()) AS TIMESTAMP(6) WITHOUT TIME ZONE);
@@ -40,7 +40,7 @@ BEGIN
 
   entry.book_id := in_book_id;
   entry.gid := in_gid;
-  entry.tx_id := in_tx_id;
+  entry.entry_pair_id := in_entry_pair_id;
   entry.amount := in_amount;
   entry.created_at := ts;
   entry.updated_at := ts;
@@ -83,7 +83,7 @@ BEGIN
   INSERT INTO stern_entries (
     book_id,
     gid,
-    tx_id,
+    entry_pair_id,
     amount,
     ending_balance,
     timestamp,
@@ -92,7 +92,7 @@ BEGIN
   ) VALUES (
     entry.book_id,
     entry.gid,
-    entry.tx_id,
+    entry.entry_pair_id,
     entry.amount,
     entry.ending_balance,
     entry.timestamp,

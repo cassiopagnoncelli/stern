@@ -1,5 +1,5 @@
 module Stern
-  # Operations are top-level API commands to handle txs and therefore entries.
+  # Operations are top-level API commands to handle entry pairs and therefore entries.
   # Use cases are all thought in terms of operations. A direct consequence is models
   # should never be used or manipulated directly, instead operations should be used.
   #
@@ -59,23 +59,23 @@ module Stern
       raise NotImplementedError
     end
 
-    def new_credit_tx_id(remaining_tries = 10)
+    def new_credit_entry_pair_id(remaining_tries = 10)
       unless remaining_tries.positive?
-        raise "remaining tries exhausted while generating credit_tx_id"
+        raise "remaining tries exhausted while generating credit_entry_pair_id"
       end
 
-      seq = ::Stern::Tx.generate_tx_credit_id
+      seq = ::Stern::EntryPair.generate_entry_pair_credit_id
 
-      already_present = Tx.find_by(code: Tx.codes[:add_credit], uid: seq).present?
-      already_present ? new_credit_tx_id(remaining_tries - 1) : seq
+      already_present = EntryPair.find_by(code: EntryPair.codes[:add_credit], uid: seq).present?
+      already_present ? new_credit_entry_pair_id(remaining_tries - 1) : seq
     end
 
     def apply_credits(charged_credits, merchant_id)
       return nil unless charged_credits.present? && charged_credits.abs.positive?
 
-      credit_tx_id = new_credit_tx_id
-      Tx.add_credit(credit_tx_id, merchant_id, -charged_credits, operation_id:)
-      credit_tx_id
+      credit_entry_pair_id = new_credit_entry_pair_id
+      EntryPair.add_credit(credit_entry_pair_id, merchant_id, -charged_credits, operation_id:)
+      credit_entry_pair_id
     end
 
     def display
@@ -103,7 +103,7 @@ module Stern
     private
 
     def lock_tables
-      ApplicationRecord.lock_table(table: Tx.table_name)
+      ApplicationRecord.lock_table(table: EntryPair.table_name)
       ApplicationRecord.lock_table(table: Entry.table_name)
     end
 

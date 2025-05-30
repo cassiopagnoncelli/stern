@@ -31,13 +31,13 @@ module Stern
     def perform(operation_id)
       raise ArgumentError if invalid? || operation_id.blank?
 
-      Tx.add_settlement_processing(settlement_id, merchant_id, amount, nil, operation_id:)
+      EntryPair.add_settlement_processing(settlement_id, merchant_id, amount, nil, operation_id:)
     end
 
     def perform_undo
       raise ArgumentError if invalid?(:undo)
 
-      Tx.remove_settlement(settlement_id)
+      EntryPair.remove_settlement(settlement_id)
     end
   end
 end

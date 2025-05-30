@@ -74,14 +74,28 @@ bin/rails "db:migrate:functions[development]"
 ```
 
 ## Operations
-Operations are an abstraction layer defining how **book transactions** (TXs) take place.
-In fact, TXs should never be used directly; instead, use operations.
 
-**Example**. `PayCreditCard` rebates fees from existing credits before registering
-the fee via `add_credit_card_fee` transaction, then registered the captured amount
-via `add_credit_card_capture` transaction.
+Ledger defines entries, entry pairs, and operations.
 
-Refer to `app/operations` to implement operations.
+Entries are single records to accounting books; because Stern is a double-entry
+guaranteeing consistency in such a way inputs match outputs, each entry requires a
+counterpair entry, this pair is called an entry pair. Technically entry pairs are
+atomic, consistent, isolated, and durable.
+
+Operations are an abstraction atop entry pairs and technically group sequences of
+entry pairs defined programmatically. Users should never input entry pairs directly
+nor entries, instead should define operations and use operations as an exposed API.
+
+**Example**. `PayCreditCard` involves multiple steps of entry pairs:
+- `add_credit_card_captured`: cash in
+- `add_credit_card_fee`: transaction fee
+- `add_credit_card_internal_fee`: payment institution + interbank fee
+- `add_merchant_balance_withholding`: move money from captured silo to merchant
+withholding balance
+- `add_merchant_balance`: scheduled operation to move money from withholding balance
+to merchant's free balance.
+
+Operations are defined in `app/operations`.
 Following name conventions, always start with a verb.
 
 ## Testing
@@ -89,7 +103,7 @@ Following name conventions, always start with a verb.
 Use RSpec to run specs.
 
 ```sh
-RAILS_ENV=test bundle exec rails db:drop db:setup_env
+RAILS_ENV=test bundle exec rails app:db:drop app:db:setup_env
 ```
 
 then run RSpec as usual
@@ -101,8 +115,13 @@ rspec
 ## Standalone setup
 
 ```sh
-RAILS_ENV=development bundle exec rails db:drop db:setup_env
+RAILS_ENV=development bundle exec rails app:db:drop app:db:setup_env
 ```
+
+Then drop to console to use the ledger standalone.
+
+_Tip: You may benefit from `include Stern` so you do not need to prefix commands with
+`Stern::` for every call._
 
 ## Technical notes
 

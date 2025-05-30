@@ -6,6 +6,6 @@ module Stern
 
     it { should validate_presence_of(:operation_def_id) }
     it { should validate_presence_of(:direction) }
-    it { should have_many(:txs) }
+    it { should have_many(:entry_pairs) }
   end
 end

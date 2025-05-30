@@ -32,14 +32,27 @@ ActiveRecord::Schema[8.0].define(version: 2023_05_24_123950) do
   create_table "stern_entries", force: :cascade do |t|
     t.integer "book_id", null: false
     t.integer "gid", null: false
-    t.bigint "tx_id", null: false
+    t.bigint "entry_pair_id", null: false
     t.bigint "amount", null: false
     t.bigint "ending_balance", null: false
     t.datetime "timestamp", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["book_id", "gid", "entry_pair_id"], name: "index_stern_entries_on_book_id_and_gid_and_entry_pair_id", unique: true
     t.index ["book_id", "gid", "timestamp"], name: "index_stern_entries_on_book_id_and_gid_and_timestamp", unique: true
-    t.index ["book_id", "gid", "tx_id"], name: "index_stern_entries_on_book_id_and_gid_and_tx_id", unique: true
+  end
+
+  create_table "stern_entry_pairs", force: :cascade do |t|
+    t.integer "code", null: false
+    t.bigint "uid", null: false
+    t.bigint "amount", null: false
+    t.datetime "timestamp", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.bigint "credit_entry_pair_id"
+    t.bigint "operation_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code", "uid"], name: "index_stern_entry_pairs_on_code_and_uid", unique: true
+    t.index ["operation_id"], name: "index_stern_entry_pairs_on_operation_id"
   end
 
   create_table "stern_operation_defs", force: :cascade do |t|
@@ -72,18 +85,5 @@ ActiveRecord::Schema[8.0].define(version: 2023_05_24_123950) do
     t.index ["after_time"], name: "index_stern_scheduled_operations_on_after_time"
     t.index ["operation_def_id"], name: "index_stern_scheduled_operations_on_operation_def_id"
     t.index ["status"], name: "index_stern_scheduled_operations_on_status"
-  end
-
-  create_table "stern_txs", force: :cascade do |t|
-    t.integer "code", null: false
-    t.bigint "uid", null: false
-    t.bigint "amount", null: false
-    t.datetime "timestamp", default: -> { "CURRENT_TIMESTAMP" }, null: false
-    t.bigint "credit_tx_id"
-    t.bigint "operation_id", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["code", "uid"], name: "index_stern_txs_on_code_and_uid", unique: true
-    t.index ["operation_id"], name: "index_stern_txs_on_operation_id"
   end
 end

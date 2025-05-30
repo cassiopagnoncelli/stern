@@ -4,16 +4,16 @@ module Stern
   RSpec.describe Entry, type: :model do
     def gen_entry(amount: 100, timestamp: nil)
       Doctor.clear
-      described_class.create!(book_id: 1, gid: 1101, tx_id: 1, amount:, timestamp:)
+      described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 1, amount:, timestamp:)
     end
 
     describe "validations" do
       it { should validate_presence_of(:book_id) }
       it { should validate_presence_of(:gid) }
-      it { should validate_presence_of(:tx_id) }
+      it { should validate_presence_of(:entry_pair_id) }
       it { should validate_presence_of(:amount) }
       it { should allow_value(DateTime.current.last_week).for(:timestamp) }
-      it { should belong_to(:tx).class_name("Stern::Tx").optional }
+      it { should belong_to(:entry_pair).class_name("Stern::EntryPair").optional }
       it { should belong_to(:book).class_name("Stern::Book").optional }
     end
 
@@ -40,7 +40,7 @@ module Stern
 
       it "does not create without bang operator" do
         expect {
-          described_class.create(book_id: 1, gid: 1101, tx_id: 1, amount: 100, timestamp: nil)
+          described_class.create(book_id: 1, gid: 1101, entry_pair_id: 1, amount: 100, timestamp: nil)
         }.to raise_error(NotImplementedError, "Use create! instead")
       end
     end
