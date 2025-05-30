@@ -91,7 +91,7 @@ module Stern
     def log_operation(direction, base_operation = self)
       raise ArgumentError unless direction.in?([:do, :undo])
 
-      base_operation.operation = Operation.build(
+      base_operation.operation = Operation.new(
         name: operation_name,
         direction:,
         params: operation_params,

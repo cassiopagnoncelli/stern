@@ -3,17 +3,11 @@ require "rails_helper"
 module Stern
   RSpec.describe ScheduledOperation, type: :model do
     describe "validations" do
-      it { should validate_presence_of(:operation_def_id) }
+      it { should validate_presence_of(:name) }
       it { should validate_presence_of(:after_time) }
       it { should validate_presence_of(:status) }
       it { should validate_presence_of(:status_time) }
       it { should define_enum_for(:status) }
-
-      it {
-        should belong_to(:operation_def).class_name("Stern::OperationDef") # rubocop:disable RSpec/ImplicitSubject
-                                        .optional
-                                        .inverse_of(:scheduled_operations)
-      }
     end
 
     describe "#build" do

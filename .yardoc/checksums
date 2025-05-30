@@ -9,7 +9,6 @@ app/models/stern/operation.rb 419a4051581c84900b63376961f6c228cdf9f148
 app/operations/stern/pay_pix.rb 548717a1be9c4b4ae4d400f23d320aa495748a1d
 app/queries/stern/base_query.rb b59054aaa5b26698c0e571db993567c119b5daac
 app/jobs/stern/application_job.rb 5238892e8b33b023310a55de81bc3fcef6295b8d
-app/models/stern/operation_def.rb 739dc4b406b4be2ae372d127f770f2a57a14355d
 app/operations/stern/pay_boleto.rb e58c5ab452523539c333a1c9d79151dbdeface20
 app/queries/stern/balance_query.rb d0398f0df85dc357179f1ccb90e21e40e3e52478
 app/operations/stern/give_credit.rb 1d96b71f69f9b1eaf4843cb17278e7429c0ac795
@@ -23,7 +22,6 @@ app/operations/stern/open_settlement.rb 1163163532844d6b4e9009c4f97a1835d08453fc
 app/operations/stern/charge_boleto_fee.rb 928dc9f50afaa3bc027d011e20c2798163fa1b72
 app/operations/stern/charge_settlement.rb 6828f420dca3e53ed8ece443adeeca3250dd54a6
 app/operations/stern/charge_subscription.rb e3fb6363b32887cc241924d6b6cabde23ee9096a
-app/models/stern/operation_def/definitions.rb 08f8604ffa7c66c1d230c88ebcf72dfec3f8c4eb
 app/operations/stern/charge_settlement_fee.rb 4cce77a1bd26254a7c92f9370b4f2a39f97a87ba
 app/queries/stern/helpers/frequency_helper.rb 0f6f0a355c925158d05035820973230ccbc4fa7a
 app/queries/stern/outstanding_balance_query.rb 300692416f3367dfaf13ba5ea856323570fb6ecd

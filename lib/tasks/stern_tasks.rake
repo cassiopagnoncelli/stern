@@ -7,7 +7,6 @@ namespace :db do
     Rake::Task["app:db:migrate:functions"].invoke(ENV["RAILS_ENV"])
 
     if Rails.env.development?
-      Rake::Task["app:db:operations:refresh"].invoke
       Rake::Task["app:db:seed"].invoke
     end
   end
@@ -24,15 +23,6 @@ namespace :db do
       exec_line = "RAILS_ENV=#{env} bundle exec rails db < #{file_path}"
       puts "#{exec_line}"
       system(exec_line)
-    end
-  end
-
-  namespace :operations do
-    desc "seed OperationDef model"
-    task :refresh => :environment do
-      printf "Persisting operation definitions... "
-      Stern::OperationDef::Definitions.persist!
-      puts "OK"
     end
   end
 end

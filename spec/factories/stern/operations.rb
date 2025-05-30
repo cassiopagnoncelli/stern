@@ -1,6 +1,6 @@
 FactoryBot.define do
   factory :operation, class: "Stern::Operation" do
-    operation_def_id { 1 }
+    name { "operation_name" }
     direction { :do }
     params { {} }
   end

@@ -22,7 +22,6 @@ Bundler/OrderedGems:
 FactoryBot/ConsistentParenthesesStyle:
   Exclude:
     - 'spec/models/stern/book_spec.rb'
-    - 'spec/models/stern/operation_def_spec.rb'
     - 'spec/models/stern/operation_spec.rb'
 
 # Offense count: 3
@@ -244,7 +243,6 @@ RSpec/RepeatedExample:
 # SupportedStyles: slashes, arguments
 Rails/FilePath:
   Exclude:
-    - 'config/initializers/operation_defs.rb'
     - 'lib/tasks/stern_tasks.rake'
     - 'spec/rails_helper.rb'
 
@@ -271,13 +269,6 @@ Rails/SquishedSQLHeredocs:
     - 'db/migrate/20230402223428_create_gid_sequence.rb'
     - 'db/migrate/20230407233646_create_entry_function.rb'
     - 'db/migrate/20230408022903_destroy_entry_function.rb'
-
-# Offense count: 2
-# Configuration parameters: Include.
-# Include: db/**/*.rb
-Rails/ThreeStateBooleanColumn:
-  Exclude:
-    - 'db/migrate/20230520060107_create_stern_operation_defs.rb'
 
 # Offense count: 1
 # This cop supports unsafe autocorrection (--autocorrect-all).
