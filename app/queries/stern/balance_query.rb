@@ -4,6 +4,9 @@ module Stern
   # Get the book's balance at the given timestamp.
   #
   # For instance, in merchant book, this would return the merchant balance at the given time.
+  #
+  # > BalanceQuery.new(gid: 1101, book_id: :merchant_balance, timestamp: DateTime.current).call
+  #
   class BalanceQuery < BaseQuery
     attr_accessor :gid, :book_id, :timestamp, :results
 

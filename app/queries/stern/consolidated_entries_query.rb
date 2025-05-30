@@ -3,6 +3,9 @@
 module Stern
   # Consolidates all transactions during a time window for an account (gid) in a book (eg. merchant
   # balance).
+  #
+  # > ConsolidatedEntriesQuery.new(gid: 1101, book_id: :merchant_balance, time_grouping: :hourly, start_date: DateTime.current.last_month.beginning_of_month, end_date: Date.current).call
+  # 
   class ConsolidatedEntriesQuery < BaseQuery
     attr_accessor :gid, :book_id, :time_grouping, :start_date, :end_date, :results
 
@@ -12,7 +15,6 @@ module Stern
     # @param start_date [DateTime] report starting date/time
     # @param end_date [DateTime] report ending date/time
     def initialize(gid:, book_id:, time_grouping:, start_date:, end_date:)
-      super
       unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
         raise ArgumentError,
               "book does not exist"

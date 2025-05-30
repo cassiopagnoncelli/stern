@@ -4,13 +4,15 @@ module Stern
   # Get the book's balance at the given timestamp for all accounts (gids).
   #
   # For instance, in merchant book, this would return all merchant balances at the given time.
+  #
+  # > BalancesQuery.new(book_id: 1101).call
+  #
   class BalancesQuery < BaseQuery
     attr_accessor :book_id, :timestamp, :results
 
     # @param book_id [Bignum] book, eg. merchant balance
     # @param timestamp [DateTime] balance at the given time
     def initialize(book_id:, timestamp: DateTime.current)
-      super
       unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
         raise ArgumentError,
               "book does not exist"

@@ -3,13 +3,15 @@
 module Stern
   # Sum up the ending balances across all accounts (gid) at the given timestamp.
   # This is equivalent to sum all individual BalanceQuery on the book_id.
+  #
+  # > OutstandingBalanceQuery.new(book_id: :merchant_balance).call
+  #
   class OutstandingBalanceQuery < BaseQuery
     attr_accessor :book_id, :timestamp, :results
 
     # @param book_id [Bignum] book, eg. merchant balance
     # @param timestamp [DateTime] balance at the given time
     def initialize(book_id:, timestamp: DateTime.current)
-      super
       unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
         raise ArgumentError,
               "book does not exist"
