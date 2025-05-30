@@ -4,6 +4,16 @@ module Stern
   # should never be used or manipulated directly, instead operations should be used.
   #
   # All operations have to be backwards compatible.
+  #
+  # To schedule an operation, you may want to use
+  # 
+  # > sop = ScheduledOperation.build(
+  #     name: 'PayPix',
+  #     params: { payment_id: 123, merchant_id: 1101, amount: 9900, fee: 65 },
+  #     after_time: 10.seconds.from_now
+  #   )
+  # > sop.save!
+  #
   class BaseOperation
     attr_accessor :operation
 

@@ -13,7 +13,9 @@ module Stern
   # `clear_picked`, thus having these items reappearing in `enqueue_list`. This routine can be
   # placed in a periodic job.
   #
-  module SopService
+  # You can safely copy the main job to your app while putting in a periodic routine.
+  #
+  module ScheduledOperationService
     module_function
 
     BATCH_SIZE = 100
@@ -22,8 +24,14 @@ module Stern
     CannotProcessNonPickedSopError = Class.new(StandardError)
     CannotProcessAheadOfTimeError = Class.new(StandardError)
 
+    def list
+      picked_list = ScheduledOperation.picked.ids
+      picked_list = enqueue_list if picked_list.empty?
+      picked_list
+    end
+
     def enqueue_list(size = BATCH_SIZE)
-      ScheduledOperation.next_batch(size).then do |batch|
+      ScheduledOperation.pending.where("after_time <= NOW()").limit(size).then do |batch|
         batch.each_update!(status: :picked, status_time: DateTime.current.utc)
         batch.collect(&:id)
       end
@@ -36,18 +44,12 @@ module Stern
         .each_update!(status: :pending, status_time: DateTime.current.utc)
     end
 
-    def preprocess_sop(scheduled_op_id)
+    def process_sop(scheduled_op_id)
       scheduled_op = ScheduledOperation.find(scheduled_op_id)
 
       raise ArgumentError unless scheduled_op
       raise CannotProcessNonPickedSopError unless scheduled_op.picked?
-
-      process_sop(scheduled_op)
-    end
-
-    def process_sop(scheduled_op)
-      raise CannotProcessNonPickedSopError unless scheduled_op.picked?
-      raise CannotProcessAheadOfTimeError if scheduled_op.after_time >= DateTime.current.utc
+      raise CannotProcessAheadOfTimeError if scheduled_op.after_time > DateTime.current.utc
 
       scheduled_op.update!(status: :in_progress, status_time: DateTime.current.utc)
 

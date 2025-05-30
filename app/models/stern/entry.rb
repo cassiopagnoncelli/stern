@@ -84,19 +84,25 @@ module Stern
       ApplicationRecord.connection.execute(sanitized_sql)
     end
 
-    def display
-      format(
-        "id:%<id>s gid:%<gid>d book:%<book_name>s amount:%<amount>.2f balance:%<ending_balance>.2f",
-        gid:,
-        book_name:,
-        amount: amount.to_f / 100,
-        ending_balance: ending_balance.to_f / 100,
-        id:,
-      )
-    end
-
     def book_name
       BOOKS.invert[book_id]
+    end
+
+    def pp
+      amount_color = amount > 0 ? :green : (amount < 0 ? :red : :white)
+      balance_color = ending_balance > 0 ? :green : (ending_balance < 0 ? :red : :white)
+      book_nam = BOOKS.invert[book_id]
+      colorize_output([
+        ["Entry", :white],
+        ["#{format("%5s", id)}", :white, :bold],
+        ["|", :white],
+        [timestamp, :purple, :bold],
+        ["|", :white],
+        [format("%8s", amount), amount_color, :bold],
+        [format("%10s", ending_balance), balance_color, :bold],
+        ["| book", :white],
+        [format("%-20s", book_nam || "N/A"), :magenta, :bold]
+      ])
     end
   end
 end

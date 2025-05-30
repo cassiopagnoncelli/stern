@@ -78,6 +78,25 @@ module Stern
       raise NotImplementedError, "EntryPair reccords cannot be updated by design"
     end
 
+    def pp
+      amount_color = amount > 0 ? :green : (amount < 0 ? :red : :white)
+      
+      colorize_output([
+        ["EntryPair", :white],
+        ["#{format("%5s", id)}", :white, :bold],
+        ["|", :white],
+        [timestamp, :purple, :bold],
+        ["|", :white],
+        ["Grouping UID", :white],
+        ["#{format("%5s", uid)}", :yellow, :bold],
+        ["|", :white],
+        [format("%s", operation&.name || "N/A"), :white, :bold],
+        [format("%10s", amount), amount_color, :bold],
+        ["| verb", :white],
+        [format("%s", code || "N/A"), :orange, :bold]
+      ])
+    end
+
     private
 
     def no_future_timestamp

@@ -30,5 +30,39 @@ module Stern
 
       operation_classes
     end
+
+    def pp
+      params_flat = flatten_params(params).map { |k, v| "#{k}:#{v}" }.join(" ") if params
+      params_flat ||= "N/A"
+
+      colorize_output([
+        ["Operation", :white],
+        ["#{format("%5s", id)}", :white, :bold],
+        ["|", :white],
+        [updated_at, :purple, :bold],
+        ["|", :white],
+        ["Name:", :white],
+        [format("%-15s", name || "N/A"), :white, :bold],
+        ["|", :white],
+        ["Direction:", :white],
+        [format("%-3s", direction || "N/A"), :cyan, :bold],
+        ["|", :white],
+        ["Params:", :white],
+        [params_flat, :yellow, :bold]
+      ])
+    end
+
+    private
+
+    def flatten_params(hash, parent_key = "", separator = ".")
+      hash.each_with_object({}) do |(k, v), h|
+        new_key = parent_key.empty? ? k : "#{parent_key}#{separator}#{k}"
+        if v.is_a?(Hash)
+          h.merge!(flatten_params(v, new_key, separator))
+        else
+          h[new_key] = v
+        end
+      end
+    end
   end
 end
