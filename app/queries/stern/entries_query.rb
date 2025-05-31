@@ -29,19 +29,16 @@ module Stern
     def call
       @results = execute_query
       @results.map do |record|
-        {
-          timestamp: record[:timestamp],
-          amount: record[:amount],
-          ending_balance: record[:ending_balance]
-        }
+        record.symbolize_keys.slice(:timestamp, :amount, :ending_balance)
       end
     end
 
     def sql
       Entry
         .where(gid:, book_id:)
-        .where("entries.timestamp BETWEEN ? AND ?", start_date, end_date)
+        .where("timestamp BETWEEN ? AND ?", start_date, end_date)
         .order(:timestamp)
+        .to_sql
     end
   end
 end
@@ -50,7 +47,7 @@ __END__
 
 EntriesQuery.new(
   gid: 1101,
-  book_id: :boleto,
-  start_date: DateTime.current.last_month.beginning_of_month,
+  book_id: :merchant_balance,
+  start_date: DateTime.parse('2025-05-01 00:00:00'),
   end_date: DateTime.current
 ).call
