@@ -4,6 +4,10 @@ module Stern
   # Sums all transactions over a time window for an account (gid) in a book (eg. merchant
   # balance). No ending balance or previous balance is provided.
   #
+  # Returns a table of rows in the format
+  # 
+  #   time_window | code | amount
+  #
   # Example at the end of the file.
   # 
   class SumEntriesQuery < BaseQuery
@@ -62,8 +66,8 @@ __END__
 
 SumEntriesQuery.new(
   gid: 1101,
-  book_id: :merchant_balance,
+  book_id: :boleto,
   time_grouping: :hourly,
   start_date: DateTime.current.last_month.beginning_of_month,
-  end_date: Date.current
+  end_date: DateTime.current
 ).call

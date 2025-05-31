@@ -4,6 +4,8 @@ module Stern
   # Sum up the ending balances across all accounts (gid) at the given timestamp.
   # This is equivalent to sum all individual BalanceQuery on the book_id.
   #
+  # Returns balance as a bigint.
+  #
   # Example at the end of the file.
   #
   class OutstandingBalanceQuery < BaseQuery

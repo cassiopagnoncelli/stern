@@ -2,8 +2,9 @@
 
 module Stern
   # Get the book's balance at the given timestamp for all accounts (gids).
-  #
   # For instance, in merchant book, this would return all merchant balances at the given time.
+  #
+  # Returns a hash of accounts (gids) and their respective balances.
   #
   # Examples at the end of the file.
   #

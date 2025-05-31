@@ -2,8 +2,9 @@
 
 module Stern
   # Get the book's balance at the given timestamp.
-  #
   # For instance, in merchant book, this would return the merchant balance at the given time.
+  #
+  # Returns balance as a bigint.
   #
   # Examples at the end of the file.
   #
