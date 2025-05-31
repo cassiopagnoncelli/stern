@@ -4,7 +4,7 @@ module Stern
   # Sum up the ending balances across all accounts (gid) at the given timestamp.
   # This is equivalent to sum all individual BalanceQuery on the book_id.
   #
-  # > OutstandingBalanceQuery.new(book_id: :merchant_balance).call
+  # Example at the end of the file.
   #
   class OutstandingBalanceQuery < BaseQuery
     attr_accessor :book_id, :timestamp, :results
@@ -30,10 +30,6 @@ module Stern
       @results.first["outstanding"].to_i
     end
 
-    def execute_query
-      ApplicationRecord.connection.execute(sql)
-    end
-
     def sql
       sql = %{
         SELECT
@@ -52,3 +48,7 @@ module Stern
     end
   end
 end
+
+__END__
+
+OutstandingBalanceQuery.new(book_id: :merchant_balance).call

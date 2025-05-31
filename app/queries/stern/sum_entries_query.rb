@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
 module Stern
-  # Consolidates all transactions during a time window for an account (gid) in a book (eg. merchant
-  # balance).
+  # Sums all transactions over a time window for an account (gid) in a book (eg. merchant
+  # balance). No ending balance or previous balance is provided.
   #
-  # > ConsolidatedEntriesQuery.new(gid: 1101, book_id: :merchant_balance, time_grouping: :hourly, start_date: DateTime.current.last_month.beginning_of_month, end_date: Date.current).call
+  # Example at the end of the file.
   # 
-  class ConsolidatedEntriesQuery < BaseQuery
+  class SumEntriesQuery < BaseQuery
     attr_accessor :gid, :book_id, :time_grouping, :start_date, :end_date, :results
 
     # @param gid [Bignum] group id, eg. merchant id
@@ -36,10 +36,6 @@ module Stern
       end
     end
 
-    def execute_query
-      ApplicationRecord.connection.execute(sql)
-    end
-
     def sql
       sql = %{
         SELECT
@@ -61,3 +57,13 @@ module Stern
     end
   end
 end
+
+__END__
+
+SumEntriesQuery.new(
+  gid: 1101,
+  book_id: :merchant_balance,
+  time_grouping: :hourly,
+  start_date: DateTime.current.last_month.beginning_of_month,
+  end_date: Date.current
+).call

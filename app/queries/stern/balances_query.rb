@@ -5,7 +5,7 @@ module Stern
   #
   # For instance, in merchant book, this would return all merchant balances at the given time.
   #
-  # > BalancesQuery.new(book_id: 1101).call
+  # Examples at the end of the file.
   #
   class BalancesQuery < BaseQuery
     attr_accessor :book_id, :timestamp, :results
@@ -31,10 +31,6 @@ module Stern
       @results.values.to_h
     end
 
-    def execute_query
-      ApplicationRecord.connection.execute(sql)
-    end
-
     def sql
       sql = %{
         SELECT
@@ -49,3 +45,7 @@ module Stern
     end
   end
 end
+
+__END__
+
+BalancesQuery.new(book_id: 1101).call

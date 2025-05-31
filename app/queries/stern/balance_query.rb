@@ -5,7 +5,7 @@ module Stern
   #
   # For instance, in merchant book, this would return the merchant balance at the given time.
   #
-  # > BalanceQuery.new(gid: 1101, book_id: :merchant_balance, timestamp: DateTime.current).call
+  # Examples at the end of the file.
   #
   class BalanceQuery < BaseQuery
     attr_accessor :gid, :book_id, :timestamp, :results
@@ -32,3 +32,11 @@ module Stern
     end
   end
 end
+
+__END__
+
+BalanceQuery.new(
+  gid: 1101,
+  book_id: :merchant_balance,
+  timestamp: DateTime.current
+).call
