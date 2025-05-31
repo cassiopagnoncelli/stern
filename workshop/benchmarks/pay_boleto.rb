@@ -1,13 +1,14 @@
-Stern::Doctor.clear
+Doctor.clear
 
 Benchmark.measure do
   (1..100).each do |i|
-    Stern::PayBoleto.new(payment_id: 2*i, merchant_id: 1101, amount: 250, fee: 50).call
-    Stern::PayBoleto.new(payment_id: 2*i + 1, merchant_id: 1101, amount: 100, fee: 0).call
+    PayBoleto.new(payment_id: 2*i, merchant_id: 1101, amount: 250, fee: 50).call
+    PayBoleto.new(payment_id: 2*i + 1, merchant_id: 1101, amount: 100, fee: 0).call
   end
 end
 
-Stern::EntryPair.all.each(&:destroy!)
+Entry.all.each(&:destroy!)
+EntryPair.all.each(&:destroy!)
 
 __END__
 

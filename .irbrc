@@ -4,8 +4,6 @@ require "irb/ext/tracer"
 begin
   require_relative "lib/stern"
   include Stern
-  
-  puts "Stern module included - you can use methods directly without Stern:: prefix"
 rescue LoadError
   # Stern not available or in engine mode
 end
