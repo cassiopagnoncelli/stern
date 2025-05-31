@@ -7,8 +7,6 @@ Benchmark.measure do
   end
 end
 
-include Stern
-
 Stern::EntryPair.all.each(&:destroy!)
 
 __END__
