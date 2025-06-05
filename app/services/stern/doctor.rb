@@ -114,6 +114,7 @@ module Stern
       Entry.delete_all
       EntryPair.delete_all
       Operation.delete_all
+      ScheduledOperation.delete_all
     end
 
     # Queue.

@@ -21,6 +21,16 @@ module Stern
       raise NotImplementedError unless operation_uid.is_a?(Integer)
 
       base_operation = self
+
+      existing_operation = Operation.find_by(idem_key:)
+      if existing_operation.present?
+        if existing_operation.name == operation_name && existing_operation.direction == direction.to_s && existing_operation.params == operation_params
+          return existing_operation.id
+        else
+          raise "Operation with idem_key #{idem_key} already exists with different parameters"
+        end
+      end
+
       case direction
       when :do, :redo, :forward, :forwards, :perform
         fun = lambda {
