@@ -2,8 +2,8 @@ Doctor.clear
 
 Benchmark.measure do
   (1..100).each do |i|
-    PayBoleto.new(payment_id: 2*i, merchant_id: 1101, amount: 250, fee: 50).call
-    PayBoleto.new(payment_id: 2*i + 1, merchant_id: 1101, amount: 100, fee: 0).call
+    PayBoleto.new(payment_id: 2*i, merchant_id: 1101, amount: 250, fee: 50).call(idem_key: "boletinho_#{2*i}")
+    PayBoleto.new(payment_id: 2*i + 1, merchant_id: 1101, amount: 100, fee: 0).call(idem_key: "boletinho_#{2*i + 1}")
   end
 end
 

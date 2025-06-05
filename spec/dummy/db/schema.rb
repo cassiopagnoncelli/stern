@@ -53,6 +53,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_05_30_090922) do
     t.string "name", null: false
     t.integer "direction", null: false
     t.json "params", default: "{}", null: false
+    t.string "idem_key", limit: 20
+    t.index ["idem_key"], name: "index_stern_operations_on_idem_key", unique: true, where: "(idem_key IS NOT NULL)"
     t.index ["name"], name: "index_stern_operations_on_name"
   end
 

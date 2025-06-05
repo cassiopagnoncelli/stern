@@ -7,6 +7,11 @@ module Stern
     validates :name, presence: true, allow_blank: false, allow_nil: false
     validates :direction, presence: true
     validates :params, presence: true, allow_blank: true
+    validates :idem_key,
+      presence: true,
+      allow_blank: true,
+      uniqueness: true,
+      length: { minimum: 10, maximum: 20, allow_blank: true }
 
     def self.list
       # Get the engine root directory
@@ -45,7 +50,10 @@ module Stern
         [format("%-15s", name || "N/A"), :white, :bold],
         ["|", :white],
         ["Direction:", :white],
-        [format("%-3s", direction || "N/A"), :cyan, :bold],
+        [format("%-4s", direction || "N/A"), :cyan, :bold],
+        ["|", :white],
+        ["Idemp:", :white],
+        [format("%-20s", idem_key || "N/A"), :orange, :bold],
         ["|", :white],
         ["Params:", :white],
         [params_flat, :yellow, :bold]

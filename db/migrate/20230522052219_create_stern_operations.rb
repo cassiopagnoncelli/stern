@@ -6,6 +6,7 @@ class CreateSternOperations < ActiveRecord::Migration[7.0]
       t.string :name, null: false, index: true
       t.integer :direction, null: false
       t.json :params, null: false, default: "{}"
+      t.string :idem_key, null: true, limit: 20, index: { unique: true, where: "idem_key IS NOT NULL" }
     end
   end
 end

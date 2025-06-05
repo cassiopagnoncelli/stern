@@ -17,14 +17,14 @@ module Stern
   class BaseOperation
     attr_accessor :operation
 
-    def call(direction: :do, transaction: true)
+    def call(direction: :do, transaction: true, idem_key: nil)
       raise NotImplementedError unless operation_uid.is_a?(Integer)
 
       base_operation = self
       case direction
       when :do, :redo, :forward, :forwards, :perform
         fun = lambda {
-          log_operation(:do, base_operation)
+          log_operation(:do, base_operation, idem_key)
           perform(base_operation.operation.id)
         }
         if transaction
@@ -37,7 +37,7 @@ module Stern
         end
       when :undo, :backward, :backwards
         fun = lambda {
-          log_operation(:undo, base_operation)
+          log_operation(:undo, base_operation, idem_key)
           perform_undo
         }
         if transaction
@@ -98,13 +98,14 @@ module Stern
       )
     end
 
-    def log_operation(direction, base_operation = self)
+    def log_operation(direction, base_operation = self, idem_key = nil)
       raise ArgumentError unless direction.in?([:do, :undo])
 
       base_operation.operation = Operation.new(
         name: operation_name,
         direction:,
         params: operation_params,
+        idem_key:
       )
       base_operation.operation.save!
       base_operation.operation
