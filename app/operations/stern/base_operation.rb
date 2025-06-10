@@ -18,8 +18,6 @@ module Stern
     attr_accessor :operation
 
     def call(direction: :do, transaction: true, idem_key: nil)
-      raise NotImplementedError unless operation_uid.is_a?(Integer)
-
       base_operation = self
 
       existing_operation = Operation.find_by(idem_key:)
