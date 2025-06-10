@@ -29,10 +29,11 @@ module Stern
         end
       end
 
+      operation_id = nil
       case direction
       when :do, :redo, :forward, :forwards, :perform
         fun = lambda {
-          log_operation(:do, base_operation, idem_key)
+          operation_id = log_operation(:do, base_operation, idem_key)
           perform(base_operation.operation.id)
         }
         if transaction
@@ -45,7 +46,7 @@ module Stern
         end
       when :undo, :backward, :backwards
         fun = lambda {
-          log_operation(:undo, base_operation, idem_key)
+          operation_id = log_operation(:undo, base_operation, idem_key)
           perform_undo
         }
         if transaction
@@ -59,6 +60,7 @@ module Stern
       else
         raise ArgumentError, "provide `direction` with :do or :undo"
       end
+      operation_id
     end
 
     def call_undo
@@ -116,7 +118,7 @@ module Stern
         idem_key:
       )
       base_operation.operation.save!
-      base_operation.operation
+      base_operation.operation.id
     end
 
     private
