@@ -72,48 +72,48 @@ entry_pairs:
     book_sub: customer_balance_locked_usd
 
   customer_pending_to_available_balance_usd:
-    code: 1021:
+    code: 1021
     book_add: customer_balance_available_usd
     book_sub: customer_balance_pending_usd
   customer_available_to_pending_balance_usd:
-    code: 1022:
+    code: 1022
     book_add: customer_balance_pending_usd
     book_sub: customer_balance_available_usd
 
   # Withdraw.
   withdraw_request_usd:
-    code: 1031:
+    code: 1031
     book_add: customer_withdraw_pending_usd
     book_sub: customer_balance_available_usd
   withdraw_request_revert_usd:
-    code: 1032:
+    code: 1032
     book_add: customer_balance_available_usd
     book_sub: customer_withdraw_pending_usd
 
   withdraw_confirm_usd:
-    code: 1041:
+    code: 1041
     book_add: customer_withdraw_usd
     book_sub: customer_withdraw_pending_usd
   withdraw_confirm_revert_usd:
-    code: 1042:
+    code: 1042
     book_add: customer_withdraw_pending_usd
     book_sub: customer_withdraw_usd
 
   withdraw_fee_customer_pay_usd:
-    code: 1051:
+    code: 1051
     book_add: customer_withdraw_fee_usd
     book_sub: customer_balance_available_usd
   withdraw_fee_customer_pay_revert_usd:
-    code: 1052:
+    code: 1052
     book_add: customer_balance_available_usd
     book_sub: customer_withdraw_fee_usd
 
   withdraw_fee_service_pay_usd:
-    code: 1061:
+    code: 1061
     book_add: withdraw_fee_cost_usd
     book_sub: withdraw_fee_pl_usd
   withdraw_fee_service_pay_revert_usd:
-    code: 1062:
+    code: 1062
     book_add: withdraw_fee_pl_usd
     book_sub: withdraw_fee_cost_usd
 
