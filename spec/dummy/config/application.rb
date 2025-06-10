@@ -38,7 +38,7 @@ module Dummy
 
     # Don't generate system test files.
     config.generators.system_tests = nil
-    
+
     # Use structure.sql instead of schema.rb to capture PostgreSQL sequences and functions
     config.active_record.schema_format = :sql
   end
