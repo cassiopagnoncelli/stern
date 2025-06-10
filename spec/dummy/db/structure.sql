@@ -343,7 +343,7 @@ CREATE TABLE public.stern_operations (
     name character varying NOT NULL,
     direction integer NOT NULL,
     params json DEFAULT '"{}"'::json NOT NULL,
-    idem_key character varying(20)
+    idem_key character varying(24)
 );
 
 

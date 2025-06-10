@@ -5,12 +5,12 @@ module Stern
   class WithdrawFeeServicePayRevert < BaseOperation
     include ActiveModel::Validations
 
-    attr_accessor :withdraw_id, :customer_id, :currency, :amount
+    attr_accessor :withdraw_id, :customer_id, :currency, :fee
 
     validates :withdraw_id, presence: true, numericality: { other_than: 0 }
     validates :customer_id, presence: true, numericality: { other_than: 0 }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
-    validates :amount, presence: false
+    validates :fee, presence: false
 
     UnknownCurrencyError = Class.new(StandardError)
 
@@ -19,12 +19,12 @@ module Stern
     # @param withdraw_id [Bigint] unique withdraw id
     # @param customer_id [Bigint] customer id
     # @param currency [Str] curreny code (eg. usd, eur, btc)
-    # @param amount [Bigint] amount reverted from the service
-    def initialize(withdraw_id: nil, customer_id: nil, currency: nil, amount: nil)
+    # @param fee [Bigint] fee reverted from the service
+    def initialize(withdraw_id: nil, customer_id: nil, currency: nil, fee: nil)
       self.withdraw_id = withdraw_id
       self.customer_id = customer_id
       self.currency = currency.strip.downcase.presence
-      self.amount = amount
+      self.fee = fee
     end
 
     def perform(operation_id)
@@ -32,7 +32,7 @@ module Stern
 
       raise UnknownCurrencyError unless currency.presence&.in?(%w[usd])
 
-      EntryPair.add_withdraw_fee_service_pay_revert_usd(withdraw_id, customer_id, amount, nil, operation_id:) if amount.present?
+      EntryPair.add_withdraw_fee_service_pay_revert_usd(withdraw_id, customer_id, fee, nil, operation_id:) if fee.present?
     end
 
     def perform_undo
