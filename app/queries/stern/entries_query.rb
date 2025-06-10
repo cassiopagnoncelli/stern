@@ -11,13 +11,13 @@ module Stern
   class EntriesQuery < BaseQuery
     attr_accessor :gid, :book_id, :start_date, :end_date, :page, :per_page, :results
 
-    # @param gid [Bignum] group id, eg. merchant id
+    # @param gid [Bignum] group id, eg. merchant id (optional)
     # @param book_id [DateTime] consolidating book, eg. merchant balance
     # @param start_date [DateTime] report starting date/time
     # @param end_date [DateTime] report ending date/time
     # @param page [Integer] page number (-3, -2, -1, 1, 2, 3, ..., defaults to -1, page 0 does not exist)
     # @param per_page [Integer] records per page (defaults to 50)
-    def initialize(gid:, book_id:, start_date:, end_date:, page: -1, per_page: 50)
+    def initialize(book_id:, start_date:, end_date:, gid: nil, page: -1, per_page: 50)
       unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
         raise ArgumentError, "book does not exist"
       end
@@ -44,9 +44,9 @@ module Stern
     end
 
     def sql
-      query = Entry
-        .where(gid:, book_id:)
-        .where("timestamp BETWEEN ? AND ?", start_date, end_date)
+      query = Entry.where(book_id:)
+      query = query.where(gid:) if gid.present?
+      query = query.where("timestamp BETWEEN ? AND ?", start_date, end_date)
       
       if page > 0
         # Positive pages: ascending order with normal pagination
@@ -74,28 +74,35 @@ __END__
 
 # Get last page (default behavior)
 EntriesQuery.new(
-  gid: 1101,
   book_id: :merchant_balance,
   start_date: DateTime.parse('2025-05-01 00:00:00'),
-  end_date: DateTime.current
+  end_date: DateTime.current,
+  gid: 1101
 ).call
 
 # Get first page with 25 records per page
 EntriesQuery.new(
-  gid: 1101,
   book_id: :merchant_balance,
   start_date: DateTime.parse('2025-05-01 00:00:00'),
   end_date: DateTime.current,
+  gid: 1101,
   page: 1,
   per_page: 25
 ).call
 
 # Get second-to-last page with 100 records per page
 EntriesQuery.new(
-  gid: 1101,
   book_id: :merchant_balance,
   start_date: DateTime.parse('2025-05-01 00:00:00'),
   end_date: DateTime.current,
+  gid: 1101,
   page: -2,
   per_page: 100
+).call
+
+# Get entries for all gids in a book
+EntriesQuery.new(
+  book_id: :merchant_balance,
+  start_date: DateTime.parse('2025-05-01 00:00:00'),
+  end_date: DateTime.current
 ).call
