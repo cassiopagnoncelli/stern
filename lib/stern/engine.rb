@@ -2,6 +2,9 @@ module Stern
   class Engine < ::Rails::Engine
     isolate_namespace Stern
 
+    # Use structure.sql instead of schema.rb to capture PostgreSQL sequences and functions
+    config.active_record.schema_format = :sql
+
     config.generators do |generators|
       generators.test_framework :rspec
       generators.fixture_replacement :factory_bot
