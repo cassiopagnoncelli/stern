@@ -14,7 +14,11 @@ module Stern
     # PaymentProcessing::PayPix.
     #
     initializer "stern.configure_autoloader", before: :set_autoload_paths do
-      Dir[root.join("app/operations/stern/payment_processing/")].each do |dir|
+      require Engine.root.join("config/initializers/chart").to_s
+
+      operations_module_name = STERN_DEFS[:operations]
+
+      Dir[root.join("app/operations/stern/#{operations_module_name}/")].each do |dir|
         next if File.basename(dir) == "concerns"
         Rails.autoloaders.main.collapse(dir)
       end

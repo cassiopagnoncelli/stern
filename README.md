@@ -57,14 +57,14 @@ config.time_zone = 'America/Sao_Paulo'
 Defined at
 
 ```
-config/chart_of_accounts.yml
+config/chart.yaml
 ```
 
-and has two structures
+with information:
 
+1. Operations module (ie. which of the app/operations/stern subdirectories will be used).
 1. List of books, each mapping an unique id.
-2. List of double-entry transactions, each mapping
-an unique code and a pair of additive-subtractive books.
+1. List of double-entry transactions, each mapping an unique code and a pair of additive-subtractive books.
 
 ### Migrations
 
@@ -148,7 +148,10 @@ rails plugin new stern \
   --skip-action-text \
   --skip-action-storage \
   --skip-action-cable \
-  --skip-hotwire --skip-sprockets --skip-javascript --skip-turbolinks \
+  --skip-hotwire \
+  --skip-sprockets \
+  --skip-javascript \
+  --skip-turbolinks \
   --skip-test --skip-system-test \
   --skip-gemfile-entry \
   --css=tailwind \

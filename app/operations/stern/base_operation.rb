@@ -128,10 +128,6 @@ module Stern
       ApplicationRecord.lock_table(table: Entry.table_name)
     end
 
-    def operation_uid
-      self.class::UID
-    end
-
     def operation_name
       self.class.to_s.gsub("Stern::", "")
     end

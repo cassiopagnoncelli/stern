@@ -7,8 +7,6 @@ module Stern
   class GiveBalance < BaseOperation
     include ActiveModel::Validations
 
-    UID = 5
-
     attr_accessor :uid, :merchant_id, :amount
 
     validates :uid, presence: true, numericality: { other_than: 0 }

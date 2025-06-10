@@ -7,8 +7,6 @@ module Stern
   class OpenSettlement < BaseOperation
     include ActiveModel::Validations
 
-    UID = 7
-
     attr_accessor :settlement_id, :merchant_id, :amount
 
     validates :settlement_id, presence: true, numericality: { other_than: 0 }

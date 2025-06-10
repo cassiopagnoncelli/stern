@@ -46,7 +46,7 @@ end
 ### 4. Factory Pattern (Dynamic Methods)
 Entry pairs are created through dynamically generated factory methods:
 ```ruby
-# Generated from chart_of_accounts.yml
+# Generated from chart.yaml
 EntryPair.add_balance(uid, gid, amount, ...)
 EntryPair.add_credit(uid, gid, amount, ...)
 EntryPair.add_boleto_payment(uid, gid, amount, ...)

@@ -39,8 +39,7 @@ stern/
 
 ### Key Configuration Files
 - `stern.gemspec`: Gem specification and dependencies
-- `chart_of_accounts.yml`: Financial account definitions
-- `config/chart_of_accounts.yml`: Engine config copy
+- `config/chart.yaml`: Financial account definitions (Chart of Accounts)
 - `.rubocop.yml`: Code style rules
 - `config/routes.rb`: Engine routing
 

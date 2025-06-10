@@ -61,7 +61,7 @@ Gemspec/RequiredRubyVersion:
 # SupportedStyles: with_first_element, with_fixed_indentation
 Layout/ArrayAlignment:
   Exclude:
-    - 'config/initializers/chart_of_accounts.rb'
+    - 'config/initializers/chart.rb'
 
 # Offense count: 1
 # This cop supports safe autocorrection (--autocorrect).
@@ -101,7 +101,7 @@ Layout/LineLength:
 # SupportedStyles: symmetrical, new_line, same_line
 Layout/MultilineArrayBraceLayout:
   Exclude:
-    - 'config/initializers/chart_of_accounts.rb'
+    - 'config/initializers/chart.rb'
 
 # Offense count: 2
 # This cop supports safe autocorrection (--autocorrect).
@@ -127,7 +127,7 @@ Layout/SpaceInsideArrayLiteralBrackets:
 Layout/TrailingWhitespace:
   Exclude:
     - 'app/queries/stern/helpers/normalize_time_helper.rb'
-    - 'config/initializers/chart_of_accounts.rb'
+    - 'config/initializers/chart.rb'
     - 'db/migrate/20230408022903_destroy_entry_function.rb'
     - 'spec/factories/stern/entries.rb'
     - 'stern.gemspec'
@@ -168,7 +168,7 @@ Lint/ShadowingOuterLocalVariable:
 Lint/SymbolConversion:
   Exclude:
     - 'app/models/stern/application_record.rb'
-    - 'config/initializers/chart_of_accounts.rb'
+    - 'config/initializers/chart.rb'
     - 'spec/dummy/app/models/application_record.rb'
 
 # Offense count: 1
@@ -293,7 +293,7 @@ Style/Documentation:
 # This cop supports safe autocorrection (--autocorrect).
 Style/ExpandPathArguments:
   Exclude:
-    - 'config/initializers/chart_of_accounts.rb'
+    - 'config/initializers/chart.rb'
 
 # Offense count: 1
 # This cop supports safe autocorrection (--autocorrect).
@@ -342,7 +342,7 @@ Style/InvertibleUnlessCondition:
 # This cop supports unsafe autocorrection (--autocorrect-all).
 Style/MapToHash:
   Exclude:
-    - 'config/initializers/chart_of_accounts.rb'
+    - 'config/initializers/chart.rb'
 
 # Offense count: 1
 # This cop supports unsafe autocorrection (--autocorrect-all).
@@ -416,7 +416,7 @@ Style/SymbolArray:
 # SupportedStylesForMultiline: comma, consistent_comma, no_comma
 Style/TrailingCommaInArguments:
   Exclude:
-    - 'config/initializers/chart_of_accounts.rb'
+    - 'config/initializers/chart.rb'
 
 # Offense count: 2
 # This cop supports safe autocorrection (--autocorrect).
@@ -424,7 +424,7 @@ Style/TrailingCommaInArguments:
 # SupportedStylesForMultiline: comma, consistent_comma, no_comma
 Style/TrailingCommaInArrayLiteral:
   Exclude:
-    - 'config/initializers/chart_of_accounts.rb'
+    - 'config/initializers/chart.rb'
     - 'spec/dummy/config/initializers/filter_parameter_logging.rb'
 
 # Offense count: 2

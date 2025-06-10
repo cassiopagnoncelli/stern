@@ -9,8 +9,6 @@ module Stern
   class ChargeSettlement < BaseOperation
     include ActiveModel::Validations
 
-    UID = 3
-
     attr_accessor :settlement_id, :merchant_id, :amount, :fee
 
     validates :settlement_id, presence: true, numericality: { other_than: 0 }

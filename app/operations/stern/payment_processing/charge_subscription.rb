@@ -8,8 +8,6 @@ module Stern
   class ChargeSubscription < BaseOperation
     include ActiveModel::Validations
 
-    UID = 4
-
     attr_accessor :subs_charge_id, :merchant_id, :amount
 
     validates :subs_charge_id, presence: true, numericality: { other_than: 0 }

@@ -9,8 +9,6 @@ module Stern
   class PayBoleto < BaseOperation
     include ActiveModel::Validations
 
-    UID = 8
-
     attr_accessor :payment_id, :merchant_id, :amount, :fee
 
     validates :payment_id, presence: true, numericality: { other_than: 0 }
