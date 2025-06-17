@@ -32,14 +32,14 @@ module Stern
 
       raise UnknownCurrencyError unless currency.presence&.in?(%w[usd])
 
-      EntryPair.add_customer_bonus_locked_revert_usd(bonus_id, customer_id, amount, nil, operation_id:) if amount.present?
+      EntryPair.add_customer_give_bonus_locked_revert_usd(bonus_id, customer_id, amount, nil, operation_id:) if amount.present?
     end
 
     def perform_undo
       raise ArgumentError if invalid?(:undo)
 
-      if EntryPair.find_by(code: ENTRY_PAIRS[:add_customer_bonus_locked_revert_usd], uid: bonus_id).present?
-        EntryPair.remove_customer_bonus_locked_revert_usd(bonus_id)
+      if EntryPair.find_by(code: ENTRY_PAIRS[:add_customer_give_bonus_locked_revert_usd], uid: bonus_id).present?
+        EntryPair.remove_customer_give_bonus_locked_revert_usd(bonus_id)
       end
     end
   end
