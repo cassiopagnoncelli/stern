@@ -32,14 +32,14 @@ module Stern
 
       raise UnknownCurrencyError unless currency.presence&.in?(%w[usd])
 
-      EntryPair.add_customer_withdraw_request_revert_usd(withdraw_id, customer_id, amount, nil, operation_id:) if amount.present?
+      EntryPair.add_withdraw_request_revert_usd(withdraw_id, customer_id, amount, nil, operation_id:) if amount.present?
     end
 
     def perform_undo
       raise ArgumentError if invalid?(:undo)
 
-      if EntryPair.find_by(code: ENTRY_PAIRS[:add_customer_withdraw_request_revert_usd], uid: withdraw_id).present?
-        EntryPair.remove_customer_withdraw_request_revert_usd(withdraw_id)
+      if EntryPair.find_by(code: ENTRY_PAIRS[:add_withdraw_request_revert_usd], uid: withdraw_id).present?
+        EntryPair.remove_withdraw_request_revert_usd(withdraw_id)
       end
     end
   end
