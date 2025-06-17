@@ -20,14 +20,8 @@ module Stern
     def call(direction: :do, transaction: true, idem_key: nil)
       base_operation = self
 
-      existing_operation = Operation.find_by(idem_key:)
-      if existing_operation.present?
-        if existing_operation.name == operation_name && existing_operation.direction == direction.to_s && existing_operation.params == operation_params
-          return existing_operation.id
-        else
-          raise "Operation with idem_key #{idem_key} already exists with different parameters"
-        end
-      end
+      op_id = find_existing_operation(direction, transaction, idem_key)
+      return op_id if op_id.present?
 
       operation_id = nil
       case direction
@@ -142,6 +136,20 @@ module Stern
       end
 
       attr_accessor_hash
+    end
+
+    def find_existing_operation(direction, transaction, idem_key)
+      return nil if idem_key.nil?
+
+      op = Operation.find_by(idem_key:)
+      return nil if op.nil?
+      
+      return op.id if
+        op.name == operation_name && 
+        op.direction == direction.to_s &&
+        op.params == operation_params
+        
+      raise "Operation with idem_key #{idem_key} already exists with different parameters"
     end
   end
 end
