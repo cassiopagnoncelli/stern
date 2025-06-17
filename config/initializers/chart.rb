@@ -2,7 +2,7 @@
 
 module Stern
   # Loading chart.
-  available_charts = Dir["config/charts/*"].map { |file| file.split("/").last.split(".").first }
+  available_charts = Dir[Engine.root.join("config/charts/*")].map { |file| file.split("/").last.split(".").first }
   chart_name = ENV.fetch("STERN_CHART", "game")
   unless chart_name.in?(available_charts)
     raise "STERN_CHART=\"#{chart_name}\" should be either of #{available_charts}"
