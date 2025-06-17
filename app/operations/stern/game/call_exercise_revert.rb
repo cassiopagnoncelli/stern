@@ -2,7 +2,7 @@
 
 module Stern
   # Exercise a call option.
-  class CallExercise < BaseOperation
+  class CallExerciseRevert < BaseOperation
     include ActiveModel::Validations
 
     attr_accessor :call_option_id, :customer_id, :currency, :amount
