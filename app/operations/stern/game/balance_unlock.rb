@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Stern
-  # Unlock balance of customer's igaming account.
+  # Unlock balance of customer's account.
   class BalanceUnlock < BaseOperation
     include ActiveModel::Validations
 

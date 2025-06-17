@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Stern
-  # Revert give bonus to customer's igaming account.
-  class BonusGiveRevert < BaseOperation
+  # Revert unlock bonus in customer's account.
+  class BonusUnlockRevert < BaseOperation
     include ActiveModel::Validations
 
     attr_accessor :bonus_id, :customer_id, :currency, :amount
@@ -19,7 +19,7 @@ module Stern
     # @param bonus_id [Bigint] unique bonus id
     # @param customer_id [Bigint] customer id
     # @param currency [Str] curreny code (eg. usd, eur, btc)
-    # @param amount [Bigint] amount reverted from customer balance
+    # @param amount [Bigint] amount reverted from unlocked bonus balance
     def initialize(bonus_id: nil, customer_id: nil, currency: nil, amount: nil)
       self.bonus_id = bonus_id
       self.customer_id = customer_id
@@ -32,14 +32,14 @@ module Stern
 
       raise UnknownCurrencyError unless currency.presence&.in?(%w[usd])
 
-      EntryPair.add_customer_bonus_locked_revert_usd(bonus_id, customer_id, amount, nil, operation_id:) if amount.present?
+      EntryPair.add_customer_bonus_unlock_revert_usd(bonus_id, customer_id, amount, nil, operation_id:) if amount.present?
     end
 
     def perform_undo
       raise ArgumentError if invalid?(:undo)
 
-      if EntryPair.find_by(code: ENTRY_PAIRS[:add_customer_bonus_locked_revert_usd], uid: bonus_id).present?
-        EntryPair.remove_customer_bonus_locked_revert_usd(bonus_id)
+      if EntryPair.find_by(code: ENTRY_PAIRS[:add_customer_bonus_unlock_revert_usd], uid: bonus_id).present?
+        EntryPair.remove_customer_bonus_unlock_revert_usd(bonus_id)
       end
     end
   end

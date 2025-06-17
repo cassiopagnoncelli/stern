@@ -1,8 +1,16 @@
 # frozen_string_literal: true
 
 module Stern
-  chart_path ||= Engine.root.join("config/chart.yaml").to_s.freeze
+  # Loading chart.
+  available_charts = Dir["config/charts/*"].map { |file| file.split("/").last.split(".").first }
+  chart_name = ENV.fetch("STERN_CHART", "game")
+  unless chart_name.in?(available_charts)
+    raise "STERN_CHART=\"#{chart_name}\" should be either of #{available_charts}"
+  end
+  chart_path ||= Engine.root.join("config/charts/#{chart_name}.yaml").to_s.freeze
   chart_contents ||= YAML.load_file(chart_path)
+
+  # Parse chart.
   STERN_DEFS ||= chart_contents.deep_symbolize_keys!
 
   TIMESTAMP_DELTA ||= 2 * (1.second / 1e6)

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Stern
-  # Revert redeem bonus in customer's igaming account.
-  class BonusRedeemRevert < BaseOperation
+  # Revert give bonus to customer's account.
+  class BonusGiveRevert < BaseOperation
     include ActiveModel::Validations
 
     attr_accessor :bonus_id, :customer_id, :currency, :amount
@@ -32,14 +32,14 @@ module Stern
 
       raise UnknownCurrencyError unless currency.presence&.in?(%w[usd])
 
-      EntryPair.add_customer_bonus_redeem_revert_usd(bonus_id, customer_id, amount, nil, operation_id:) if amount.present?
+      EntryPair.add_customer_bonus_locked_revert_usd(bonus_id, customer_id, amount, nil, operation_id:) if amount.present?
     end
 
     def perform_undo
       raise ArgumentError if invalid?(:undo)
 
-      if EntryPair.find_by(code: ENTRY_PAIRS[:add_customer_bonus_redeem_revert_usd], uid: bonus_id).present?
-        EntryPair.remove_customer_bonus_redeem_revert_usd(bonus_id)
+      if EntryPair.find_by(code: ENTRY_PAIRS[:add_customer_bonus_locked_revert_usd], uid: bonus_id).present?
+        EntryPair.remove_customer_bonus_locked_revert_usd(bonus_id)
       end
     end
   end
