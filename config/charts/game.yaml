@@ -23,8 +23,12 @@ books:
 
   customer_deposit_fee_usd: 20151
 
-  customer_bonus_available_usd: 20161
-  customer_bonus_locked_usd: 20162
+  customer_refund_usd: 20161
+
+  customer_chargeback_usd: 20171
+
+  customer_bonus_available_usd: 20181
+  customer_bonus_locked_usd: 20182
 
   # Service.
   bops_pl_usd: 20201
@@ -134,6 +138,22 @@ entry_pairs:
     code: 1082
     book_add: customer_balance_available_usd
     book_sub: customer_deposit_fee_usd
+  customer_refund_usd:
+    code: 1091
+    book_add: customer_refund_usd
+    book_sub: customer_balance_locked_usd
+  customer_refund_revert_usd:
+    code: 1092
+    book_add: customer_refund_usd
+    book_sub: customer_balance_locked_usd
+  customer_chargeback_usd:
+    code: 1101
+    book_add: customer_chargeback_usd
+    book_sub: customer_balance_available_usd
+  customer_chargeback_revert_usd:
+    code: 1102
+    book_add: customer_balance_available_usd
+    book_sub: customer_chargeback_usd
 
   # Bonus.
   customer_bonus_unlock_usd:
