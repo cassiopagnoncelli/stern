@@ -4,7 +4,7 @@ class CreateSternEntries < ActiveRecord::Migration[7.0]
       t.timestamps
 
       t.integer :book_id, null: false
-      t.integer :gid, null: false
+      t.bigint :gid, null: false
       t.bigint :entry_pair_id, null: false
       t.bigint :amount, null: false
       t.bigint :ending_balance, null: false

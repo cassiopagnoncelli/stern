@@ -3,7 +3,7 @@ class CreateEntryFunction < ActiveRecord::Migration[7.0]
     <<-SQL
 CREATE OR REPLACE FUNCTION create_entry(
   IN in_book_id INTEGER,
-  IN in_gid INTEGER,
+  IN in_gid BIGINT,
   IN in_entry_pair_id BIGINT,
   IN in_amount BIGINT,
   IN in_timestamp_utc TIMESTAMP(6) DEFAULT NULL,

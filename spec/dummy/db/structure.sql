@@ -22,7 +22,7 @@ CREATE TABLE public.stern_entries (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     book_id integer NOT NULL,
-    gid integer NOT NULL,
+    gid bigint NOT NULL,
     entry_pair_id bigint NOT NULL,
     amount bigint NOT NULL,
     ending_balance bigint NOT NULL,
@@ -31,10 +31,10 @@ CREATE TABLE public.stern_entries (
 
 
 --
--- Name: create_entry(integer, integer, bigint, bigint, timestamp without time zone, boolean); Type: FUNCTION; Schema: public; Owner: -
+-- Name: create_entry(integer, bigint, bigint, bigint, timestamp without time zone, boolean); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.create_entry(in_book_id integer, in_gid integer, in_entry_pair_id bigint, in_amount bigint, in_timestamp_utc timestamp without time zone DEFAULT NULL::timestamp without time zone, verbose_mode boolean DEFAULT false) RETURNS public.stern_entries
+CREATE FUNCTION public.create_entry(in_book_id integer, in_gid bigint, in_entry_pair_id bigint, in_amount bigint, in_timestamp_utc timestamp without time zone DEFAULT NULL::timestamp without time zone, verbose_mode boolean DEFAULT false) RETURNS public.stern_entries
     LANGUAGE plpgsql
     AS $$
 DECLARE

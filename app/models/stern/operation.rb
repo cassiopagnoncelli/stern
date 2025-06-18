@@ -11,7 +11,7 @@ module Stern
       presence: true,
       allow_blank: true,
       uniqueness: true,
-      length: { minimum: 10, maximum: 20, allow_nil: true, allow_blank: false }
+      length: { minimum: 8, maximum: 24, allow_nil: true, allow_blank: false }
 
     def self.list
       # Get the engine root directory
