@@ -1,15 +1,14 @@
 # Active Context: Stern
 
 ## Current Work Focus
-**Memory Bank Initialization** - Establishing comprehensive documentation of the Stern double-entry ledger project to enable effective future development and maintenance.
+**RSpec Testing Infrastructure Fixed** - Successfully resolved critical RSpec testing issues that were preventing proper test execution in the Stern Rails engine.
 
 ## Recent Changes
-- Created initial memory bank structure with core documentation files
-- Analyzed project architecture and established understanding of:
-  - Double-entry ledger design patterns
-  - Operations-based API architecture
-  - PostgreSQL-specific implementation details
-  - Rails engine integration patterns
+- **Fixed Dummy App Configuration**: Corrected `spec/dummy/config/boot.rb` to point to engine's root Gemfile (`../../Gemfile` instead of `../Gemfile`)
+- **Added Engine Loading**: Added `require "stern"` to dummy app's `application.rb` to ensure proper engine initialization during testing
+- **Fixed Chart Configuration**: Corrected `config/charts/psp.yaml` to use `operations: psp` instead of `operations: payment_processing` to match actual directory structure
+- **Set Default Test Chart**: Added `ENV["STERN_CHART"] ||= "psp"` to `spec/rails_helper.rb` to ensure consistent test environment
+- **Verified Multi-Chart Support**: Confirmed both `psp` and `game` charts work correctly with their respective operation sets
 
 ## Next Steps
 1. **Complete Memory Bank Setup**: Finish creating progress.md to establish current project status

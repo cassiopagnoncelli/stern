@@ -1,4 +1,4 @@
-operations: payment_processing
+operations: psp
 
 books:
   merchant_balance: 1101
