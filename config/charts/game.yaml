@@ -3,332 +3,333 @@ operations: game
 
 # Book naming conventions:
 #
-#   0000X: state (eg. available=1, locked=2, pending=3, frozen=4, floating=5, etc.)
-#   000X0: entity wallet type (eg. balance=1, withdraw=2, deposit=4, bonus=6, etc.)
-#   00X00: entity type (eg. customer=1, service=2, bops=3, etc.)
-#   XX000: units and decimals describe the currency of the book (eg. usd=20.)
+#   00000X: state (eg. available=1, locked=2, pending=3, frozen=4, floating=5, etc.)
+#   000XX0: entity wallet type (eg. balance=1, withdraw=2, deposit=4, bonus=6, etc.)
+#   00X000: entity type (eg. customer=1, service=2, bops=3, etc.)
+#   XX0000: book currency (eg. usd=20.)
 #
 books:
   # Customer.
-  customer_balance_available_usd: 20101
-  customer_balance_locked_usd: 20102
-  customer_balance_pending_usd: 20103
+  customer_balance_available_usd: 201001
+  customer_balance_locked_usd: 201002
+  customer_balance_pending_usd: 201003
 
-  customer_withdraw_usd: 20111
-  customer_withdraw_pending_usd: 20113
+  customer_withdraw_usd: 201011
+  customer_withdraw_pending_usd: 201012
 
-  customer_withdraw_fee_usd: 20121
+  customer_withdraw_fee_usd: 201021
 
-  customer_deposit_usd: 20141
+  customer_deposit_usd: 201041
 
-  customer_deposit_fee_usd: 20151
+  customer_deposit_fee_usd: 201051
 
-  customer_refund_usd: 20161
+  customer_refund_usd: 201061
 
-  customer_refund_fee_usd: 20171
+  customer_refund_fee_usd: 201071
 
-  customer_chargeback_usd: 20181
+  customer_chargeback_usd: 201081
 
-  customer_chargeback_fee_usd: 20191
+  customer_chargeback_fee_usd: 201091
 
-  customer_bonus_available_usd: 20191
-  customer_bonus_locked_usd: 20192
+  customer_bonus_available_usd: 201101
+  customer_bonus_locked_usd: 201102
 
   # Service.
-  bops_pl_usd: 20201
+  bops_pl_usd: 202001
 
-  bonus_given_usd: 20211
+  bonus_given_usd: 202011
 
-  withdraw_fee_pl_usd: 20221
+  withdraw_fee_pl_usd: 202021
 
-  withdraw_fee_cost_usd: 20231
+  withdraw_fee_cost_usd: 202031
 
-  deposit_fee_pl_usd: 20241
+  deposit_fee_pl_usd: 202041
 
-  deposit_fee_cost_usd: 20251
+  deposit_fee_cost_usd: 202051
 
-  refund_fee_pl_usd: 20261
+  refund_fee_pl_usd: 202061
 
-  refund_fee_cost_usd: 20271
+  refund_fee_cost_usd: 202071
 
-  chargeback_fee_pl_usd: 20281
+  chargeback_fee_pl_usd: 202081
 
-  chargeback_fee_cost_usd: 20291
+  chargeback_fee_cost_usd: 202091
 
   # Binary options game.
-  bops_trade_usd: 20301
+  bops_trade_usd: 203001
 
-  handle_call_usd: 20311
+  handle_call_usd: 203011
 
-  handle_put_usd: 20321
+  handle_put_usd: 203021
 
-  revenue_call_usd: 20331
+  revenue_call_usd: 203031
 
-  revenue_put_usd: 20341
+  revenue_put_usd: 203041
 
-  payout_call_usd: 20351
+  payout_call_usd: 203051
 
-  payout_put_usd: 20361
+  payout_put_usd: 203061
 
 # Entry pairs naming conventions:
 #
-#   000X: action (eg. add/give=1, sub/take=2)
-#   0XX0: action (eg. customer_balance_available_usd, customer_bonus_usd, etc.)
-#   X000: base entity (eg. customer=1, service=2, etc.)
+#   00000X: action (eg. add/give=1, sub/take=2)
+#   000XX0: action (eg. customer_balance_available_usd, customer_bonus_usd, etc.)
+#   00X000: base entity (eg. customer=1, service=2, etc.)
+#   XX0000: book currency (eg. usd=20.)
 #
 entry_pairs:
   # Customer balance.
   customer_lock_balance_usd:
-    code: 1011
+    code: 201011
     book_add: customer_balance_locked_usd
     book_sub: customer_balance_available_usd
   customer_unlock_balance_usd:
-    code: 1012
+    code: 201012
     book_add: customer_balance_available_usd
     book_sub: customer_balance_locked_usd
 
   customer_pending_to_available_balance_usd:
-    code: 1021
+    code: 201021
     book_add: customer_balance_available_usd
     book_sub: customer_balance_pending_usd
   customer_available_to_pending_balance_usd:
-    code: 1022
+    code: 201022
     book_add: customer_balance_pending_usd
     book_sub: customer_balance_available_usd
 
   # Withdraw.
   withdraw_request_usd:
-    code: 1031
+    code: 201031
     book_add: customer_withdraw_pending_usd
     book_sub: customer_balance_available_usd
   withdraw_request_revert_usd:
-    code: 1032
+    code: 201032
     book_add: customer_balance_available_usd
     book_sub: customer_withdraw_pending_usd
 
   withdraw_confirm_usd:
-    code: 1041
+    code: 201041
     book_add: customer_withdraw_usd
     book_sub: customer_withdraw_pending_usd
   withdraw_confirm_revert_usd:
-    code: 1042
+    code: 201042
     book_add: customer_withdraw_pending_usd
     book_sub: customer_withdraw_usd
 
   withdraw_fee_customer_pay_usd:
-    code: 1051
+    code: 201051
     book_add: customer_withdraw_fee_usd
     book_sub: customer_balance_available_usd
   withdraw_fee_customer_pay_revert_usd:
-    code: 1052
+    code: 201052
     book_add: customer_balance_available_usd
     book_sub: customer_withdraw_fee_usd
 
   withdraw_fee_service_pay_usd:
-    code: 1061
+    code: 201061
     book_add: withdraw_fee_cost_usd
     book_sub: withdraw_fee_pl_usd
   withdraw_fee_service_pay_revert_usd:
-    code: 1062
+    code: 201062
     book_add: withdraw_fee_pl_usd
     book_sub: withdraw_fee_cost_usd
 
   # Deposit.
   customer_deposit_usd:
-    code: 1071
+    code: 201071
     book_add: customer_balance_available_usd
     book_sub: customer_deposit_usd
   customer_deposit_revert_usd:
-    code: 1072
+    code: 201072
     book_add: customer_deposit_usd
     book_sub: customer_balance_available_usd
 
   # Deposit fee.
   customer_deposit_fee_usd:
-    code: 1081
+    code: 201081
     book_add: customer_deposit_fee_usd
     book_sub: customer_balance_available_usd
   customer_deposit_fee_revert_usd:
-    code: 1082
+    code: 201082
     book_add: customer_balance_available_usd
     book_sub: customer_deposit_fee_usd
 
   # Refund.
   customer_refund_usd:
-    code: 1091
+    code: 201091
     book_add: customer_refund_usd
     book_sub: customer_balance_locked_usd
   customer_refund_revert_usd:
-    code: 1092
+    code: 201092
     book_add: customer_refund_usd
     book_sub: customer_balance_locked_usd
 
   # Refund fee.
   refund_fee_customer_pay_usd:
-    code: 1101
+    code: 201101
     book_add: customer_refund_fee_usd
     book_sub: customer_balance_available_usd
   refund_fee_customer_pay_revert_usd:
-    code: 1102
+    code: 201102
     book_add: customer_balance_available_usd
     book_sub: customer_refund_fee_usd
   refund_fee_service_pay_usd:
-    code: 1111
+    code: 201111
     book_add: refund_fee_cost_usd
     book_sub: refund_fee_pl_usd
   refund_fee_service_pay_revert_usd:
-    code: 1112
+    code: 201112
     book_add: refund_fee_pl_usd
     book_sub: refund_fee_cost_usd
 
   # Chargeback.
   customer_chargeback_usd:
-    code: 1101
+    code: 201121
     book_add: customer_chargeback_usd
     book_sub: customer_balance_available_usd
   customer_chargeback_revert_usd:
-    code: 1102
+    code: 201122
     book_add: customer_balance_available_usd
     book_sub: customer_chargeback_usd
 
   # Chargeback fee.
   chargeback_fee_customer_pay_usd:
-    code: 1111
+    code: 201131
     book_add: customer_chargeback_fee_usd
     book_sub: customer_balance_available_usd
   chargeback_fee_customer_pay_revert_usd:
-    code: 1112
+    code: 201132
     book_add: customer_chargeback_usd
     book_sub: customer_chargeback_fee_usd
   chargeback_fee_service_pay_usd:
-    code: 1121
+    code: 201141
     book_add: chargeback_fee_cost_usd
     book_sub: chargeback_fee_pl_usd
   chargeback_fee_service_pay_revert_usd:
-    code: 1122
+    code: 201142
     book_add: chargeback_fee_pl_usd
     book_sub: chargeback_fee_cost_usd
 
   # Bonus.
   customer_bonus_unlock_usd:
-    code: 1091
+    code: 201151
     book_add: customer_bonus_available_usd
     book_sub: customer_bonus_locked_usd
   customer_bonus_unlock_revert_usd:
-    code: 1092
+    code: 201152
     book_add: customer_bonus_locked_usd
     book_sub: customer_bonus_available_usd
   customer_bonus_redeem_usd:
-    code: 1101
+    code: 201161
     book_add: customer_balance_available_usd
     book_sub: customer_bonus_available_usd
   customer_bonus_redeem_revert_usd:
-    code: 1102
+    code: 201162
     book_add: customer_bonus_available_usd
     book_sub: customer_balance_available_usd
 
   # Service.
   service_withdraw_fee_usd:
-    code: 2011
+    code: 202011
     book_add: withdraw_fee_cost_usd
     book_sub: withdraw_fee_pl_usd
   service_withdraw_fee_revert_usd:
-    code: 2012
+    code: 202012
     book_add: withdraw_fee_pl_usd
     book_sub: withdraw_fee_cost_usd
 
   service_deposit_fee_usd:
-    code: 2021
+    code: 202021
     book_add: deposit_fee_cost_usd
     book_sub: deposit_fee_pl_usd
   service_deposit_fee_revert_usd:
-    code: 2022
+    code: 202022
     book_add: deposit_fee_pl_usd
     book_sub: deposit_fee_cost_usd
 
   customer_give_bonus_locked_usd:
-    code: 2031
+    code: 202031
     book_add: customer_bonus_locked_usd
     book_sub: bonus_given_usd
   customer_give_bonus_locked_revert_usd:
-    code: 2032
+    code: 202032
     book_add: bonus_given_usd
     book_sub: customer_bonus_locked_usd
 
   # Binary options.
   call_option_usd:
-    code: 3011
+    code: 203011
     book_add: handle_call_usd
     book_sub: customer_balance_available_usd
   call_option_revert_usd:
-    code: 3012
+    code: 203012
     book_add: customer_balance_available_usd
     book_sub: handle_call_usd
   put_option_usd:
-    code: 3021
+    code: 203021
     book_add: handle_put_usd
     book_sub: customer_balance_available_usd
   put_option_revert_usd:
-    code: 3022
+    code: 203022
     book_add: customer_balance_available_usd
     book_sub: handle_put_usd
   
   call_expire_usd:
-    code: 3031
+    code: 203031
     book_add: revenue_call_usd
     book_sub: handle_call_usd
   call_expire_revert_usd:
-    code: 3032
+    code: 203032
     book_add: handle_call_usd
     book_sub: revenue_call_usd
   put_expire_usd:
-    code: 3041
+    code: 203041
     book_add: revenue_put_usd
     book_sub: handle_put_usd
   put_expire_revert_usd:
-    code: 3042
+    code: 203042
     book_add: handle_put_usd
     book_sub: revenue_put_usd
 
   handle_payback_call_usd:
-    code: 3031
+    code: 203051
     book_add: customer_balance_available_usd
     book_sub: handle_call_usd
   handle_payback_call_revert_usd:
-    code: 3032
+    code: 203052
     book_add: handle_call_usd
     book_sub: customer_balance_available_usd
   handle_payback_put_usd:
-    code: 3041
+    code: 203061
     book_add: customer_balance_available_usd
     book_sub: handle_put_usd
   handle_payback_put_revert_usd:
-    code: 3042
+    code: 203062
     book_add: handle_put_usd
     book_sub: customer_balance_available_usd
 
   payout_call_usd:
-    code: 3051
+    code: 203071
     book_add: customer_balance_available_usd
     book_sub: payout_call_usd
   payout_call_revert_usd:
-    code: 3052
+    code: 203072
     book_add: payout_call_usd
     book_sub: customer_balance_available_usd
   payout_put_usd:
-    code: 3051
+    code: 203081
     book_add: customer_balance_available_usd
     book_sub: payout_put_usd
   payout_put_revert_usd:
-    code: 3052
+    code: 203082
     book_add: payout_put_usd
     book_sub: customer_balance_available_usd
 
   bops_trade_pl_usd:
-    code: 3061
+    code: 203091
     book_add: bops_pl_usd
     book_sub: bops_trade_usd
   bops_trade_pl_revert_usd:
-    code: 3062
+    code: 203092
     book_add: bops_trade_usd
     book_sub: bops_pl_usd
