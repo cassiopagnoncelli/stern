@@ -25,23 +25,35 @@ books:
 
   customer_refund_usd: 20161
 
-  customer_chargeback_usd: 20171
+  customer_refund_fee_usd: 20171
 
-  customer_bonus_available_usd: 20181
-  customer_bonus_locked_usd: 20182
+  customer_chargeback_usd: 20181
+
+  customer_chargeback_fee_usd: 20191
+
+  customer_bonus_available_usd: 20191
+  customer_bonus_locked_usd: 20192
 
   # Service.
   bops_pl_usd: 20201
 
-  withdraw_fee_pl_usd: 20211
+  bonus_given_usd: 20211
 
-  withdraw_fee_cost_usd: 20221
+  withdraw_fee_pl_usd: 20221
 
-  deposit_fee_pl_usd: 20231
+  withdraw_fee_cost_usd: 20231
+
+  deposit_fee_pl_usd: 20241
 
   deposit_fee_cost_usd: 20251
 
-  bonus_given_usd: 20261
+  refund_fee_pl_usd: 20261
+
+  refund_fee_cost_usd: 20271
+
+  chargeback_fee_pl_usd: 20281
+
+  chargeback_fee_cost_usd: 20291
 
   # Binary options game.
   bops_trade_usd: 20301
@@ -130,6 +142,8 @@ entry_pairs:
     code: 1072
     book_add: customer_deposit_usd
     book_sub: customer_balance_available_usd
+
+  # Deposit fee.
   customer_deposit_fee_usd:
     code: 1081
     book_add: customer_deposit_fee_usd
@@ -138,6 +152,8 @@ entry_pairs:
     code: 1082
     book_add: customer_balance_available_usd
     book_sub: customer_deposit_fee_usd
+
+  # Refund.
   customer_refund_usd:
     code: 1091
     book_add: customer_refund_usd
@@ -146,6 +162,26 @@ entry_pairs:
     code: 1092
     book_add: customer_refund_usd
     book_sub: customer_balance_locked_usd
+
+  # Refund fee.
+  refund_fee_customer_pay_usd:
+    code: 1101
+    book_add: customer_refund_fee_usd
+    book_sub: customer_balance_available_usd
+  refund_fee_customer_pay_revert_usd:
+    code: 1102
+    book_add: customer_balance_available_usd
+    book_sub: customer_refund_fee_usd
+  refund_fee_service_pay_usd:
+    code: 1111
+    book_add: refund_fee_cost_usd
+    book_sub: refund_fee_pl_usd
+  refund_fee_service_pay_revert_usd:
+    code: 1112
+    book_add: refund_fee_pl_usd
+    book_sub: refund_fee_cost_usd
+
+  # Chargeback.
   customer_chargeback_usd:
     code: 1101
     book_add: customer_chargeback_usd
@@ -154,6 +190,24 @@ entry_pairs:
     code: 1102
     book_add: customer_balance_available_usd
     book_sub: customer_chargeback_usd
+
+  # Chargeback fee.
+  chargeback_fee_customer_pay_usd:
+    code: 1111
+    book_add: customer_chargeback_fee_usd
+    book_sub: customer_balance_available_usd
+  chargeback_fee_customer_pay_revert_usd:
+    code: 1112
+    book_add: customer_chargeback_usd
+    book_sub: customer_chargeback_fee_usd
+  chargeback_fee_service_pay_usd:
+    code: 1121
+    book_add: chargeback_fee_cost_usd
+    book_sub: chargeback_fee_pl_usd
+  chargeback_fee_service_pay_revert_usd:
+    code: 1122
+    book_add: chargeback_fee_pl_usd
+    book_sub: chargeback_fee_cost_usd
 
   # Bonus.
   customer_bonus_unlock_usd:

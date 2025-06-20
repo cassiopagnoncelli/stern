@@ -5,7 +5,7 @@ module Stern
   class Refund < BaseOperation
     include ActiveModel::Validations
 
-    attr_accessor :customer_id, :currency, :amount, :refund_id, :lock_id
+    attr_accessor :customer_id, :currency, :amount, :refund_id
 
     validates :refund_id, presence: true, numericality: { other_than: 0 }
     validates :customer_id, presence: true, numericality: { other_than: 0 }
