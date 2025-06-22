@@ -20,4 +20,6 @@ module Stern
   ENTRY_PAIRS ||= STERN_DEFS[:entry_pairs].map { |k, v| ["add_#{k}".to_sym, v[:code]] }.to_h.merge(
     STERN_DEFS[:entry_pairs].map { |k, v| ["remove_#{k}".to_sym, -v[:code]] }.to_h
   ).with_indifferent_access.freeze
+
+  ENTRY_PAIRS_CODES ||= ENTRY_PAIRS.invert.freeze
 end

@@ -36,34 +36,40 @@ module Stern
     def call
       @results = execute_query
       results_array = @results.map do |record|
-        record.symbolize_keys.slice(:timestamp, :amount, :ending_balance)
+        record = record.symbolize_keys.slice(:timestamp, :amount, :ending_balance, :code)
+        record[:code] = ENTRY_PAIRS_CODES[record[:code]].sub(/^add_/, '').sub(/^remove_/, '')
+        record
       end
-      
+
       # If negative page, reverse results to maintain ascending order
       page < 0 ? results_array.reverse : results_array
     end
 
     def sql
-      query = Entry.where(book_id:)
+      query = Entry.joins(:entry_pair)
+        .select('stern_entries.*, stern_entry_pairs.code')
+        .where(book_id:)
+        .where("stern_entries.timestamp BETWEEN ? AND ?", start_date, end_date)
       query = query.where(gid:) if gid.present?
-      query = query.where("timestamp BETWEEN ? AND ?", start_date, end_date)
-      
-      if page > 0
-        # Positive pages: ascending order with normal pagination
-        query = query
+      query = paginate(query)
+
+      query.to_sql
+    end
+
+    def paginate(query)
+      if page.positive?
+        query
           .order(:timestamp)
           .limit(per_page)
           .offset((page - 1) * per_page)
       else
         # Negative pages: descending order for reverse pagination
         absolute_page = page.abs
-        query = query
+        query
           .order(timestamp: :desc)
           .limit(per_page)
           .offset((absolute_page - 1) * per_page)
       end
-      
-      query.to_sql
     end
   end
 end
@@ -71,6 +77,13 @@ end
 __END__
 
 # Examples:
+
+EntriesQuery.new(
+  book_id: :customer_balance_available_usd,
+  start_date: DateTime.current.yesterday,
+  end_date: DateTime.current + 1.minute,
+  gid: 1
+).call
 
 # Get last page (default behavior)
 EntriesQuery.new(
