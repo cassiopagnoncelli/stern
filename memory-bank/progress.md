@@ -33,7 +33,7 @@
 
 ### Query System ✅
 - **BalanceQuery**: Real-time balance calculations
-- **BalancesQuery**: Multiple balance queries
+- **BookBalancesQuery**: Multiple balance queries
 - **ConsolidatedEntriesQuery**: Entry aggregation
 - **OutstandingBalanceQuery**: Outstanding balance calculations
 - **Helper Modules**: Frequency and time normalization helpers

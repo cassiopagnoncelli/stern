@@ -16,6 +16,7 @@ module Stern
   TIMESTAMP_DELTA ||= 2 * (1.second / 1e6)
 
   BOOKS ||= STERN_DEFS[:books].with_indifferent_access.freeze
+  BOOKS_CODES ||= BOOKS.invert.freeze
 
   ENTRY_PAIRS ||= STERN_DEFS[:entry_pairs].map { |k, v| ["add_#{k}".to_sym, v[:code]] }.to_h.merge(
     STERN_DEFS[:entry_pairs].map { |k, v| ["remove_#{k}".to_sym, -v[:code]] }.to_h
