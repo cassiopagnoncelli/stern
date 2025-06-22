@@ -38,7 +38,7 @@ module Stern
     def call
       @results = execute_query
       results_array = @results.map do |record|
-        record = record.symbolize_keys.slice(:timestamp, :amount, :ending_balance, :code)
+        record = record.symbolize_keys.slice(:timestamp, :gid, :amount, :ending_balance, :code)
         record[:code] = code_format.reduce(ENTRY_PAIRS_CODES[record[:code]]) do |acc, format|
           Helpers::StringFormatHelper.format_string(acc, format)
         end
