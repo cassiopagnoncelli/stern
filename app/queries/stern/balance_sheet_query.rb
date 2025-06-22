@@ -74,6 +74,7 @@ module Stern
         FROM books b
         LEFT JOIN current_balances cb ON b.book_id = cb.book_id
         LEFT JOIN previous_balances pb ON b.book_id = pb.book_id
+        ORDER BY b.book_id
       }
       ApplicationRecord.sanitize_sql_array([sql, { start_date:, end_date:, book_ids: }])
     end
