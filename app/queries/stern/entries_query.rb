@@ -37,7 +37,7 @@ module Stern
       @results = execute_query
       results_array = @results.map do |record|
         record = record.symbolize_keys.slice(:timestamp, :amount, :ending_balance, :code)
-        record[:code] = ENTRY_PAIRS_CODES[record[:code]].sub(/^add_/, '').sub(/^remove_/, '')
+        record[:code] = Stern::ENTRY_PAIRS_CODES[record[:code]].sub(/^add_/, '').sub(/^remove_/, '')
         record
       end
 
