@@ -9,15 +9,16 @@ module Stern
   # Example at the end of the file.
   # 
   class EntriesQuery < BaseQuery
-    attr_accessor :gid, :book_id, :start_date, :end_date, :page, :per_page, :results
+    attr_accessor :gid, :book_id, :start_date, :end_date, :code_format, :page, :per_page, :results
 
     # @param gid [Bignum] group id, eg. merchant id (optional)
     # @param book_id [DateTime] consolidating book, eg. merchant balance
     # @param start_date [DateTime] report starting date/time
     # @param end_date [DateTime] report ending date/time
+    # @param code_format [Array<Symbol>] format of the code, eg. %i[titleize drop_first_word]
     # @param page [Integer] page number (-3, -2, -1, 1, 2, 3, ..., defaults to -1, page 0 does not exist)
     # @param per_page [Integer] records per page (defaults to 50)
-    def initialize(book_id:, start_date:, end_date:, gid: nil, page: -1, per_page: 50)
+    def initialize(book_id:, start_date:, end_date:, gid: nil, code_format: %i[titleize drop_first_word], page: -1, per_page: 50)
       unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
         raise ArgumentError, "book does not exist"
       end
@@ -29,6 +30,7 @@ module Stern
       self.book_id = book_id.is_a?(Symbol) || book_id.is_a?(String) ? BOOKS[book_id] : book_id
       self.start_date = Helpers::NormalizeTimeHelper.normalize_time(start_date, true)
       self.end_date = Helpers::NormalizeTimeHelper.normalize_time(end_date, true)
+      self.code_format = code_format
       self.page = page
       self.per_page = per_page
     end
@@ -37,7 +39,9 @@ module Stern
       @results = execute_query
       results_array = @results.map do |record|
         record = record.symbolize_keys.slice(:timestamp, :amount, :ending_balance, :code)
-        record[:code] = ENTRY_PAIRS_CODES[record[:code]].sub(/^add_/, '').sub(/^remove_/, '')
+        record[:code] = code_format.reduce(ENTRY_PAIRS_CODES[record[:code]]) do |acc, format|
+          Helpers::StringFormatHelper.format_string(acc, format)
+        end
         record
       end
 
@@ -82,40 +86,6 @@ EntriesQuery.new(
   book_id: :customer_balance_available_usd,
   start_date: DateTime.current.yesterday,
   end_date: DateTime.current + 1.minute,
-  gid: 1
-).call
-
-# Get last page (default behavior)
-EntriesQuery.new(
-  book_id: :merchant_balance,
-  start_date: DateTime.parse('2025-05-01 00:00:00'),
-  end_date: DateTime.current,
-  gid: 1101
-).call
-
-# Get first page with 25 records per page
-EntriesQuery.new(
-  book_id: :merchant_balance,
-  start_date: DateTime.parse('2025-05-01 00:00:00'),
-  end_date: DateTime.current,
-  gid: 1101,
-  page: 1,
-  per_page: 25
-).call
-
-# Get second-to-last page with 100 records per page
-EntriesQuery.new(
-  book_id: :merchant_balance,
-  start_date: DateTime.parse('2025-05-01 00:00:00'),
-  end_date: DateTime.current,
-  gid: 1101,
-  page: -2,
-  per_page: 100
-).call
-
-# Get entries for all gids in a book
-EntriesQuery.new(
-  book_id: :merchant_balance,
-  start_date: DateTime.parse('2025-05-01 00:00:00'),
-  end_date: DateTime.current
+  gid: 1,
+  code_format: %i[titleize drop_first_word]
 ).call
