@@ -56,7 +56,7 @@ module Stern
         current_balances AS (
           SELECT
             book_id,
-            SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) AS debts,
+            SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) AS debits,
             SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) AS credits,
             SUM(amount) AS net
           FROM stern_entries
@@ -66,7 +66,7 @@ module Stern
         )
         SELECT
           b.book_id,
-          COALESCE(cb.debts, 0) AS debts,
+          COALESCE(cb.debits, 0) AS debits,
           COALESCE(cb.credits, 0) AS credits,
           COALESCE(cb.net, 0) AS net,
           COALESCE(pb.previous_balance, 0) AS previous_balance,
