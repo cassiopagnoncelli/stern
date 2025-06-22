@@ -66,9 +66,11 @@ module Stern
         )
         SELECT
           b.book_id,
-          cb.*,
+          COALESCE(cb.debts, 0) AS debts,
+          COALESCE(cb.credits, 0) AS credits,
+          COALESCE(cb.net, 0) AS net,
           COALESCE(pb.previous_balance, 0) AS previous_balance,
-          COALESCE(pb.previous_balance, 0) + cb.net AS final_balance
+          COALESCE(pb.previous_balance, 0) + COALESCE(cb.net, 0) AS final_balance
         FROM books b
         LEFT JOIN current_balances cb ON b.book_id = cb.book_id
         LEFT JOIN previous_balances pb ON b.book_id = pb.book_id
