@@ -4,6 +4,9 @@
 **RunJob Spec Implementation Complete** - Successfully implemented comprehensive RSpec tests for the RunJob background job that processes scheduled operations.
 
 ## Recent Changes
+- **Fixed Entry Spec Test Syntax**: Corrected failing test in `spec/models/stern/entry_spec.rb`
+  - Changed `raise(NotImplementedError)` to `raise_error(NotImplementedError)` for proper RSpec syntax
+  - All 188 tests now pass with 0 failures
 - **Implemented RunJob Spec**: Created comprehensive RSpec tests for `Stern::RunJob` background job
   - Tests job's interaction with `ScheduledOperationService.list` and `ScheduledOperationService.process_sop`
   - Covers normal operation, empty list handling, and error propagation scenarios

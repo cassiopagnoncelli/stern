@@ -69,6 +69,10 @@ module Stern
       ApplicationRecord.sanitize_sql_array([sql, { book_id:, gid:, entry_pair_id:, amount:, timestamp: }])
     end
 
+    def self.destroy_all
+      raise NotImplementedError, "Ledger is append-only, if you are sure about this operation use delete_all"
+    end
+
     def destroy
       raise NotImplementedError, "Use destroy! instead"
     end

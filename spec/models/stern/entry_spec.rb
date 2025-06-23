@@ -83,7 +83,9 @@ module Stern
         expect { entry.destroy! }.to change(described_class, :count).by(-1)
       end
 
-      pending "destroy_all is unopinionated"
+      it "destroy_all is unopinionated" do
+        expect { entry; Entry.destroy_all }.to raise_error(NotImplementedError)
+      end
     end
 
     describe ".last_entry" do
