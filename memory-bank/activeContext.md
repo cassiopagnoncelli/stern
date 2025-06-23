@@ -1,9 +1,14 @@
 # Active Context: Stern
 
 ## Current Work Focus
-**RSpec Testing Infrastructure Fixed** - Successfully resolved critical RSpec testing issues that were preventing proper test execution in the Stern Rails engine.
+**RunJob Spec Implementation Complete** - Successfully implemented comprehensive RSpec tests for the RunJob background job that processes scheduled operations.
 
 ## Recent Changes
+- **Implemented RunJob Spec**: Created comprehensive RSpec tests for `Stern::RunJob` background job
+  - Tests job's interaction with `ScheduledOperationService.list` and `ScheduledOperationService.process_sop`
+  - Covers normal operation, empty list handling, and error propagation scenarios
+  - Uses stubbing approach as requested for simple implementation
+  - All 4 test cases pass successfully
 - **Fixed Dummy App Configuration**: Corrected `spec/dummy/config/boot.rb` to point to engine's root Gemfile (`../../Gemfile` instead of `../Gemfile`)
 - **Added Engine Loading**: Added `require "stern"` to dummy app's `application.rb` to ensure proper engine initialization during testing
 - **Fixed Chart Configuration**: Corrected `config/charts/psp.yaml` to use `operations: psp` instead of `operations: payment_processing` to match actual directory structure
