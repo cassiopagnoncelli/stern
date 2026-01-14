@@ -16,7 +16,7 @@
 - **Added Engine Loading**: Added `require "stern"` to dummy app's `application.rb` to ensure proper engine initialization during testing
 - **Fixed Chart Configuration**: Corrected `config/charts/psp.yaml` to use `operations: psp` instead of `operations: payment_processing` to match actual directory structure
 - **Set Default Test Chart**: Added `ENV["STERN_CHART"] ||= "psp"` to `spec/rails_helper.rb` to ensure consistent test environment
-- **Verified Multi-Chart Support**: Confirmed both `psp` and `game` charts work correctly with their respective operation sets
+- **Verified Multi-Chart Support**: Confirmed both `psp` and `ob` charts work correctly with their respective operation sets
 
 ## Next Steps
 1. **Complete Memory Bank Setup**: Finish creating progress.md to establish current project status

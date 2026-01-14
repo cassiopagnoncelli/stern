@@ -1,4 +1,4 @@
-operations: game
+operations: pred
 
 
 # Book naming conventions:
@@ -55,7 +55,7 @@ books:
 
   chargeback_fee_cost_usd: 202091
 
-  # Binary options game.
+  # Binary options.
   bops_trade_usd: 203001
 
   handle_call_usd: 203011
