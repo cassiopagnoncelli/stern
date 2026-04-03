@@ -1,4 +1,5 @@
-.PHONY: all release build check clean docs test lint style stats
+.PHONY: all release build check clean docs tests test lint style stats help
+.DEFAULT_GOAL := help
 
 RAILS_LOC_DIRS = app config db lib spec
 RAILS_LOC_FIND_TYPES = \( -name '*.rb' -o -name '*.erb' -o -name '*.js' -o -name '*.rake' -o -name '*.ru' \)
@@ -15,33 +16,36 @@ RAILS_LOC_GIT_PATHS = \
 	Rakefile \
 	config.ru
 
-all: build clean
+all: build clean ## Build and clean temporary artifacts
 
-release: lint test docs check build
+release: lint test docs check build ## Run full release pipeline
 
-build: clean docs
+build: clean docs ## Run build steps
 
-check: build
+check: build ## Verify build can run
 
-clean:
+clean: ## Remove generated log files
 	@rm -f logs/*.log
 
-docs:
+docs: ## Generate documentation (currently no-op)
 
-tests: test
+tests: test ## Alias for test
 
-test:
+test: ## Run test suite
 	bundle exec rspec
 
-lint:
+lint: ## Run static analysis
 	bundle exec rubocop
 
-style:
+style: ## Auto-correct style issues
 	bundle exec rubocop --auto-correct
 
-stats:
+stats: ## Show current and historical LOC stats
 	@current_rails_loc=$$(find $(RAILS_LOC_DIRS) -type f $(RAILS_LOC_FIND_TYPES) -print0 | xargs -0 cat | wc -l | tr -d ' ') && \
 	printf "LOC\n  Current: %s\n" "$$current_rails_loc"
 	@historical_rails_loc=$$(git log --numstat --format=tformat: -- $(RAILS_LOC_GIT_PATHS) | \
 		awk '($$1 ~ /^[0-9]+$$/ && $$2 ~ /^[0-9]+$$/) { total += $$1 + $$2 } END { print total + 0 }') && \
 	printf "  Historical: %s\n" "$$historical_rails_loc"
+
+help: ## Show available make targets
+	@awk 'BEGIN {FS = ":.*##"; printf "Usage: make <target>\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "  %-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
