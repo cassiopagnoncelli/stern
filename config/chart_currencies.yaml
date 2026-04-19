@@ -1,0 +1,44 @@
+# Unit (reserved: 1)
+u: 1
+U: 1
+unit: 1
+Unit: 1
+UNIT: 1
+
+# Major global fiat (10-19)
+USD: 11
+EUR: 12
+GBP: 13
+JPY: 14
+CAD: 15
+AUD: 16
+CHF: 17
+CNY: 18
+
+# Latam fiat (20-29)
+BRL: 21
+MXN: 22
+ARS: 23
+CLP: 24
+COP: 25
+PEN: 26
+UYU: 27
+PYG: 28
+
+# USD stablecoins (1000-1009)
+USDT: 1001
+USDC: 1002
+DAI:  1003
+
+# BRL stablecoins (1010-1019)
+BRZ:  1011
+DREX: 1012
+BRLA: 1013
+
+# Major cryptos (2000-2009)
+BTC: 2001
+ETH: 2002
+BNB: 2003
+SOL: 2004
+XRP: 2005
+ADA: 2006
