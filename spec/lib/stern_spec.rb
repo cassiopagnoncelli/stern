@@ -38,11 +38,11 @@ RSpec.describe Stern do
       end
 
       it "returns \"bleh\" for an unknown currency name" do
-        expect(described_class.cur("XXX")).to eq("bleh")
+        expect { described_class.cur("XXX") }.to raise_error(Stern::UnknownCurrencyError)
       end
 
       it "returns \"bleh\" for an unknown currency index" do
-        expect(described_class.cur(999_999)).to eq("bleh")
+        expect { described_class.cur(999_999) }.to raise_error(Stern::UnknownCurrencyError)
       end
     end
   end

@@ -21,11 +21,11 @@ module Stern
 
     if name_or_index.is_a?(String)
       name = name_or_index.strip.upcase
-      return "bleh" unless STERN_CURRENCIES.keys.include?(name)
+      raise UnknownCurrencyError unless STERN_CURRENCIES.keys.include?(name)
 
       STERN_CURRENCIES[name]
     elsif name_or_index.is_a?(Integer)
-      return "bleh" unless STERN_CURRENCIES_R.keys.include?(name_or_index)
+      raise UnknownCurrencyError unless STERN_CURRENCIES_R.keys.include?(name_or_index)
 
       STERN_CURRENCIES_R[name_or_index]
     else
