@@ -15,7 +15,7 @@
 - **Fixed Dummy App Configuration**: Corrected `spec/dummy/config/boot.rb` to point to engine's root Gemfile (`../../Gemfile` instead of `../Gemfile`)
 - **Added Engine Loading**: Added `require "stern"` to dummy app's `application.rb` to ensure proper engine initialization during testing
 - **Fixed Chart Configuration**: Corrected `config/charts/psp.yaml` to use `operations: psp` instead of `operations: payment_processing` to match actual directory structure
-- **Set Default Test Chart**: Added `ENV["STERN_CHART"] ||= "psp"` to `spec/rails_helper.rb` to ensure consistent test environment
+- **Set Default Test Chart**: Added `ENV["STERN_CHART"] ||= "general"` to `spec/rails_helper.rb` to ensure consistent test environment
 - **Verified Multi-Chart Support**: Confirmed both `psp` and `ob` charts work correctly with their respective operation sets
 
 ## Next Steps
