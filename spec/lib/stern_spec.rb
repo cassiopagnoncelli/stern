@@ -45,5 +45,63 @@ RSpec.describe Stern do
         expect { described_class.cur(999_999) }.to raise_error(Stern::UnknownCurrencyError)
       end
     end
+
+    context "with the result: keyword argument" do
+      it "defaults result to :both" do
+        expect(described_class.cur("USD")).to eq(described_class.cur("USD", result: :both))
+        expect(described_class.cur(811)).to eq(described_class.cur(811, result: :both))
+      end
+
+      it "raises UnrecognizedArgument for an unknown result option" do
+        expect { described_class.cur("USD", result: :foo) }
+          .to raise_error(Stern::UnrecognizedArgument)
+      end
+
+      it "raises UnrecognizedArgument for :integer (not in the allow list)" do
+        expect { described_class.cur("USD", result: :integer) }
+          .to raise_error(Stern::UnrecognizedArgument)
+      end
+
+      it "validates the result argument before inspecting the currency" do
+        expect { described_class.cur("XXX", result: :foo) }
+          .to raise_error(Stern::UnrecognizedArgument)
+        expect { described_class.cur(999_999, result: :foo) }
+          .to raise_error(Stern::UnrecognizedArgument)
+      end
+
+      it "still raises UnknownCurrencyError when the argument is blank regardless of result" do
+        expect { described_class.cur(nil, result: :both) }
+          .to raise_error(Stern::UnknownCurrencyError)
+        expect { described_class.cur("", result: :index) }
+          .to raise_error(Stern::UnknownCurrencyError)
+      end
+
+      Stern::STERN_CURRENCIES.each do |name, idx|
+        it "returns the index for #{name.inspect} with result: :both" do
+          expect(described_class.cur(name, result: :both)).to eq(idx)
+        end
+
+        it "returns the name for #{idx} with result: :both" do
+          expect(described_class.cur(idx, result: :both)).to eq(name)
+        end
+
+        it "returns the index for #{name.inspect} with result: :index" do
+          expect(described_class.cur(name, result: :index)).to eq(idx)
+        end
+
+        it "returns the name for #{idx} with result: :index" do
+          expect(described_class.cur(idx, result: :index)).to eq(name)
+        end
+
+        it "returns the name for #{idx} with result: :string" do
+          expect(described_class.cur(idx, result: :string)).to eq(name)
+        end
+
+        it "raises ArgumentMustBeInteger when asking for :string from name #{name.inspect}" do
+          expect { described_class.cur(name, result: :string) }
+            .to raise_error(Stern::ArgumentMustBeInteger)
+        end
+      end
+    end
   end
 end
