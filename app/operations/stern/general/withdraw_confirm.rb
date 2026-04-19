@@ -12,8 +12,6 @@ module Stern
     validates :currency, presence: true, allow_blank: false, allow_nil: false
     validates :amount, presence: false
 
-    UnknownCurrencyError = Class.new(StandardError)
-
     # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.
     #
     # @param withdraw_id [Bigint] unique withdraw id

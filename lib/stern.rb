@@ -2,6 +2,8 @@ require "stern/version"
 require "stern/engine"
 
 module Stern
+  UnknownCurrencyError = Class.new(StandardError)
+
   def self.generate_gid
     ApplicationRecord.generate_gid
   end
@@ -14,11 +16,13 @@ module Stern
     BalanceQuery.new(gid:, book_id:, timestamp:).call
   end
 
-  def self.curidx(name)
-    STERN_CURRENCIES[name.to_s]
-  end
-
-  def self.cur(idx)
-    STERN_CURRENCIES_R[idx]
+  def self.cur(name_or_index)
+    if name_or_index.is_a?(String)
+      STERN_CURRENCIES[name.to_s.strip.upcase.presence]
+    elsif name_or_index.is_a?(Integer)
+      STERN_CURRENCIES_R[idx]
+    else
+      raise UnknownCurrencyError
+    end
   end
 end
