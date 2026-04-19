@@ -1,4 +1,8 @@
 # Tasks
 
-- Renumerate ob.yaml
-- Link customer_chargeback_fee_usd to chargeback_fee_pl_usd and others
+- General chart, operations
+- SOP job must be durable, AL/E-OD, idem key; use RabbitMQ + Sidekiq
+- Install/uninstall script
+- Add real currency per book support
+- Replicate frontend from CRM
+- Prometheus
