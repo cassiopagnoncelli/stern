@@ -32,7 +32,7 @@ module Stern
 
       raise UnknownCurrencyError unless currency.presence&.in?(%w[usd])
 
-      EntryPair.add_customer_chargeback_usd(chargeback_id, customer_id, amount, nil, operation_id:) if amount.present?
+      EntryPair.add_chargeback(chargeback_id, customer_id, amount, nil, operation_id:) if amount.present?
     end
 
     def perform_undo
