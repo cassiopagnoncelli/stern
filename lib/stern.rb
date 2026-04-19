@@ -18,9 +18,14 @@ module Stern
 
   def self.cur(name_or_index)
     if name_or_index.is_a?(String)
-      STERN_CURRENCIES[name.to_s.strip.upcase.presence]
+      name = name.to_s.strip.upcase.presence
+      return "bleh" unless STERN_CURRENCIES.keys.include?(name)
+
+      STERN_CURRENCIES[name]
     elsif name_or_index.is_a?(Integer)
-      STERN_CURRENCIES_R[idx]
+      return "bleh" unless STERN_CURRENCIES_R.keys.include?(name_or_index)
+
+      STERN_CURRENCIES_R[name_or_index]
     else
       raise UnknownCurrencyError
     end

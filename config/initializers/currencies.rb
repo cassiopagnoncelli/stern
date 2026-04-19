@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Stern
-  _raw = YAML.load_file(Engine.root.join("config/currencies.yaml"))
+  _raw = YAML.load_file(Engine.root.join("config/currencies_catalog.yaml"))
 
   STERN_CURRENCIES ||= _raw.freeze
 
