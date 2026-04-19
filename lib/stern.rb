@@ -13,4 +13,12 @@ module Stern
   def self.balance(gid, book_id = :merchant_balance, timestamp = DateTime.current)
     BalanceQuery.new(gid:, book_id:, timestamp:).call
   end
+
+  def self.curidx(name)
+    STERN_CURRENCIES[name.to_s]
+  end
+
+  def self.cur(idx)
+    STERN_CURRENCIES_R[idx]
+  end
 end
