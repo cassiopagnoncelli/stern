@@ -1,35 +1,58 @@
 operations: psp
 
+#
+# Accounting books
+#
 books:
-  merchant_balance: 1101
-  merchant_withholding_balance: 1301
-  merchant_credit: 1401
-  given_balance: 2101
-  given_credit: 2102
-  settlement_processing: 4101
-  settlement: 4102
-  settlement_fee: 4201
-  subscription: 5101
-  boleto: 11101
-  boleto_fee: 11111
-  boleto_refund_processing: 11121
-  boleto_refund: 11122
-  boleto_refund_fee: 11131
-  pix: 12101
-  pix_fee: 12111
-  pix_refund_processing: 12121
-  pix_refund: 12122
-  pix_refund_fee: 12131
-  cc: 13101
-  cc_fee: 13111
-  cc_refund_processing: 13121
-  cc_refund: 13122
-  cc_refund_fee: 13131
-  cc_chargeback_processing: 13141
-  cc_chargeback: 13142
-  cc_chargeback_fee: 13151
-  cc_anticipation: 13501
-  cc_anticipation_fee: 13502
+  # Merchant
+  merchant_balance: 9000001
+  merchant_adjusted: 9000002
+  merchant_withholding: 9000003
+  merchant_locked: 9000004
+
+  # Partner
+  partner_balance: 8000001
+  partner_adjusted: 8000002
+  partner_withholding: 8000003
+  partner_locked: 8000004
+
+  # Customer
+  customer_balance: 7000001
+  customer_adjusted: 7000002
+  customer_withholding: 7000003
+  customer_locked: 7000004
+
+  # Payment Processing: PSP, gateway
+  pp_payment: 1000001
+
+  pp_charge_direct: 1110001
+  pp_charge_bank_transfer: 1110002
+  pp_charge_credit_card: 1110003
+  pp_charge_debit_card: 1110004
+  pp_charge_wallet: 1110005
+  pp_charge_pix: 1110006
+
+  pp_charge_direct_fee: 1120001
+  pp_charge_bank_transfer_fee: 1120002
+  pp_charge_credit_card_fee: 1120003
+  pp_charge_debit_card_fee: 1120004
+  pp_charge_wallet_fee: 1120005
+  pp_charge_pix_fee: 1120006
+
+  pp_refund: 1210001
+  pp_refund_fee: 1220001
+
+  pp_chargeback: 1310001
+  pp_chargeback_fee: 1320001
+
+  # Withdrawals
+  wdw: 2000001
+  wdw_merchant: 2100011
+  wdw_merchant_requested: 2100012
+  wdw_partner: 2100021
+  wdw_partner_requested: 2100022
+  wdw_customer: 2100031
+  wdw_customer_requested: 2100032
 
 entry_pairs:
   balance:
