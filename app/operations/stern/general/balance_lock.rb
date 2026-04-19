@@ -23,7 +23,7 @@ module Stern
     def initialize(lock_id: nil, customer_id: nil, currency: nil, amount: nil)
       self.lock_id = lock_id
       self.customer_id = customer_id
-      self.currency = currency.strip.downcase.presence
+      self.currency = currency.strip.upcase.presence
       self.amount = amount
     end
 

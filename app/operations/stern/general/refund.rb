@@ -23,7 +23,7 @@ module Stern
     def initialize(refund_id: nil, customer_id: nil, currency: nil, amount: nil)
       self.refund_id = refund_id
       self.customer_id = customer_id
-      self.currency = currency.strip.downcase.presence
+      self.currency = currency.strip.upcase.presence
       self.amount = amount
     end
 
