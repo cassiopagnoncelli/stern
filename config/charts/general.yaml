@@ -61,15 +61,31 @@ books:
   pp_refund_merchant_wallet: 1211014
   pp_refund_merchant_pix: 1211015
 
-  pp_refund_fee_merchant_internal: 1211001
-  pp_refund_fee_merchant_manual: 1211002
-  pp_refund_fee_merchant_bank_transfer: 1211011
-  pp_refund_fee_merchant_credit_card: 1211012
-  pp_refund_fee_merchant_debit_card: 1211013
-  pp_refund_fee_merchant_wallet: 1211014
-  pp_refund_fee_merchant_pix: 1211015
+  pp_refund_partner_internal: 1221001
+  pp_refund_partner_manual: 1221002
+  pp_refund_partner_bank_transfer: 1221011
+  pp_refund_partner_credit_card: 1221012
+  pp_refund_partner_debit_card: 1221013
+  pp_refund_partner_wallet: 1221014
+  pp_refund_partner_pix: 1221015
 
-  pp_refund_fee: 1220001
+  pp_refund_fee: 1300001
+
+  pp_refund_fee_merchant_internal: 1311001
+  pp_refund_fee_merchant_manual: 1311002
+  pp_refund_fee_merchant_bank_transfer: 1311011
+  pp_refund_fee_merchant_credit_card: 1311012
+  pp_refund_fee_merchant_debit_card: 1311013
+  pp_refund_fee_merchant_wallet: 1311014
+  pp_refund_fee_merchant_pix: 1311015
+
+  pp_refund_fee_partner_internal: 1321001
+  pp_refund_fee_partner_manual: 1321002
+  pp_refund_fee_partner_bank_transfer: 1321011
+  pp_refund_fee_partner_credit_card: 1321012
+  pp_refund_fee_partner_debit_card: 1231013
+  pp_refund_fee_partner_wallet: 1321014
+  pp_refund_fee_partner_pix: 1321015
 
   pp_chargeback: 1310001
   pp_chargeback_fee: 1320001
