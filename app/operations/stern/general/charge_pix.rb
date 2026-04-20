@@ -2,7 +2,7 @@
 
 module Stern
   # Chargeback balance of customer's account.
-  class Chargeback < BaseOperation
+  class ChargePix < BaseOperation
     include ActiveModel::Validations
 
     attr_accessor :customer_id, :currency, :amount, :chargeback_id
@@ -30,7 +30,7 @@ module Stern
 
       raise UnknownCurrencyError unless currency.presence&.in?(%w[usd])
 
-      EntryPair.add_chargeback(chargeback_id, customer_id, amount, nil, operation_id:) if amount.present?
+      EntryPair.add_charge_pix(chargeback_id, customer_id, amount, nil, operation_id:) if amount.present?
     end
 
     def perform_undo

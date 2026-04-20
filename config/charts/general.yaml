@@ -4,6 +4,8 @@ operations: psp
 # Accounting books
 #
 books:
+  nop: 1
+
   # Merchant
   merchant_balance: 9000001
   merchant_adjusted: 9000002
@@ -25,21 +27,48 @@ books:
   # Payment Processing: PSP, gateway
   pp_payment: 1000001
 
-  pp_charge_direct: 1110001
-  pp_charge_bank_transfer: 1110002
-  pp_charge_credit_card: 1110003
-  pp_charge_debit_card: 1110004
-  pp_charge_wallet: 1110005
-  pp_charge_pix: 1110006
+  pp_charge_internal: 1110001
+  pp_charge_manual: 1110002
+  pp_charge_bank_transfer: 1110011
+  pp_charge_credit_card: 1110012
+  pp_charge_debit_card: 1110013
+  pp_charge_wallet: 1110014
+  pp_charge_pix: 1110015
 
-  pp_charge_direct_fee: 1120001
-  pp_charge_bank_transfer_fee: 1120002
-  pp_charge_credit_card_fee: 1120003
-  pp_charge_debit_card_fee: 1120004
-  pp_charge_wallet_fee: 1120005
-  pp_charge_pix_fee: 1120006
+  pp_charge_fee_merchant_internal: 1121001
+  pp_charge_fee_merchant_manual: 1121002
+  pp_charge_fee_merchant_bank_transfer: 1121011
+  pp_charge_fee_merchant_credit_card: 1121012
+  pp_charge_fee_merchant_debit_card: 1121013
+  pp_charge_fee_merchant_wallet: 1121014
+  pp_charge_fee_merchant_pix: 1121015
 
-  pp_refund: 1210001
+  pp_charge_fee_partner_internal: 1122001
+  pp_charge_fee_partner_manual: 1122002
+  pp_charge_fee_partner_bank_transfer: 1122011
+  pp_charge_fee_partner_credit_card: 1122012
+  pp_charge_fee_partner_debit_card: 1122013
+  pp_charge_fee_partner_wallet: 1122014
+  pp_charge_fee_partner_pix: 1122015
+
+  pp_refund: 1200001
+
+  pp_refund_merchant_internal: 1211001
+  pp_refund_merchant_manual: 1211002
+  pp_refund_merchant_bank_transfer: 1211011
+  pp_refund_merchant_credit_card: 1211012
+  pp_refund_merchant_debit_card: 1211013
+  pp_refund_merchant_wallet: 1211014
+  pp_refund_merchant_pix: 1211015
+
+  pp_refund_fee_merchant_internal: 1211001
+  pp_refund_fee_merchant_manual: 1211002
+  pp_refund_fee_merchant_bank_transfer: 1211011
+  pp_refund_fee_merchant_credit_card: 1211012
+  pp_refund_fee_merchant_debit_card: 1211013
+  pp_refund_fee_merchant_wallet: 1211014
+  pp_refund_fee_merchant_pix: 1211015
+
   pp_refund_fee: 1220001
 
   pp_chargeback: 1310001
@@ -54,8 +83,116 @@ books:
   wdw_customer: 2100031
   wdw_customer_requested: 2100032
 
+#
+# Entry pairs.
+#
+#   operation:
+#     code: numeric
+#     book_add: book_a
+#     book_sub: book_b
+#
 entry_pairs:
-  withheld_balance:
-    code: 1000
-    book_add: merchant_balance
-    book_sub: given_credit
+  #
+  # Payments
+  #
+
+  # Charges
+  charge_internal:
+    code: 12214
+    book_sub: pp_charge_internal
+    book_add: pp_payment
+  charge_manual:
+    code: 1215821
+    book_sub: pp_charge_manual
+    book_add: pp_payment
+  charge_pix:
+    code: 1024125
+    book_sub: pp_charge_pix
+    book_add: pp_payment
+  charge_credit_card:
+    code: 217891
+    book_sub: pp_charge_credit_card
+    book_add: pp_payment
+
+  # Splits
+  split_merchant:
+    code: 1025215
+    book_sub: pp_payment
+    book_add: merchant_withholding
+  split_partner:
+    code: 12512512
+    book_sub: pp_payment
+    book_add: partner_withholding
+
+  # Charge fees - merchant
+  charge_fee_merchant_internal:
+    code: 12214
+    book_sub: merchant_withholding
+    book_add: pp_charge_fee_merchant_internal
+  charge_fee_merchant_manual:
+    code: 1215821
+    book_sub: merchant_withholding
+    book_add: pp_charge_fee_merchant_manual
+  charge_fee_merchant_bank_transfer:
+    code: 1215821
+    book_sub: merchant_withholding
+    book_add: pp_charge_fee_merchant_bank_transfer
+  charge_fee_merchant_credit_card:
+    code: 1215821
+    book_sub: merchant_withholding
+    book_add: pp_charge_fee_merchant_credit_card
+  charge_fee_merchant_debit_card:
+    code: 1215821
+    book_sub: merchant_withholding
+    book_add: pp_charge_fee_merchant_debit_card
+  charge_fee_merchant_wallet:
+    code: 1215821
+    book_sub: merchant_withholding
+    book_add: pp_charge_fee_merchant_wallet
+  charge_fee_merchant_pix:
+    code: 1215821
+    book_sub: merchant_withholding
+    book_add: pp_charge_fee_merchant_pix
+  
+  # Charge fees - partner
+  charge_fee_partner_internal:
+    code: 12214
+    book_sub: partner_withholding
+    book_add: pp_charge_fee_partner_internal
+  charge_fee_partner_manual:
+    code: 1215821
+    book_sub: partner_withholding
+    book_add: pp_charge_fee_partner_manual
+  charge_fee_partner_bank_transfer:
+    code: 1215821
+    book_sub: partner_withholding
+    book_add: pp_charge_fee_partner_bank_transfer
+  charge_fee_partner_credit_card:
+    code: 1215821
+    book_sub: partner_withholding
+    book_add: pp_charge_fee_partner_credit_card
+  charge_fee_partner_debit_card:
+    code: 1215821
+    book_sub: partner_withholding
+    book_add: pp_charge_fee_partner_debit_card
+  charge_fee_partner_wallet:
+    code: 1215821
+    book_sub: partner_withholding
+    book_add: pp_charge_fee_partner_wallet
+  charge_fee_partner_pix:
+    code: 1215821
+    book_sub: partner_withholding
+    book_add: pp_charge_fee_partner_pix
+  
+  # Refunds
+  refund:
+    code: 1215821
+    book_sub: nop
+    book_add: nop
+
+  # Chargebacks
+  chargeback:
+    code: 1215821
+    book_sub: nop
+    book_add: nop
+
