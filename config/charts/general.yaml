@@ -25,79 +25,115 @@ books:
   customer_locked: 7000004
 
   # Payment Processing: PSP, gateway
-  pp_payment: 1000001
+  # [X: pp] [XX: op] [X: actor] [XXX: channel]
+  pp_charge: 1110001    # pp_charge redundates to payment, skip.
+  pp_charge_internal: 1110011
+  pp_charge_manual: 1110012
+  pp_charge_bank_transfer: 1110021
+  pp_charge_credit_card: 1110022
+  pp_charge_debit_card: 1110023
+  pp_charge_wallet: 1110024
+  pp_charge_pix: 1110025
 
-  pp_charge_internal: 1110001
-  pp_charge_manual: 1110002
-  pp_charge_bank_transfer: 1110011
-  pp_charge_credit_card: 1110012
-  pp_charge_debit_card: 1110013
-  pp_charge_wallet: 1110014
-  pp_charge_pix: 1110015
+  pp_charge_fee: 1120001
+  pp_charge_fee_merchant: 1129001
+  pp_charge_fee_merchant_internal: 1129011
+  pp_charge_fee_merchant_manual: 1129012
+  pp_charge_fee_merchant_bank_transfer: 1129021
+  pp_charge_fee_merchant_credit_card: 1129022
+  pp_charge_fee_merchant_debit_card: 1129023
+  pp_charge_fee_merchant_wallet: 1129024
+  pp_charge_fee_merchant_pix: 1129025
+  pp_charge_fee_partner: 1128001
+  pp_charge_fee_partner_internal: 1128011
+  pp_charge_fee_partner_manual: 1128012
+  pp_charge_fee_partner_bank_transfer: 1128021
+  pp_charge_fee_partner_credit_card: 1128022
+  pp_charge_fee_partner_debit_card: 1128023
+  pp_charge_fee_partner_wallet: 1128024
+  pp_charge_fee_partner_pix: 1128025
 
-  pp_charge_fee_merchant_internal: 1121001
-  pp_charge_fee_merchant_manual: 1121002
-  pp_charge_fee_merchant_bank_transfer: 1121011
-  pp_charge_fee_merchant_credit_card: 1121012
-  pp_charge_fee_merchant_debit_card: 1121013
-  pp_charge_fee_merchant_wallet: 1121014
-  pp_charge_fee_merchant_pix: 1121015
+  pp_refund: 1130001
+  pp_refund_merchant: 1139001
+  pp_refund_merchant_internal: 1139011
+  pp_refund_merchant_manual: 11390012
+  pp_refund_merchant_bank_transfer: 1139021
+  pp_refund_merchant_credit_card: 1139022
+  pp_refund_merchant_debit_card: 1139023
+  pp_refund_merchant_wallet: 1139024
+  pp_refund_merchant_pix: 1139025
+  pp_refund_partner: 1138001
+  pp_refund_partner_internal: 1138011
+  pp_refund_partner_manual: 1138012
+  pp_refund_partner_bank_transfer: 1138021
+  pp_refund_partner_credit_card: 1138022
+  pp_refund_partner_debit_card: 1138023
+  pp_refund_partner_wallet: 1138024
+  pp_refund_partner_pix: 1138025
 
-  pp_charge_fee_partner_internal: 1122001
-  pp_charge_fee_partner_manual: 1122002
-  pp_charge_fee_partner_bank_transfer: 1122011
-  pp_charge_fee_partner_credit_card: 1122012
-  pp_charge_fee_partner_debit_card: 1122013
-  pp_charge_fee_partner_wallet: 1122014
-  pp_charge_fee_partner_pix: 1122015
+  pp_refund_fee: 1140001
+  pp_refund_fee_merchant: 1149001
+  pp_refund_fee_merchant_internal: 1149011
+  pp_refund_fee_merchant_manual: 1149012
+  pp_refund_fee_merchant_bank_transfer: 1149021
+  pp_refund_fee_merchant_credit_card: 1149022
+  pp_refund_fee_merchant_debit_card: 1149023
+  pp_refund_fee_merchant_wallet: 1149024
+  pp_refund_fee_merchant_pix: 1149025
+  pp_refund_fee_partner: 1148001
+  pp_refund_fee_partner_internal: 1148011
+  pp_refund_fee_partner_manual: 1148012
+  pp_refund_fee_partner_bank_transfer: 1148021
+  pp_refund_fee_partner_credit_card: 1148022
+  pp_refund_fee_partner_debit_card: 1148023
+  pp_refund_fee_partner_wallet: 1148024
+  pp_refund_fee_partner_pix: 1148025
 
-  pp_refund: 1200001
+  pp_chargeback: 1150001
+  pp_chargeback_merchant: 1159001
+  pp_chargeback_merchant_internal: 1159011
+  pp_chargeback_merchant_manual: 1159012
+  pp_chargeback_merchant_bank_transfer: 1159021
+  pp_chargeback_merchant_credit_card: 1159022
+  pp_chargeback_merchant_debit_card: 1159023
+  pp_chargeback_merchant_wallet: 1159024
+  pp_chargeback_merchant_pix: 1159025
+  pp_chargeback_partner: 1158001
+  pp_chargeback_partner_internal: 1158011
+  pp_chargeback_partner_manual: 1158012
+  pp_chargeback_partner_bank_transfer: 1158021
+  pp_chargeback_partner_credit_card: 1158022
+  pp_chargeback_partner_debit_card: 1158023
+  pp_chargeback_partner_wallet: 1158024
+  pp_chargeback_partner_pix: 1158025
 
-  pp_refund_merchant_internal: 1211001
-  pp_refund_merchant_manual: 1211002
-  pp_refund_merchant_bank_transfer: 1211011
-  pp_refund_merchant_credit_card: 1211012
-  pp_refund_merchant_debit_card: 1211013
-  pp_refund_merchant_wallet: 1211014
-  pp_refund_merchant_pix: 1211015
-
-  pp_refund_partner_internal: 1221001
-  pp_refund_partner_manual: 1221002
-  pp_refund_partner_bank_transfer: 1221011
-  pp_refund_partner_credit_card: 1221012
-  pp_refund_partner_debit_card: 1221013
-  pp_refund_partner_wallet: 1221014
-  pp_refund_partner_pix: 1221015
-
-  pp_refund_fee: 1300001
-
-  pp_refund_fee_merchant_internal: 1311001
-  pp_refund_fee_merchant_manual: 1311002
-  pp_refund_fee_merchant_bank_transfer: 1311011
-  pp_refund_fee_merchant_credit_card: 1311012
-  pp_refund_fee_merchant_debit_card: 1311013
-  pp_refund_fee_merchant_wallet: 1311014
-  pp_refund_fee_merchant_pix: 1311015
-
-  pp_refund_fee_partner_internal: 1321001
-  pp_refund_fee_partner_manual: 1321002
-  pp_refund_fee_partner_bank_transfer: 1321011
-  pp_refund_fee_partner_credit_card: 1321012
-  pp_refund_fee_partner_debit_card: 1231013
-  pp_refund_fee_partner_wallet: 1321014
-  pp_refund_fee_partner_pix: 1321015
-
-  pp_chargeback: 1310001
-  pp_chargeback_fee: 1320001
+  pp_chargeback_fee: 1160001
+  pp_chargeback_fee_merchant: 1169001
+  pp_chargeback_fee_merchant_internal: 1169011
+  pp_chargeback_fee_merchant_manual: 1169012
+  pp_chargeback_fee_merchant_bank_transfer: 1169021
+  pp_chargeback_fee_merchant_credit_card: 1169022
+  pp_chargeback_fee_merchant_debit_card: 1169023
+  pp_chargeback_fee_merchant_wallet: 1169024
+  pp_chargeback_fee_merchant_pix: 1169025
+  pp_chargeback_fee_partner: 1168001
+  pp_chargeback_fee_partner_internal: 1168011
+  pp_chargeback_fee_partner_manual: 1168012
+  pp_chargeback_fee_partner_bank_transfer: 1168021
+  pp_chargeback_fee_partner_credit_card: 1168022
+  pp_chargeback_fee_partner_debit_card: 1168023
+  pp_chargeback_fee_partner_wallet: 1168024
+  pp_chargeback_fee_partner_pix: 1168025
 
   # Withdrawals
+  # [X: wdw] [XX: op] [X: actor] [XXX: channel]
   wdw: 2000001
-  wdw_merchant: 2100011
-  wdw_merchant_requested: 2100012
-  wdw_partner: 2100021
-  wdw_partner_requested: 2100022
-  wdw_customer: 2100031
-  wdw_customer_requested: 2100032
+  wdw_merchant: 2009001
+  wdw_merchant_requested: 2100002
+  wdw_partner: 2008001
+  wdw_partner_requested: 2008002
+  wdw_customer: 2007001
+  wdw_customer_requested: 2007002
 
 #
 # Entry pairs.
