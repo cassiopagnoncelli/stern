@@ -1,5 +1,14 @@
+require "xxhash"
 require "stern/version"
 require "stern/engine"
+
+module Kernel
+  def uint63_hash(str)
+    raise Stern::ArgumentMustBeString unless str.is_a?(String)
+
+    XXhash.xxh64(str) & Stern::INT_MASK
+  end
+end
 
 module Stern
   UnknownCurrencyError = Class.new(StandardError)
@@ -7,8 +16,16 @@ module Stern
   ArgumentMustBeInteger = Class.new(StandardError)
   ArgumentMustBeString = Class.new(StandardError)
 
+  INT_MASK = (1 << 31) - 1
+
   def self.generate_gid
     ApplicationRecord.generate_gid
+  end
+
+  def self.uint63_hash(str)
+    raise ArgumentMustBeString unless str.is_a?(String)
+
+    XXhash.xxh64(str) & INT_MASK
   end
 
   def self.outstanding_balance(book_id = :merchant_balance, timestamp = DateTime.current)

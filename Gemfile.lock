@@ -5,6 +5,7 @@ PATH
       nokogiri (>= 1.15.6)
       pg (>= 1.4.5)
       rails (>= 8.0)
+      xxhash (>= 0.5)
 
 GEM
   remote: https://rubygems.org/
@@ -265,6 +266,7 @@ GEM
       base64
       websocket-extensions (>= 0.1.0)
     websocket-extensions (0.1.5)
+    xxhash (0.7.0)
     zeitwerk (2.7.3)
 
 PLATFORMS
@@ -286,7 +288,7 @@ DEPENDENCIES
   tracer
 
 RUBY VERSION
-   ruby 3.4.2p28
+  ruby 3.4.2p28
 
 BUNDLED WITH
-   4.0.10
+  4.0.10
