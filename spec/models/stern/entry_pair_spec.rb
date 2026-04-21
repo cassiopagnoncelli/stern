@@ -61,5 +61,57 @@ module Stern
         expect(described_class.generate_entry_pair_credit_id).to be_a_kind_of(Integer)
       end
     end
+
+    describe "book-derived singleton methods" do
+      STERN_DEFS[:books].each_key do |book_name|
+        it "defines .add_#{book_name}" do
+          expect(described_class).to respond_to(:"add_#{book_name}")
+        end
+      end
+
+      it "does not collide with entry_pair names" do
+        expect(STERN_DEFS[:entry_pairs].keys & STERN_DEFS[:books].keys).to eq([])
+      end
+    end
+
+    describe ".add_<book> (forward/backward)" do
+      let(:book_name) { STERN_DEFS[:books].keys.first }
+      let(:book_code) { STERN_DEFS[:books][book_name] }
+      let(:uid) { Integer(rand * 1e5) }
+      let(:gid) { 1 }
+      let(:amount) { 100 }
+      let(:timestamp) { DateTime.current }
+      let(:operation_id) { create(:operation).id }
+      let(:credit_entry_pair_id) { nil }
+
+      it "issues a forward and a backward double_entry_add with mirrored book codes" do
+        expect(described_class).to receive(:double_entry_add).with(
+          "add_#{book_name}", gid, uid,
+          book_code, -book_code,
+          amount, credit_entry_pair_id, timestamp, operation_id,
+        ).ordered
+        expect(described_class).to receive(:double_entry_add).with(
+          "sub_#{book_name}", gid, uid,
+          -book_code, book_code,
+          amount, credit_entry_pair_id, timestamp, operation_id,
+        ).ordered
+
+        described_class.public_send(
+          :"add_#{book_name}", uid, gid, amount, credit_entry_pair_id,
+          timestamp: timestamp, operation_id: operation_id,
+        )
+      end
+
+      it "defaults credit_entry_pair_id, timestamp and operation_id when omitted" do
+        expect(described_class).to receive(:double_entry_add).with(
+          "add_#{book_name}", gid, uid, book_code, -book_code, amount, nil, nil, nil,
+        ).ordered
+        expect(described_class).to receive(:double_entry_add).with(
+          "sub_#{book_name}", gid, uid, -book_code, book_code, amount, nil, nil, nil,
+        ).ordered
+
+        described_class.public_send(:"add_#{book_name}", uid, gid, amount)
+      end
+    end
   end
 end
