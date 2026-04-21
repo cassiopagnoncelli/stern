@@ -5,21 +5,21 @@ module Stern
   class ChargePix < BaseOperation
     include ActiveModel::Validations
 
-    attr_accessor :customer_id, :currency, :amount, :chargeback_id
+    attr_accessor :customer_id, :currency, :amount, :charge_id
 
-    validates :chargeback_id, presence: true, numericality: { other_than: 0 }
+    validates :charge_id, presence: true, numericality: { other_than: 0 }
     validates :customer_id, presence: true, numericality: { other_than: 0 }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
     validates :amount, presence: true
 
     # Initialize the object, use `call` to perform the operation or `call_undo` to undo it.
     #
-    # @param chargeback_id [Bigint] unique chargeback id
+    # @param charge_id [Bigint] unique chargeback id
     # @param customer_id [Bigint] customer id
     # @param currency [Str] curreny code (eg. usd, eur, btc)
     # @param amount [Bigint] amount given to customer
-    def initialize(chargeback_id: nil, customer_id: nil, currency: nil, amount: nil)
-      self.chargeback_id = chargeback_id
+    def initialize(charge_id: nil, customer_id: nil, currency: nil, amount: nil)
+      self.charge_id = charge_id
       self.customer_id = customer_id
       self.currency = cur(currency, result: :index)
       self.amount = amount
@@ -28,16 +28,14 @@ module Stern
     def perform(operation_id)
       raise ArgumentError if invalid? || operation_id.blank?
 
-      raise UnknownCurrencyError unless currency.presence&.in?(%w[usd])
-
-      EntryPair.add_charge_pix(chargeback_id, customer_id, amount, nil, operation_id:) if amount.present?
+      EntryPair.add_charge_pix(charge_id, customer_id, amount, nil, operation_id:) if amount.present?
     end
 
     def perform_undo
       raise ArgumentError if invalid?(:undo)
 
-      if EntryPair.find_by(code: ENTRY_PAIRS[:add_customer_chargeback_usd], uid: chargeback_id).present?
-        EntryPair.remove_customer_chargeback_usd(chargeback_id)
+      if EntryPair.find_by(code: ENTRY_PAIRS[:add_customer_chargeback_usd], uid: charge_id).present?
+        EntryPair.remove_customer_chargeback_usd(charge_id)
       end
     end
   end
