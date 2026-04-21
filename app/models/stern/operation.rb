@@ -1,11 +1,8 @@
 module Stern
   class Operation < ApplicationRecord
-    enum :direction, { do: 1, undo: -1 }
-
     has_many :entry_pairs, class_name: "Stern::EntryPair", dependent: :restrict_with_exception
 
     validates :name, presence: true, allow_blank: false, allow_nil: false
-    validates :direction, presence: true
     validates :params, presence: true, allow_blank: true
     validates :idem_key, 
       presence: true,
@@ -48,9 +45,6 @@ module Stern
         ["|", :white],
         ["Name:", :white],
         [format("%-15s", name || "N/A"), :white, :bold],
-        ["|", :white],
-        ["Direction:", :white],
-        [format("%-4s", direction || "N/A"), :cyan, :bold],
         ["|", :white],
         ["Idemp:", :white],
         [format("%-20s", idem_key || "N/A"), :orange, :bold],

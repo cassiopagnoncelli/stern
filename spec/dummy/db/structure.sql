@@ -1,6 +1,12 @@
+\restrict L8jWBOaWJmJlbjt80y0WXzCDdzM0OPa25dDfPu1bd5ThSGbST12guoY5S62P864
+
+-- Dumped from database version 17.9 (Postgres.app)
+-- Dumped by pg_dump version 17.9 (Postgres.app)
+
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -341,7 +347,6 @@ CREATE TABLE public.stern_operations (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     name character varying NOT NULL,
-    direction integer NOT NULL,
     params json DEFAULT '"{}"'::json NOT NULL,
     idem_key character varying(24)
 );
@@ -566,6 +571,8 @@ CREATE INDEX index_stern_scheduled_operations_on_status ON public.stern_schedule
 --
 -- PostgreSQL database dump complete
 --
+
+\unrestrict L8jWBOaWJmJlbjt80y0WXzCDdzM0OPa25dDfPu1bd5ThSGbST12guoY5S62P864
 
 SET search_path TO "$user", public;
 
