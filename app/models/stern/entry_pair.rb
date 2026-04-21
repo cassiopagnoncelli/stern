@@ -3,6 +3,8 @@
 # Stern engine.
 module Stern
   class EntryPair < ApplicationRecord
+    MethodAlreadyDefined = Class.new(StandardError)
+
     enum :code, ENTRY_PAIRS
 
     has_many :entries, class_name: "Stern::Entry", dependent: :restrict_with_exception
@@ -25,7 +27,23 @@ module Stern
       entries.each(&:destroy!)
     end
 
+    STERN_DEFS[:books].each do |name, book_num|
+      define_singleton_method :"add_#{name}" do |uid, gid, amount, credit_entry_pair_id = nil, timestamp: nil, operation_id: nil|
+        add_book_forward = 100 * book_num + 1
+        add_book_backward = 100 * book_num + 9
+
+        double_entry_add("add_#{book}", gid, uid,
+                         add_book_forward, add_book_backward, amount, credit_entry_pair_id, timestamp, operation_id,)
+
+        double_entry_add("sub_#{book}", gid, uid,
+                         add_book_backward, add_book_forward, amount, credit_entry_pair_id, timestamp, operation_id,)
+    end
+
     STERN_DEFS[:entry_pairs].each do |name, defs|
+      if self.singleton_methods(false).include?(:"add_#{book}") || self.singleton_methods(false).include?(:"add_#{book}_0")
+        raise MethodAlreadyDefined, "add_#{book} is already defined derived from book name"
+      end
+
       # rubocop:disable Metrics/ParameterLists, Layout/LineLength
       define_singleton_method :"add_#{name}" do |uid, gid, amount, credit_entry_pair_id = nil, timestamp: nil, operation_id: nil|
         double_entry_add("add_#{name}", gid, uid,

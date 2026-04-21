@@ -91,7 +91,6 @@ books:
   pp_refund_fee_partner_pix: 1148025
 
   pp_chargeback: 1150001
-  pp_chargeback_request: 1150002
   pp_chargeback_merchant: 1159001
   pp_chargeback_merchant_internal: 1159011
   pp_chargeback_merchant_manual: 1159012
@@ -130,12 +129,13 @@ books:
   # Withdrawals
   # [X: wdw] [XX: op] [X: actor] [XXX: channel]
   wdw: 2000001
+  wdw_request: 2000002
   wdw_merchant: 2009001
-  wdw_merchant_requested: 2100002
+  wdw_merchant_request: 2100002
   wdw_partner: 2008001
-  wdw_partner_requested: 2008002
+  wdw_partner_request: 2008002
   wdw_customer: 2007001
-  wdw_customer_requested: 2007002
+  wdw_customer_request: 2007002
 
 #
 # Entry pairs.
