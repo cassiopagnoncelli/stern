@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe Stern do
   describe ".cur" do
     context "with every currency in the catalog" do
-      Stern::STERN_CURRENCIES.each do |name, idx|
+      Stern.currencies.each do |name, idx|
         it "maps name #{name.inspect} to index #{idx}" do
           expect(described_class.cur(name)).to eq(idx)
         end
@@ -76,7 +76,7 @@ RSpec.describe Stern do
           .to raise_error(Stern::UnknownCurrencyError)
       end
 
-      Stern::STERN_CURRENCIES.each do |name, idx|
+      Stern.currencies.each do |name, idx|
         it "returns the index for #{name.inspect} with result: :both" do
           expect(described_class.cur(name, result: :both)).to eq(idx)
         end

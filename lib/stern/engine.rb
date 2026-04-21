@@ -25,6 +25,7 @@ module Stern
         raise "STERN_CHART=#{chart_name.inspect} not found; available: #{available}"
       end
       Stern.chart = Stern::Chart.load(path)
+      Stern.currencies = Stern::Currencies.load(Engine.root.join("config/currencies_catalog.yaml"))
 
       # Collapsing operations allows for operations to be defined in subdirectories of
       # app/operations/stern without the dir prefix — e.g. `ChargePix` instead of

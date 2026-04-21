@@ -1,10 +1,11 @@
 require "stern/version"
 require "stern/engine"
 require "stern/chart"
+require "stern/currencies"
 
 module Stern
   class << self
-    attr_accessor :chart
+    attr_accessor :chart, :currencies
   end
 
   def self.generate_gid
@@ -23,17 +24,20 @@ module Stern
     raise UnknownCurrencyError if name_or_index.blank?
     raise UnrecognizedArgument unless [ :both, :index, :string ].include?(result)
 
-    if name_or_index.is_a?(String)
+    case name_or_index
+    when String
       name = name_or_index.strip.upcase
-      raise UnknownCurrencyError unless STERN_CURRENCIES.keys.include?(name)
+      code = currencies.code(name)
+      raise UnknownCurrencyError unless code
       raise ArgumentMustBeInteger if result == :string
 
-      STERN_CURRENCIES[name]
-    elsif name_or_index.is_a?(Integer)
-      raise UnknownCurrencyError unless STERN_CURRENCIES_R.keys.include?(name_or_index)
+      code
+    when Integer
+      name = currencies.name(name_or_index)
+      raise UnknownCurrencyError unless name
       raise ArgumentMustBeString if result == :integer
 
-      STERN_CURRENCIES_R[name_or_index]
+      name
     else
       raise UnknownCurrencyError
     end
