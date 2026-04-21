@@ -20,7 +20,7 @@ module Stern
   # Books and Entry Pairs.
   #
   BOOKS ||= STERN_DEFS[:books] + STERN_DEFS[:books].map { |name| "#{name}_0" }
-  BOOKS_CODES ||= STERN_DEFS[:books].map { |name| [name, chart_hash(name)] }.to_h.with_indifferent_access.freeze
+  BOOKS_CODES ||= BOOKS.map { |name| [name, chart_hash(name)] }.to_h.with_indifferent_access.freeze
   BOOKS_INDEX ||= BOOKS_CODES.invert.freeze
 
   ENTRY_PAIRS_BOOKS_CODES ||= STERN_DEFS[:books].map { |name| [name, chart_hash(name)] }.to_h.with_indifferent_access.freeze
