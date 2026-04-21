@@ -26,5 +26,9 @@ module Stern
         Rails.autoloaders.main.collapse(dir)
       end
     end
+
+    console do
+      Object.include(Stern)
+    end
   end
 end

@@ -17,6 +17,10 @@ module Stern
   class BaseOperation
     attr_accessor :operation
 
+    def cur(name_or_index, result: :both)
+      ::Stern.cur(name_or_index, result:)
+    end
+
     def call(direction: :do, transaction: true, idem_key: nil)
       base_operation = self
 
