@@ -89,22 +89,12 @@ Operations are an abstraction atop entry pairs and technically group sequences o
 entry pairs defined programmatically. Users should never input entry pairs directly
 nor entries, instead should define operations and use operations as an exposed API.
 
-**Example**. `PayCreditCard` involves multiple steps of entry pairs:
-- `add_credit_card_captured`: cash in
-- `add_credit_card_fee`: transaction fee
-- `add_credit_card_internal_fee`: payment institution + interbank fee
-- `add_merchant_balance_withholding`: move money from captured silo to merchant
-withholding balance
-- `add_merchant_balance`: scheduled operation to move money from withholding balance
-to merchant's free balance.
-
 Operations are defined in `app/operations`.
 Following name conventions, always start with a verb.
 
 ## Testing
 
 Use RSpec to run specs. Setup the app with `bin/setup` then `bundle exec rspec`.
-
 
 
 ```sh
