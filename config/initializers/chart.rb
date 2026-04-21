@@ -26,12 +26,12 @@ module Stern
   ENTRY_PAIRS_BOOKS_CODES ||= STERN_DEFS[:books].map { |name| [name, chart_hash(name)] }.to_h.with_indifferent_access.freeze
 
   ENTRY_PAIRS ||= (STERN_DEFS[:books] + STERN_DEFS[:entry_pairs].keys).map(&:to_sym).freeze
-  ENTRY_PAIRS_CODES ||= ENTRY_PAIRS.map { |name| [name, chart_hash(name)] }.to_h.with_indifferent_access.freeze
-  ENTRY_PAIRS_INDEX ||= ENTRY_PAIRS_CODES.invert.freeze
-  ENTRY_PAIRS_ADD ||= STERN_DEFS[:entry_pairs].transform_values { _1.fetch(:book_add) }.freeze
-  ENTRY_PAIRS_SUB ||= STERN_DEFS[:entry_pairs].transform_values { _1.fetch(:book_sub) }.freeze
-  ENTRY_PAIRS_ADD_CODES ||= STERN_DEFS[:entry_pairs].transform_values { BOOKS_CODES[_1.fetch(:book_add)] }.freeze
-  ENTRY_PAIRS_SUB_CODES ||= STERN_DEFS[:entry_pairs].transform_values { BOOKS_CODES[_1.fetch(:book_sub)] }.freeze
+  ENTRY_PAIRS_CODES ||= ENTRY_PAIRS.map { |name| [name.to_sym, chart_hash(name)] }.to_h.with_indifferent_access.freeze
+  ENTRY_PAIRS_INDEX ||= ENTRY_PAIRS_CODES.invert.with_indifferent_access.freeze
+  ENTRY_PAIRS_ADD ||= (ENTRY_PAIRS.zip(BOOKS).to_h.merge(STERN_DEFS[:entry_pairs].transform_values { _1.fetch(:book_add) })).freeze
+  ENTRY_PAIRS_SUB ||= (ENTRY_PAIRS.zip(BOOKS.map { |name| "#{name}_0" }).to_h.merge(STERN_DEFS[:entry_pairs].transform_values { _1.fetch(:book_sub) })).freeze
+  ENTRY_PAIRS_ADD_CODES ||= ENTRY_PAIRS_ADD.transform_values { chart_hash(_1) }.freeze
+  ENTRY_PAIRS_SUB_CODES ||= ENTRY_PAIRS_SUB.transform_values { chart_hash(_1) }.freeze
 
   if BOOKS_INDEX.keys.count != BOOKS_INDEX.keys.uniq.count
     raise BooksHashCollision, "collision with implicit book names"
