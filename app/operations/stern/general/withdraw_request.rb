@@ -21,7 +21,7 @@ module Stern
     def initialize(withdraw_id: nil, customer_id: nil, currency: nil, amount: nil)
       self.withdraw_id = withdraw_id
       self.customer_id = customer_id
-      self.currency = currency.strip.upcase.presence
+      self.currency = cur(currency, result: :index)
       self.amount = amount
     end
 

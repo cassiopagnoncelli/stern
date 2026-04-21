@@ -85,17 +85,12 @@ module Stern
       end
     end
 
-    # rubocop:disable Metrics/ParameterLists
-    def self.double_entry_add(code, gid, uid, book_add, book_sub, amount, credit_entry_pair_id, timestamp,
-                              operation_id)
-      entry_pair = EntryPair.find_or_create_by!(code: codes[code], uid:, amount:, credit_entry_pair_id:, timestamp:,
-                                 operation_id:,)
+    def self.double_entry_add(code, gid, uid, book_add, book_sub, amount, credit_entry_pair_id, timestamp, operation_id)
+      entry_pair = EntryPair.find_or_create_by!(code: codes[code], uid:, amount:, credit_entry_pair_id:, timestamp:, operation_id:,)
       Entry.create!(book_id: Book.code(book_add), gid:, entry_pair_id: entry_pair.id, amount:, timestamp:)
-      Entry.create!(book_id: Book.code(book_sub), gid:, entry_pair_id: entry_pair.id, amount: -amount,
-                    timestamp:,)
+      Entry.create!(book_id: Book.code(book_sub), gid:, entry_pair_id: entry_pair.id, amount: -amount, timestamp:,)
       entry_pair.id
     end
-    # rubocop:enable Metrics/ParameterLists
 
     def self.double_entry_remove(code, uid, book_add, book_sub)
       entry_pair = EntryPair.find_by!(code: codes[code], uid:)

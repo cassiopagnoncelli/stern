@@ -10,6 +10,7 @@ class CreateSternEntryPairs < ActiveRecord::Migration[7.0]
       t.bigint :credit_entry_pair_id
       t.bigint :operation_id, null: false, index: true
     end
+
     add_index :stern_entry_pairs, [:code, :uid], unique: true, if_not_exists: true
   end
 end
