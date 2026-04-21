@@ -30,7 +30,7 @@ module Stern
     end
 
     ENTRY_PAIRS.each do |name|
-      define_singleton_method :"add_#{name}" do |uid, gid, amount, credit_entry_pair_id = nil, timestamp: nil, operation_id: nil|
+      define_singleton_method :"add_#{name}" do |uid, gid, amount, timestamp: nil, operation_id: nil|
         double_entry_add(
           "add_#{name}",
           gid,
@@ -38,15 +38,14 @@ module Stern
           ENTRY_PAIRS_ADD[name],
           ENTRY_PAIRS_SUB[name],
           amount,
-          credit_entry_pair_id,
           timestamp,
           operation_id,
         )
       end
     end
 
-    def self.double_entry_add(code, gid, uid, book_add, book_sub, amount, credit_entry_pair_id, timestamp, operation_id)
-      entry_pair = EntryPair.find_or_create_by!(code: codes[code], uid:, amount:, credit_entry_pair_id:, timestamp:, operation_id:)
+    def self.double_entry_add(code, gid, uid, book_add, book_sub, amount, timestamp, operation_id)
+      entry_pair = EntryPair.find_or_create_by!(code: codes[code], uid:, amount:, timestamp:, operation_id:)
       Entry.create!(book_id: Book.code(book_add), gid:, entry_pair_id: entry_pair.id, amount:, timestamp:)
       Entry.create!(book_id: Book.code(book_sub), gid:, entry_pair_id: entry_pair.id, amount: -amount, timestamp:)
       entry_pair.id
@@ -60,10 +59,6 @@ module Stern
 
       entry_pair.destroy
       entry_pair_id
-    end
-
-    def self.generate_entry_pair_credit_id
-      ApplicationRecord.connection.execute("SELECT nextval('credit_entry_pair_id_seq')").first.values.first
     end
 
     def update

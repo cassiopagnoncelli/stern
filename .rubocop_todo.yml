@@ -265,7 +265,6 @@ Rails/HasManyOrHasOneDependent:
 # This cop supports unsafe autocorrection (--autocorrect-all).
 Rails/SquishedSQLHeredocs:
   Exclude:
-    - 'db/migrate/20230326215510_create_credit_entry_pair_id_sequence.rb'
     - 'db/migrate/20230402223428_create_gid_sequence.rb'
     - 'db/migrate/20230407233646_create_entry_function.rb'
     - 'db/migrate/20230408022903_destroy_entry_function.rb'

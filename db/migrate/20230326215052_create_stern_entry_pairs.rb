@@ -7,7 +7,6 @@ class CreateSternEntryPairs < ActiveRecord::Migration[7.0]
       t.bigint :uid, null: false
       t.bigint :amount, null: false
       t.datetime :timestamp, null: false, default: -> { "CURRENT_TIMESTAMP" }
-      t.bigint :credit_entry_pair_id
       t.bigint :operation_id, null: false
     end
 

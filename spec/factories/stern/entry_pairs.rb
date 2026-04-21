@@ -4,7 +4,6 @@ FactoryBot.define do
     uid { 1 }
     amount { 100 }
     timestamp { DateTime.current }
-    credit_entry_pair_id { nil }
     operation_id { 1 }
   end
 end
