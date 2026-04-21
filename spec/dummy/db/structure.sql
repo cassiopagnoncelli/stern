@@ -1,4 +1,4 @@
-\restrict L8jWBOaWJmJlbjt80y0WXzCDdzM0OPa25dDfPu1bd5ThSGbST12guoY5S62P864
+\restrict l0R09O4YweyelwHmesJL3HGBNCo3wgZ83fAxuv8kDhfakayAkgVPcQY0dr6BwXd
 
 -- Dumped from database version 17.9 (Postgres.app)
 -- Dumped by pg_dump version 17.9 (Postgres.app)
@@ -502,7 +502,7 @@ ALTER TABLE ONLY public.stern_scheduled_operations
 -- Name: index_stern_books_on_name; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_stern_books_on_name ON public.stern_books USING btree (name);
+CREATE UNIQUE INDEX index_stern_books_on_name ON public.stern_books USING btree (name);
 
 
 --
@@ -572,7 +572,7 @@ CREATE INDEX index_stern_scheduled_operations_on_status ON public.stern_schedule
 -- PostgreSQL database dump complete
 --
 
-\unrestrict L8jWBOaWJmJlbjt80y0WXzCDdzM0OPa25dDfPu1bd5ThSGbST12guoY5S62P864
+\unrestrict l0R09O4YweyelwHmesJL3HGBNCo3wgZ83fAxuv8kDhfakayAkgVPcQY0dr6BwXd
 
 SET search_path TO "$user", public;
 

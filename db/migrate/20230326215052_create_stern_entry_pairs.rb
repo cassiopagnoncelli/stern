@@ -8,9 +8,10 @@ class CreateSternEntryPairs < ActiveRecord::Migration[7.0]
       t.bigint :amount, null: false
       t.datetime :timestamp, null: false, default: -> { "CURRENT_TIMESTAMP" }
       t.bigint :credit_entry_pair_id
-      t.bigint :operation_id, null: false, index: true
+      t.bigint :operation_id, null: false
     end
 
     add_index :stern_entry_pairs, [:code, :uid], unique: true, if_not_exists: true
+    add_index :stern_entry_pairs, :operation_id
   end
 end

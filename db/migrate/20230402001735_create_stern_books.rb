@@ -3,7 +3,9 @@ class CreateSternBooks < ActiveRecord::Migration[7.0]
     create_table :stern_books, if_not_exists: true do |t|
       t.timestamps
 
-      t.string :name, null: false, unique: true, index: true
+      t.string :name, null: false
     end
+
+    add_index :stern_books, :name, unique: true
   end
 end
