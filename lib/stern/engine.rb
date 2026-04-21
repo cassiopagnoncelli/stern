@@ -16,8 +16,6 @@ module Stern
     #   - Stern::Book and Stern::EntryPair reference it at class-definition time.
     #   - The active operations subdirectory is derived from it.
     initializer "stern.load_chart", before: :set_autoload_paths do
-      require Engine.root.join("config/initializers/error_codes").to_s
-
       chart_name = ENV.fetch("STERN_CHART", "general")
       path = Engine.root.join("config/charts/#{chart_name}.yaml")
       unless path.exist?
