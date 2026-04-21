@@ -55,12 +55,12 @@ module Stern
       end
     end
 
-    STERN_DEFS[:entry_pairs].each do |name, defs|
-      if STERN_DEFS[:entry_pairs].keys.include?(name)
-        raise MethodAlreadyDefined, "entry pair add_#{name} is already defined, derived from book name"
-      end
+    if STERN_DEFS[:entry_pairs].keys.intersect?(STERN_DEFS[:books].keys)
+      intersection = STERN_DEFS[:entry_pairs].keys.intersection(STERN_DEFS[:books].keys)
+      raise MethodAlreadyDefined, "entry pairs are implicit and explicit defined in books: #{intersection.join(', ')}"
+    end
 
-      # rubocop:disable Metrics/ParameterLists, Layout/LineLength
+    STERN_DEFS[:entry_pairs].each do |name, defs|
       define_singleton_method :"add_#{name}" do |uid, gid, amount, credit_entry_pair_id = nil, timestamp: nil, operation_id: nil|
         double_entry_add(
           "add_#{name}",
@@ -74,7 +74,6 @@ module Stern
           operation_id,
         )
       end
-      # rubocop:enable Metrics/ParameterLists, Layout/LineLength
 
       define_singleton_method :"remove_#{name}" do |uid|
         double_entry_remove(
