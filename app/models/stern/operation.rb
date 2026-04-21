@@ -4,7 +4,7 @@ module Stern
 
     validates :name, presence: true, allow_blank: false, allow_nil: false
     validates :params, presence: true, allow_blank: true
-    validates :idem_key, 
+    validates :idem_key,
       presence: true,
       allow_blank: true,
       uniqueness: true,
@@ -13,18 +13,18 @@ module Stern
     def self.list
       # Get the engine root directory
       engine_root = File.expand_path("../../..", __dir__)
-      
+
       # Get all operation files
       operation_files = Dir[File.join(engine_root, "app", "operations", "stern", "*.rb")]
-      
+
       operation_classes = []
       operation_files.each do |file|
         # Extract filename without extension
         filename = File.basename(file, ".rb")
-        
+
         # Skip base_operation
         next if filename == "base_operation"
-        
+
         # Convert snake_case to CamelCase
         class_name = filename.split("_").map(&:capitalize).join
         operation_classes << class_name
@@ -38,19 +38,19 @@ module Stern
       params_flat ||= "N/A"
 
       colorize_output([
-        ["Operation", :white],
-        ["#{format("%5s", id)}", :white, :bold],
-        ["|", :white],
-        [updated_at, :purple, :bold],
-        ["|", :white],
-        ["Name:", :white],
-        [format("%-15s", name || "N/A"), :white, :bold],
-        ["|", :white],
-        ["Idemp:", :white],
-        [format("%-20s", idem_key || "N/A"), :orange, :bold],
-        ["|", :white],
-        ["Params:", :white],
-        [params_flat, :yellow, :bold]
+        [ "Operation", :white ],
+        [ "#{format("%5s", id)}", :white, :bold ],
+        [ "|", :white ],
+        [ updated_at, :purple, :bold ],
+        [ "|", :white ],
+        [ "Name:", :white ],
+        [ format("%-15s", name || "N/A"), :white, :bold ],
+        [ "|", :white ],
+        [ "Idemp:", :white ],
+        [ format("%-20s", idem_key || "N/A"), :orange, :bold ],
+        [ "|", :white ],
+        [ "Params:", :white ],
+        [ params_flat, :yellow, :bold ]
       ])
     end
 

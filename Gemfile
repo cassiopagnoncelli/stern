@@ -10,10 +10,7 @@ group :development, :test do
   gem "awesome_print"
   gem "dotenv-rails"
   gem "shoulda-matchers", ">= 5.0"
-  gem "rubocop"
-  gem "rubocop-rails"
-  gem "rubocop-rspec"
+  gem "rubocop-rails-omakase", require: false
   gem "factory_bot_rails"
   gem "tracer"
 end
-

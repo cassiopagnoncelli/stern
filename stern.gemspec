@@ -3,13 +3,13 @@ require_relative "lib/stern/version"
 Gem::Specification.new do |spec|
   spec.name        = "stern"
   spec.version     = Stern::VERSION
-  spec.authors     = ["Cassio Pagnoncelli"]
-  spec.email       = ["cassiopagnoncelli@gmail.com"]
+  spec.authors     = [ "Cassio Pagnoncelli" ]
+  spec.email       = [ "cassiopagnoncelli@gmail.com" ]
   spec.homepage    = "https://www.github.com/cassiopagnoncelli/stern"
   spec.summary     = "Double-entry ledger"
   spec.description = "Scalable double-entry ledger Rails engine to power financial backoffice."
   spec.license     = "Commercial, under written authorization"
-  
+
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the "allowed_push_host"
   # to allow pushing to a single host or delete this section to allow pushing to any host.
   # spec.metadata["allowed_push_host"] = "TODO: Set to 'http://mygemserver.com'"

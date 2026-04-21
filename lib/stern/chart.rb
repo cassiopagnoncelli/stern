@@ -33,12 +33,12 @@ module Stern
       explicit_pairs = defs.fetch(:entry_pairs) { {} } || {}
 
       @books = build_books(book_names)
-      @books_by_code = @books.each_value.to_h { |book| [book.code, book] }.freeze
+      @books_by_code = @books.each_value.to_h { |book| [ book.code, book ] }.freeze
       @book_codes = @books.each_value.map(&:code).freeze
 
       @entry_pairs = build_entry_pairs(book_names, explicit_pairs)
-      @entry_pairs_by_code = @entry_pairs.each_value.to_h { |pair| [pair.code, pair] }.freeze
-      @entry_pair_codes = @entry_pairs.each_value.to_h { |pair| [pair.name, pair.code] }.freeze
+      @entry_pairs_by_code = @entry_pairs.each_value.to_h { |pair| [ pair.code, pair ] }.freeze
+      @entry_pair_codes = @entry_pairs.each_value.to_h { |pair| [ pair.name, pair.code ] }.freeze
 
       validate!
       freeze
@@ -76,27 +76,27 @@ module Stern
 
     def build_books(book_names)
       all_names = book_names + book_names.map { |n| "#{n}_0" }
-      all_names.to_h { |name| [name.to_sym, Book.new(name: name, code: self.class.hash_code(name))] }
+      all_names.to_h { |name| [ name.to_sym, Book.new(name: name, code: self.class.hash_code(name)) ] }
         .freeze
     end
 
     def build_entry_pairs(book_names, explicit_pairs)
       implicit = book_names.to_h do |name|
-        [name.to_sym, EntryPair.new(
+        [ name.to_sym, EntryPair.new(
           name: name,
           code: self.class.hash_code(name),
           book_add: name,
           book_sub: "#{name}_0",
-        ),]
+        ) ]
       end
 
       explicit = explicit_pairs.to_h do |name, defn|
-        [name.to_sym, EntryPair.new(
+        [ name.to_sym, EntryPair.new(
           name: name.to_s,
           code: self.class.hash_code(name),
           book_add: defn.fetch(:book_add),
           book_sub: defn.fetch(:book_sub),
-        ),]
+        ) ]
       end
 
       implicit.merge(explicit).freeze

@@ -21,7 +21,7 @@ module Stern
 
   def self.cur(name_or_index, result: :both)
     raise UnknownCurrencyError if name_or_index.blank?
-    raise UnrecognizedArgument unless [:both, :index, :string].include?(result)
+    raise UnrecognizedArgument unless [ :both, :index, :string ].include?(result)
 
     if name_or_index.is_a?(String)
       name = name_or_index.strip.upcase

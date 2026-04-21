@@ -5,11 +5,11 @@ module Stern
   # balance). No ending balance or previous balance is provided.
   #
   # Returns a table of rows in the format
-  # 
+  #
   #   time_window | code | amount
   #
   # Example at the end of the file.
-  # 
+  #
   class SumEntriesQuery < BaseQuery
     attr_accessor :gid, :book_id, :time_grouping, :start_date, :end_date, :results
 
@@ -50,9 +50,9 @@ module Stern
         GROUP BY time_window, code
         ORDER BY time_window, code
       }
-      ApplicationRecord.sanitize_sql_array([sql,
+      ApplicationRecord.sanitize_sql_array([ sql,
                                             { time_grouping:, gid:, book_id:, start_date:,
-                                              end_date:, },])
+                                              end_date: } ])
     end
   end
 end

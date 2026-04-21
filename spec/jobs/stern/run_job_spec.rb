@@ -5,7 +5,7 @@ module Stern
     subject(:job) { described_class.new }
 
     describe '#perform' do
-      let(:sop_ids) { [1, 2, 3] }
+      let(:sop_ids) { [ 1, 2, 3 ] }
 
       before do
         allow(ScheduledOperationService).to receive(:list).and_return(sop_ids)

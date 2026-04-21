@@ -7,8 +7,8 @@ module Stern
         operations: "general",
         books: %w[foo bar],
         entry_pairs: {
-          split_foo: { book_sub: "foo", book_add: "bar" },
-        },
+          split_foo: { book_sub: "foo", book_add: "bar" }
+        }
       }
     end
 

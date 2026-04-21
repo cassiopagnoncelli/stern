@@ -104,7 +104,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
       end
 
       context "when not picked" do
-        [:pending, :in_progress, :finished, :canceled, :argument_error, :runtime_error]
+        [ :pending, :in_progress, :finished, :canceled, :argument_error, :runtime_error ]
           .each do |status|
           it "raises CannotProcessNonPickedSopError when status is #{status}" do
             scheduled_op.status = status
@@ -177,7 +177,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
       end
 
       context "when not in progress" do
-        [:pending, :picked, :finished, :canceled, :runtime_error]
+        [ :pending, :picked, :finished, :canceled, :runtime_error ]
           .each do |status|
           it "sets status to argument_error when status is #{status}" do
             scheduled_op.status = status

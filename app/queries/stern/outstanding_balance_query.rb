@@ -41,7 +41,7 @@ module Stern
           WHERE book_id = :book_id AND timestamp <= :timestamp
         ) ending_balances
       }
-      ApplicationRecord.sanitize_sql_array([sql, { book_id:, timestamp: }])
+      ApplicationRecord.sanitize_sql_array([ sql, { book_id:, timestamp: } ])
     end
   end
 end

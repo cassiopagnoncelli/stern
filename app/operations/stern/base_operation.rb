@@ -6,7 +6,7 @@ module Stern
   # All operations have to be backwards compatible.
   #
   # To schedule an operation, you may want to use
-  # 
+  #
   # > sop = ScheduledOperation.build(
   #     name: 'PayPix',
   #     params: { payment_id: 123, merchant_id: 1101, amount: 9900, fee: 65 },
@@ -41,7 +41,7 @@ module Stern
       else
         fun.call
       end
-      
+
       operation_id
     end
 
@@ -105,11 +105,11 @@ module Stern
 
       op = Operation.find_by(idem_key:)
       return nil if op.nil?
-      
+
       return op.id if
-        op.name == operation_name && 
+        op.name == operation_name &&
         op.params == operation_params
-        
+
       raise "Operation with idem_key #{idem_key} already exists with different parameters"
     end
   end

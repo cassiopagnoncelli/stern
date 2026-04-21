@@ -55,7 +55,7 @@ module Stern
         ) inconsistencies_results
         WHERE inconsistent = 1
       }
-      sanitized_sql = ApplicationRecord.sanitize_sql_array([sql, { book_id:, gid: }])
+      sanitized_sql = ApplicationRecord.sanitize_sql_array([ sql, { book_id:, gid: } ])
       results = ApplicationRecord.connection.execute(sanitized_sql)
       results.to_a.flatten
     end
@@ -89,7 +89,7 @@ module Stern
         ) l
         WHERE stern_entries.id = l.id
       }
-      ApplicationRecord.sanitize_sql_array([sql, { book_id:, gid: }])
+      ApplicationRecord.sanitize_sql_array([ sql, { book_id:, gid: } ])
     end
 
     def self.rebuild_gid_balance(gid)

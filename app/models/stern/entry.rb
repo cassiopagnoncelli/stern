@@ -5,9 +5,9 @@ module Stern
     validates :book_id, presence: true
     validates :gid, presence: true
     validates :entry_pair_id, presence: true
-    validates :amount, presence: true, exclusion: { in: [0] }
-    validates :entry_pair_id, uniqueness: { scope: [:book_id, :gid] }
-    validates :timestamp, uniqueness: { scope: [:book_id, :gid] }
+    validates :amount, presence: true, exclusion: { in: [ 0 ] }
+    validates :entry_pair_id, uniqueness: { scope: [ :book_id, :gid ] }
+    validates :timestamp, uniqueness: { scope: [ :book_id, :gid ] }
 
     belongs_to :entry_pair, class_name: "Stern::EntryPair", optional: true
     belongs_to :book, class_name: "Stern::Book", optional: true
@@ -66,7 +66,7 @@ module Stern
           verbose_mode := FALSE
         )
       }.squish
-      ApplicationRecord.sanitize_sql_array([sql, { book_id:, gid:, entry_pair_id:, amount:, timestamp: }])
+      ApplicationRecord.sanitize_sql_array([ sql, { book_id:, gid:, entry_pair_id:, amount:, timestamp: } ])
     end
 
     def self.destroy_all
@@ -84,7 +84,7 @@ module Stern
           verbose_mode := FALSE
         )
       }.squish
-      sanitized_sql = ApplicationRecord.sanitize_sql_array([sql, { id: }])
+      sanitized_sql = ApplicationRecord.sanitize_sql_array([ sql, { id: } ])
       ApplicationRecord.connection.execute(sanitized_sql)
     end
 
@@ -97,15 +97,15 @@ module Stern
       balance_color = ending_balance.positive? ? :green : (ending_balance < 0 ? :red : :white)
       book_nam = ::Stern.chart.book_name(book_id)
       colorize_output([
-        ["Entry", :white],
-        ["#{format("%5s", id)}", :white, :bold],
-        ["|", :white],
-        [timestamp, :purple, :bold],
-        ["|", :white],
-        [format("%8s", amount), amount_color, :bold],
-        [format("%10s", ending_balance), balance_color, :bold],
-        ["| book", :white],
-        [format("%-20s", book_nam || "N/A"), :magenta, :bold]
+        [ "Entry", :white ],
+        [ "#{format("%5s", id)}", :white, :bold ],
+        [ "|", :white ],
+        [ timestamp, :purple, :bold ],
+        [ "|", :white ],
+        [ format("%8s", amount), amount_color, :bold ],
+        [ format("%10s", ending_balance), balance_color, :bold ],
+        [ "| book", :white ],
+        [ format("%-20s", book_nam || "N/A"), :magenta, :bold ]
       ])
     end
   end

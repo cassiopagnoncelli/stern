@@ -6,4 +6,4 @@ FactoryBot.define do
     amount { 100 }
     timestamp { DateTime.current }
   end
-end  
+end

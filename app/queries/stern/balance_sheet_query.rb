@@ -4,7 +4,7 @@ module Stern
   # Returns a balance sheet for a given time period.
   #
   # Example at the end of the file.
-  # 
+  #
   class BalanceSheetQuery < BaseQuery
     attr_accessor :start_date, :end_date, :book_format, :book_ids
 
@@ -75,7 +75,7 @@ module Stern
         LEFT JOIN previous_balances pb ON b.book_id = pb.book_id
         ORDER BY b.book_id
       }
-      ApplicationRecord.sanitize_sql_array([sql, { start_date:, end_date:, book_ids: }])
+      ApplicationRecord.sanitize_sql_array([ sql, { start_date:, end_date:, book_ids: } ])
     end
   end
 end

@@ -7,7 +7,7 @@ module Stern
   # Returns an array of entry dictionaries in the format: timestamp, amount, ending_balance.
   #
   # Example at the end of the file.
-  # 
+  #
   class EntriesQuery < BaseQuery
     attr_accessor :gid, :book_id, :start_date, :end_date, :code_format, :page, :per_page, :results
 
@@ -47,7 +47,7 @@ module Stern
 
     def sql
       query = Entry.joins(:entry_pair)
-        .select('stern_entries.*, stern_entry_pairs.code')
+        .select("stern_entries.*, stern_entry_pairs.code")
         .where(book_id:)
         .where("stern_entries.timestamp BETWEEN ? AND ?", start_date, end_date)
       query = query.where(gid:) if gid.present?

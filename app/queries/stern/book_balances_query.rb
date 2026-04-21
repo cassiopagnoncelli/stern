@@ -37,7 +37,7 @@ module Stern
         FROM stern_entries
         WHERE book_id = :book_id AND timestamp <= :timestamp
       }
-      ApplicationRecord.sanitize_sql_array([sql, { book_id:, timestamp: }])
+      ApplicationRecord.sanitize_sql_array([ sql, { book_id:, timestamp: } ])
     end
   end
 end
