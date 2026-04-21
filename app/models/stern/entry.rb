@@ -93,8 +93,8 @@ module Stern
     end
 
     def pp
-      amount_color = amount > 0 ? :green : (amount < 0 ? :red : :white)
-      balance_color = ending_balance > 0 ? :green : (ending_balance < 0 ? :red : :white)
+      amount_color = amount.positive? ? :green : (amount < 0 ? :red : :white)
+      balance_color = ending_balance.positive? ? :green : (ending_balance < 0 ? :red : :white)
       book_nam = BOOKS_INDEX[book_id]
       colorize_output([
         ["Entry", :white],

@@ -29,22 +29,6 @@ module Stern
       entries.each(&:destroy!)
     end
 
-    BOOKS_CODES.each do |name, book_code|
-      define_singleton_method :"add_#{name}" do |uid, gid, amount, credit_entry_pair_id = nil, timestamp: nil, operation_id: nil|
-        double_entry_add(
-          "add_#{name}",
-          gid,
-          uid,
-          book_code,
-          -book_code,
-          amount,
-          credit_entry_pair_id,
-          timestamp,
-          operation_id,
-        )
-      end
-    end
-
     ENTRY_PAIRS.each do |name|
       define_singleton_method :"add_#{name}" do |uid, gid, amount, credit_entry_pair_id = nil, timestamp: nil, operation_id: nil|
         double_entry_add(
@@ -62,9 +46,9 @@ module Stern
     end
 
     def self.double_entry_add(code, gid, uid, book_add, book_sub, amount, credit_entry_pair_id, timestamp, operation_id)
-      entry_pair = EntryPair.find_or_create_by!(code: codes[code], uid:, amount:, credit_entry_pair_id:, timestamp:, operation_id:,)
+      entry_pair = EntryPair.find_or_create_by!(code: codes[code], uid:, amount:, credit_entry_pair_id:, timestamp:, operation_id:)
       Entry.create!(book_id: Book.code(book_add), gid:, entry_pair_id: entry_pair.id, amount:, timestamp:)
-      Entry.create!(book_id: Book.code(book_sub), gid:, entry_pair_id: entry_pair.id, amount: -amount, timestamp:,)
+      Entry.create!(book_id: Book.code(book_sub), gid:, entry_pair_id: entry_pair.id, amount: -amount, timestamp:)
       entry_pair.id
     end
 

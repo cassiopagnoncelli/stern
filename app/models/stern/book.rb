@@ -6,7 +6,7 @@ module Stern
 
     validates :name, presence: true, uniqueness: true
 
-    BOOKS_CODES_CODES.each do |book_name, id|
+    BOOKS_CODES.each do |book_name, id|
       define_singleton_method book_name.to_sym do
         Book.find(id)
       end
