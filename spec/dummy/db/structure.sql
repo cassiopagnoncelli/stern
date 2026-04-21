@@ -1,4 +1,4 @@
-\restrict U49NOHdDXKGzL2hpZ0vqQHjBhGcqZMkhLpYsLhFPnyXs323Sndle249X9BL7Ttg
+\restrict yYXh3bTh4Q9jAzeRg0wtHF4jmTaQ1nzl7je7fCMT9IheizjsdkgQkXVAn0lqsfh
 
 -- Dumped from database version 17.9 (Postgres.app)
 -- Dumped by pg_dump version 17.9 (Postgres.app)
@@ -220,18 +220,6 @@ CREATE TABLE public.ar_internal_metadata (
 
 
 --
--- Name: credit_entry_pair_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.credit_entry_pair_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
 -- Name: gid_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -314,7 +302,6 @@ CREATE TABLE public.stern_entry_pairs (
     uid bigint NOT NULL,
     amount bigint NOT NULL,
     "timestamp" timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    credit_entry_pair_id bigint,
     operation_id bigint NOT NULL
 );
 
@@ -572,7 +559,7 @@ CREATE INDEX index_stern_scheduled_operations_on_status ON public.stern_schedule
 -- PostgreSQL database dump complete
 --
 
-\unrestrict U49NOHdDXKGzL2hpZ0vqQHjBhGcqZMkhLpYsLhFPnyXs323Sndle249X9BL7Ttg
+\unrestrict yYXh3bTh4Q9jAzeRg0wtHF4jmTaQ1nzl7je7fCMT9IheizjsdkgQkXVAn0lqsfh
 
 SET search_path TO "$user", public;
 
@@ -586,7 +573,6 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20230407233646'),
 ('20230402223428'),
 ('20230402001735'),
-('20230326215510'),
 ('20230326215052'),
 ('20230326212250');
 

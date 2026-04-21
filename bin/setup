@@ -1,3 +1,43 @@
+#!/usr/bin/env ruby
+require "fileutils"
+
+APP_ROOT = File.expand_path("..", __dir__)
+
+def system!(*args)
+  system(*args, exception: true)
+end
+
+RED    = "\e[31m"
+GREEN  = "\e[32m"
+YELLOW = "\e[33m"
+BLUE   = "\e[34m"
+BOLD   = "\e[1m"
+RESET  = "\e[0m"
+
+FileUtils.chdir APP_ROOT do
+  # This script is a way to set up or update your development environment automatically.
+  # This script is idempotent, so that you can run it at any time and get an expectable outcome.
+  # Add necessary setup steps to this file.
+
+  # Custom setup steps.
+  system! "rm -rf ./spec/dummy/db/structure.sql"
+  system! "bin/rails db:drop"
+
+  puts "#{YELLOW}Installing dependencies#{RESET}"
+  system("bundle check") || system!("bundle install")
+  print "#{GREEN}✓ completed#{RESET}\n\n"
+
+  puts "#{YELLOW}Preparing database#{RESET}"
+  system! "bin/rails app:db:prepare"
+  print "#{GREEN}✓ completed#{RESET}\n\n"
+
+  puts "#{YELLOW}Seeding#{RESET}"
+  system! "bin/rails app:db:seed"
+  print "#{GREEN}✓ completed#{RESET}\n\n"
+end
+
+__END__
+
 #!/usr/bin/env bash
 
 bundle exec rails db:drop app:db:create app:db:schema:load app:db:seed
