@@ -12,7 +12,7 @@ module Stern
 
     context "when consistent balance" do
       let(:gid) { 1101 }
-      let(:book_id) { BOOKS[:merchant_balance] }
+      let(:book_id) { BOOKS_CODES[:merchant_balance] }
       let(:entries) { Entry.where(book_id:, gid:).order(:timestamp) }
 
       before do
@@ -28,7 +28,7 @@ module Stern
 
     context "when inconsistent balance" do
       let(:gid) { 1101 }
-      let(:book_id) { BOOKS[:merchant_balance] }
+      let(:book_id) { BOOKS_CODES[:merchant_balance] }
       let(:entries) { Entry.where(book_id:, gid:).order(:timestamp) }
 
       before do

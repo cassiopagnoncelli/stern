@@ -23,7 +23,6 @@ books:
   - customer_locked
 
   # Payment Processing: PSP, gateway
-  # [X: pp] [XX: op] [X: actor] [XXX: channel]
   - pp_payment
   - pp_charge_internal
   - pp_charge_manual
@@ -125,7 +124,6 @@ books:
   - pp_chargeback_fee_partner_pix
 
   # Withdrawals
-  # [X: wdw] [XX: op] [X: actor] [XXX: channel]
   - wdw
   - wdw_request
   - wdw_merchant
@@ -137,11 +135,6 @@ books:
 
 #
 # Entry pairs.
-#
-#   operation:
-#     code: numeric
-#     book_add: book_a
-#     book_sub: book_b
 #
 entry_pairs:
   # Splits

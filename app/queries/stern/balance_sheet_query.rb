@@ -24,7 +24,7 @@ module Stern
       @results = execute_query
       @results.map do |record|
         record = record.symbolize_keys
-        record[:book_name] = book_format.reduce(BOOKS_CODES[record[:book_id]]) do |acc, format|
+        record[:book_name] = book_format.reduce(BOOKS_INDEX[record[:book_id]]) do |acc, format|
           Helpers::StringFormatHelper.format_string(acc, format)
         end
         record

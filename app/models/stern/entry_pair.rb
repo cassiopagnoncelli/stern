@@ -3,8 +3,6 @@
 # Stern engine.
 module Stern
   class EntryPair < ApplicationRecord
-    MethodAlreadyDefined = Class.new(StandardError)
-
     enum :code, ENTRY_PAIRS
 
     has_many :entries, class_name: "Stern::Entry", dependent: :restrict_with_exception
@@ -31,7 +29,7 @@ module Stern
       entries.each(&:destroy!)
     end
 
-    STERN_DEFS[:books].each do |name, book_code|
+    BOOKS_CODES.each do |name, book_code|
       define_singleton_method :"add_#{name}" do |uid, gid, amount, credit_entry_pair_id = nil, timestamp: nil, operation_id: nil|
         double_entry_add(
           "add_#{name}",
@@ -44,47 +42,21 @@ module Stern
           timestamp,
           operation_id,
         )
-
-        double_entry_add(
-          "sub_#{name}",
-          gid,
-          uid,
-          -book_code,
-          book_code,
-          amount,
-          credit_entry_pair_id,
-          timestamp,
-          operation_id,
-        )
       end
     end
 
-    if STERN_DEFS[:entry_pairs].keys.intersect?(STERN_DEFS[:books].keys)
-      intersection = STERN_DEFS[:entry_pairs].keys.intersection(STERN_DEFS[:books].keys)
-      raise MethodAlreadyDefined, "entry pairs are implicit and explicit defined in books: #{intersection.join(', ')}"
-    end
-
-    STERN_DEFS[:entry_pairs].each do |name, defs|
+    ENTRY_PAIRS.each do |name|
       define_singleton_method :"add_#{name}" do |uid, gid, amount, credit_entry_pair_id = nil, timestamp: nil, operation_id: nil|
         double_entry_add(
           "add_#{name}",
           gid,
           uid,
-          defs[:book_add],
-          defs[:book_sub],
+          ENTRY_PAIRS_ADD[name],
+          ENTRY_PAIRS_SUB[name],
           amount,
           credit_entry_pair_id,
           timestamp,
           operation_id,
-        )
-      end
-
-      define_singleton_method :"remove_#{name}" do |uid|
-        double_entry_remove(
-          :"add_#{name}",
-          uid,
-          defs[:book_add].to_sym,
-          defs[:book_sub].to_sym,
         )
       end
     end

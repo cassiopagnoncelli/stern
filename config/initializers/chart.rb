@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Stern
-  # Loading chart.
+  # Load chart from file.
   available_charts = Dir[Engine.root.join("config/charts/*")].map { |file| file.split("/").last.split(".").first }
   chart_name = ENV.fetch("STERN_CHART", "general")
   unless chart_name.in?(available_charts)
@@ -10,40 +10,34 @@ module Stern
   chart_path ||= Engine.root.join("config/charts/#{chart_name}.yaml").to_s.freeze
   chart_contents ||= YAML.load_file(chart_path)
 
-  # Parse chart.
   STERN_DEFS ||= chart_contents.deep_symbolize_keys!.freeze
 
+  # Minimum time difference between entries, since timestamp must be unique.
+  # NOTE: This needs proper refactoring, particularly when multiple machines are involved.
   TIMESTAMP_DELTA ||= 2 * (1.second / 1e6).freeze
 
   # 
-  # Define books and entry pairs, validating the entire definitions book.
-  # Proposed names: BOOKS (list), BOOKS_CODES (hash), BOOKS_INDEX (hash inv); likewise entry pairs.
+  # Books and Entry Pairs.
   #
-  BOOKS ||= STERN_DEFS[:books].map { |name| [name, chart_hash(name)] }.to_h.with_indifferent_access.freeze
-  BOOKS_CODES ||= BOOKS.invert.freeze
+  BOOKS ||= STERN_DEFS[:books] + STERN_DEFS[:books].map { |name| "#{name}_0" }
+  BOOKS_CODES ||= STERN_DEFS[:books].map { |name| [name, chart_hash(name)] }.to_h.with_indifferent_access.freeze
+  BOOKS_INDEX ||= BOOKS_CODES.invert.freeze
 
-  # Define entry pairs.
-  ENTRY_PAIRS ||= BOOKS.map { |name, code| ["add_#{name}".to_sym, code] }.to_h.
-    merge(
-      BOOKS.map { |name, code| ["sub_#{name}".to_sym, -code] }.to_h
-    ).merge(
-      STERN_DEFS[:entry_pairs].map { |name, _h| ["add_#{name}".to_sym, chart_hash(name)] }.to_h
-    ).merge(
-      STERN_DEFS[:entry_pairs].map { |name, _h| ["remove_#{name}".to_sym, -chart_hash(name)] }.to_h
-    ).with_indifferent_access.freeze
+  ENTRY_PAIRS_BOOKS_CODES ||= STERN_DEFS[:books].map { |name| [name, chart_hash(name)] }.to_h.with_indifferent_access.freeze
 
-  ENTRY_PAIRS_CODES ||= ENTRY_PAIRS.invert.freeze
+  ENTRY_PAIRS ||= (STERN_DEFS[:books] + STERN_DEFS[:entry_pairs].keys).map(&:to_sym).freeze
+  ENTRY_PAIRS_CODES ||= ENTRY_PAIRS.map { |name| [name, chart_hash(name)] }.to_h.with_indifferent_access.freeze
+  ENTRY_PAIRS_INDEX ||= ENTRY_PAIRS_CODES.invert.freeze
+  ENTRY_PAIRS_ADD ||= STERN_DEFS[:entry_pairs].transform_values { _1.fetch(:book_add) }.freeze
+  ENTRY_PAIRS_SUB ||= STERN_DEFS[:entry_pairs].transform_values { _1.fetch(:book_sub) }.freeze
+  ENTRY_PAIRS_ADD_CODES ||= STERN_DEFS[:entry_pairs].transform_values { BOOKS_CODES[_1.fetch(:book_add)] }.freeze
+  ENTRY_PAIRS_SUB_CODES ||= STERN_DEFS[:entry_pairs].transform_values { BOOKS_CODES[_1.fetch(:book_sub)] }.freeze
 
-  books_codes = STERN_DEFS[:books].map { |name| chart_hash(name) }
-  entry_pairs_codes = STERN_DEFS[:entry_pairs].keys.map { |name| chart_hash(name) }
-
-  if books_codes.count != books_codes.uniq.count
+  if BOOKS_INDEX.keys.count != BOOKS_INDEX.keys.uniq.count
     raise BooksHashCollision, "collision with implicit book names"
-  elsif books_codes.intersect?(entry_pairs_codes)
-    raise BooksHashCollision, "collision between implicit book names and entry pairs book names"
   elsif ENTRY_PAIRS_CODES.keys.count != ENTRY_PAIRS_CODES.keys.uniq.count
-    raise EntryPairHashCollision, "collision in entry pairs codes"
+    raise EntryPairHashCollision, "collision in entry pairs names"
+  elsif ENTRY_PAIRS_INDEX.keys.count != ENTRY_PAIRS_INDEX.keys.uniq.count
+    raise BooksHashCollision, "collision between implicit book names and entry pairs book names"
   end
-
-  ENTRY_PAIRS_DEF ||= STERN_DEFS[:entry_pairs].freeze
 end

@@ -6,4 +6,5 @@ module Stern
 
   BooksHashCollision ||= Class.new(StandardError)
   EntryPairHashCollision ||= Class.new(StandardError)
+  MethodAlreadyDefined ||= Class.new(StandardError)
 end
