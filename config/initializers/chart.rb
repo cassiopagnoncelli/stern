@@ -15,7 +15,10 @@ module Stern
 
   TIMESTAMP_DELTA ||= 2 * (1.second / 1e6).freeze
 
-  # Define books.
+  # 
+  # Define books and entry pairs, validating the entire definitions book.
+  # Proposed names: BOOKS (list), BOOKS_CODES (hash), BOOKS_INDEX (hash inv); likewise entry pairs.
+  #
   BOOKS ||= STERN_DEFS[:books].map { |name| [name, chart_hash(name)] }.to_h.with_indifferent_access.freeze
   BOOKS_CODES ||= BOOKS.invert.freeze
 
@@ -31,7 +34,6 @@ module Stern
 
   ENTRY_PAIRS_CODES ||= ENTRY_PAIRS.invert.freeze
 
-  # Check validity.
   books_codes = STERN_DEFS[:books].map { |name| chart_hash(name) }
   entry_pairs_codes = STERN_DEFS[:entry_pairs].keys.map { |name| chart_hash(name) }
 
@@ -42,4 +44,6 @@ module Stern
   elsif ENTRY_PAIRS_CODES.keys.count != ENTRY_PAIRS_CODES.keys.uniq.count
     raise EntryPairHashCollision, "collision in entry pairs codes"
   end
+
+  ENTRY_PAIRS_DEF ||= STERN_DEFS[:entry_pairs].freeze
 end

@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    stern (1.1.0)
+    stern (1.2.0)
       nokogiri (>= 1.15.6)
       pg (>= 1.4.5)
       rails (>= 8.0)
