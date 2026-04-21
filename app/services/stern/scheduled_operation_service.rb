@@ -21,9 +21,6 @@ module Stern
     BATCH_SIZE = 100
     QUEUE_ITEM_TIMEOUT_IN_SECONDS = 300
 
-    CannotProcessNonPickedSopError = Class.new(StandardError)
-    CannotProcessAheadOfTimeError = Class.new(StandardError)
-
     def list
       picked_list = ScheduledOperation.picked.ids
       picked_list = enqueue_list if picked_list.empty?
