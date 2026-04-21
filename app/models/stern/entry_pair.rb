@@ -3,6 +3,8 @@
 # Stern engine.
 module Stern
   class EntryPair < ApplicationRecord
+    include AppendOnly
+
     enum :code, ::Stern.chart.entry_pair_codes
 
     has_many :entries, class_name: "Stern::Entry", dependent: :restrict_with_exception
@@ -19,10 +21,6 @@ module Stern
 
     before_save do
       raise ArgumentError, "timestamp was set" if timestamp.present? && timestamp > DateTime.current
-    end
-
-    before_update do
-      raise StandardError, "Ledger is append-only" unless Rails.env.test?
     end
 
     before_destroy do
@@ -57,20 +55,8 @@ module Stern
       Entry.find_by!(book_id: Book.code(book_add), entry_pair_id:).destroy!
       Entry.find_by!(book_id: Book.code(book_sub), entry_pair_id:).destroy!
 
-      entry_pair.destroy
+      entry_pair.destroy!
       entry_pair_id
-    end
-
-    def update
-      raise NotImplementedError, "EntryPair records cannot be updated by design"
-    end
-
-    def update!
-      raise NotImplementedError, "EntryPair reccords cannot be updated by design"
-    end
-
-    def update_all
-      raise NotImplementedError, "EntryPair reccords cannot be updated by design"
     end
 
     def pp

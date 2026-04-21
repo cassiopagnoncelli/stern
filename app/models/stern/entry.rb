@@ -2,6 +2,8 @@
 
 module Stern
   class Entry < ApplicationRecord
+    include AppendOnly
+
     validates :book_id, presence: true
     validates :gid, presence: true
     validates :entry_pair_id, presence: true
@@ -12,17 +14,12 @@ module Stern
     belongs_to :entry_pair, class_name: "Stern::EntryPair", optional: true
     belongs_to :book, class_name: "Stern::Book", optional: true
 
-    before_update do
-      raise NotImplementedError, "Entry records cannot be updated by design"
-    end
-
     before_create do
       if timestamp.presence && timestamp > DateTime.current
         raise(ArgumentError,
               "timestamp cannot be in the future",)
       end
       raise ArgumentError, "amount must be non-zero integer" if amount.blank? || amount.zero?
-      raise ArgumentError, "book_id undefined" if book_id.blank?
       raise ArgumentError, "book_id undefined" if book_id.blank?
       raise ArgumentError, "gid undefined" if gid.blank?
       raise ArgumentError, "entry_pair_id undefined" if entry_pair_id.blank?
@@ -34,14 +31,6 @@ module Stern
         .order(:timestamp, :id)
         .last(1)
     }
-
-    def self.update_all(*_args)
-      raise NotImplementedError, "Entry records cannot be updated by design"
-    end
-
-    def self.create(**params)
-      raise NotImplementedError, "Use create! instead"
-    end
 
     def self.create!(book_id:, gid:, entry_pair_id:, amount:, timestamp: nil)
       ApplicationRecord.connection.execute(
@@ -67,14 +56,6 @@ module Stern
         )
       }.squish
       ApplicationRecord.sanitize_sql_array([ sql, { book_id:, gid:, entry_pair_id:, amount:, timestamp: } ])
-    end
-
-    def self.destroy_all
-      raise NotImplementedError, "Ledger is append-only, if you are sure about this operation use delete_all"
-    end
-
-    def destroy
-      raise NotImplementedError, "Use destroy! instead"
     end
 
     def destroy!
