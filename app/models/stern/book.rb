@@ -6,14 +6,12 @@ module Stern
 
     validates :name, presence: true, uniqueness: true
 
-    BOOKS_CODES.each do |book_name, id|
-      define_singleton_method book_name.to_sym do
-        Book.find(id)
-      end
+    ::Stern.chart.books.each do |name, book|
+      define_singleton_method(name) { Book.find(book.code) }
     end
 
     def self.code(book_name)
-      BOOKS_CODES[book_name]
+      ::Stern.chart.book_code(book_name)
     end
   end
 end

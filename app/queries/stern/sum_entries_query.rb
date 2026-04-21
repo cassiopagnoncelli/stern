@@ -19,12 +19,8 @@ module Stern
     # @param start_date [DateTime] report starting date/time
     # @param end_date [DateTime] report ending date/time
     def initialize(gid:, book_id:, time_grouping:, start_date:, end_date:)
-      unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
-        raise ArgumentError, "book does not exist"
-      end
-
       self.gid = gid
-      self.book_id = book_id.is_a?(Symbol) || book_id.is_a?(String) ? BOOKS[book_id] : book_id
+      self.book_id = resolve_book_id!(book_id)
       self.time_grouping = Helpers::FrequencyHelper.frequency_in_sql(time_grouping)
       self.start_date = Helpers::NormalizeTimeHelper.normalize_time(start_date, true)
       self.end_date = Helpers::NormalizeTimeHelper.normalize_time(end_date, true)
@@ -33,7 +29,7 @@ module Stern
     def call
       @results = execute_query
       @results.map do |record|
-        record["code"] = ENTRY_PAIRS.invert[record["code"]]
+        record["code"] = ::Stern.chart.entry_pair(record["code"])&.name
         record["time_window"] = record["time_window"].in_time_zone.to_datetime
         record
       end

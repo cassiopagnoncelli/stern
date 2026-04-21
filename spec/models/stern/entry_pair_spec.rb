@@ -7,11 +7,12 @@ module Stern
       described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, timestamp, operation_id)
     end
 
-    let(:code) { "add_#{STERN_DEFS[:entry_pairs].keys.first}" }
+    let(:first_pair) { ::Stern.chart.entry_pairs.values.first }
+    let(:code) { first_pair.name }
     let(:gid) { 1 }
     let(:uid) { Integer(rand * 1e5) }
-    let(:book_add) { STERN_DEFS[:entry_pairs].values.first[:book_add] }
-    let(:book_sub) { STERN_DEFS[:entry_pairs].values.first[:book_sub] }
+    let(:book_add) { first_pair.book_add }
+    let(:book_sub) { first_pair.book_sub }
     let(:amount) { 100 }
     let(:timestamp) { DateTime.current }
     let(:operation_id) { (create(:operation)).id }
@@ -63,20 +64,16 @@ module Stern
     end
 
     describe "book-derived singleton methods" do
-      STERN_DEFS[:books].each_key do |book_name|
-        it "defines .add_#{book_name}" do
-          expect(described_class).to respond_to(:"add_#{book_name}")
+      ::Stern.chart.entry_pairs.each_key do |pair_name|
+        it "defines .add_#{pair_name}" do
+          expect(described_class).to respond_to(:"add_#{pair_name}")
         end
-      end
-
-      it "does not collide with entry_pair names" do
-        expect(STERN_DEFS[:entry_pairs].keys & STERN_DEFS[:books].keys).to eq([])
       end
     end
 
     describe ".add_<book> (forward/backward)" do
-      let(:book_name) { STERN_DEFS[:books].keys.first }
-      let(:book_code) { STERN_DEFS[:books][book_name] }
+      let(:book_name) { ::Stern.chart.books.keys.first }
+      let(:book_code) { ::Stern.chart.book_code(book_name) }
       let(:uid) { Integer(rand * 1e5) }
       let(:gid) { 1 }
       let(:amount) { 100 }

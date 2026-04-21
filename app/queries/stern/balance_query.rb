@@ -15,11 +15,10 @@ module Stern
     # @param book_id [Bignum] book id
     # @param timestamp [DateTime] balance at the given time
     def initialize(gid:, book_id:, timestamp:)
-      raise ArgumentError, "book does not exist" unless book_id.in?(BOOKS) || book_id.in?(BOOKS_INDEX.keys)
       raise ArgumentError, "should be Date or DateTime" unless timestamp.is_a?(Date) || timestamp.is_a?(DateTime)
 
       self.gid = gid
-      self.book_id = book_id.is_a?(Symbol) || book_id.is_a?(String) ? BOOKS[book_id.to_sym] : book_id
+      self.book_id = resolve_book_id!(book_id)
       self.timestamp = Helpers::NormalizeTimeHelper.normalize_time(timestamp, true)
     end
 

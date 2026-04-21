@@ -19,15 +19,11 @@ module Stern
     # @param page [Integer] page number (-3, -2, -1, 1, 2, 3, ..., defaults to -1, page 0 does not exist)
     # @param per_page [Integer] records per page (defaults to 50)
     def initialize(book_id:, start_date:, end_date:, gid: nil, code_format: %i[titleize drop_first_word], page: -1, per_page: 50)
-      unless book_id.to_s.in?(BOOKS.keys) || book_id.in?(BOOKS.values)
-        raise ArgumentError, "book does not exist"
-      end
-
       raise ArgumentError, "page cannot be 0" if page == 0
       raise ArgumentError, "per_page must be positive" if per_page <= 0
 
       self.gid = gid
-      self.book_id = book_id.is_a?(Symbol) || book_id.is_a?(String) ? BOOKS[book_id] : book_id
+      self.book_id = resolve_book_id!(book_id)
       self.start_date = Helpers::NormalizeTimeHelper.normalize_time(start_date, true)
       self.end_date = Helpers::NormalizeTimeHelper.normalize_time(end_date, true)
       self.code_format = code_format
@@ -39,7 +35,7 @@ module Stern
       @results = execute_query
       results_array = @results.map do |record|
         record = record.symbolize_keys.slice(:timestamp, :gid, :amount, :ending_balance, :code)
-        record[:code] = code_format.reduce(ENTRY_PAIRS_CODES[record[:code]]) do |acc, format|
+        record[:code] = code_format.reduce(::Stern.chart.entry_pair(record[:code])&.name) do |acc, format|
           Helpers::StringFormatHelper.format_string(acc, format)
         end
         record

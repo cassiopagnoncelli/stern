@@ -11,17 +11,25 @@ module Stern
       generators.factory_bot dir: "spec/factories"
     end
 
-    # Collapsing operations allows for operations to be defined in
-    # subdirectories of app/operations/stern without the dir prefix,
-    # that is, we can call PayPix directly instead of
-    # PaymentProcessing::PayPix.
-    #
-    initializer "stern.configure_autoloader", before: :set_autoload_paths do
-      require Engine.root.join("config/initializers/chart").to_s
+    # The chart defines books, entry pairs, and the active operations module. It must be
+    # loaded before autoload paths are set because:
+    #   - Stern::Book and Stern::EntryPair reference it at class-definition time.
+    #   - The active operations subdirectory is derived from it.
+    initializer "stern.load_chart", before: :set_autoload_paths do
+      require Engine.root.join("config/initializers/error_codes").to_s
 
-      operations_module_name = STERN_DEFS[:operations]
+      chart_name = ENV.fetch("STERN_CHART", "general")
+      path = Engine.root.join("config/charts/#{chart_name}.yaml")
+      unless path.exist?
+        available = Dir[Engine.root.join("config/charts/*.yaml")].map { File.basename(_1, ".yaml") }
+        raise "STERN_CHART=#{chart_name.inspect} not found; available: #{available}"
+      end
+      Stern.chart = Stern::Chart.load(path)
 
-      Dir[root.join("app/operations/stern/#{operations_module_name}/")].each do |dir|
+      # Collapsing operations allows for operations to be defined in subdirectories of
+      # app/operations/stern without the dir prefix — e.g. `ChargePix` instead of
+      # `General::ChargePix`.
+      Dir[root.join("app/operations/stern/#{Stern.chart.operations_module}/")].each do |dir|
         next if File.basename(dir) == "concerns"
         Rails.autoloaders.main.collapse(dir)
       end

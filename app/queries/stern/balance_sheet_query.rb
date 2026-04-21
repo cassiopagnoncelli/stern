@@ -12,19 +12,18 @@ module Stern
     # @param end_date [DateTime] report ending date/time
     # @param book_ids [Array<Bignum>] book ids, eg. %i[customer_balance_available_usd merchant_balance_available_usd]
     # @param book_format [Array<Symbol>] format of the code, eg. %i[titleize]
-    def initialize(start_date:, end_date:, book_ids: BOOKS.values, book_format: %i[titleize])
+    def initialize(start_date:, end_date:, book_ids: ::Stern.chart.book_codes, book_format: %i[titleize])
       self.start_date = Helpers::NormalizeTimeHelper.normalize_time(start_date, true)
       self.end_date = Helpers::NormalizeTimeHelper.normalize_time(end_date, true)
       self.book_format = book_format
-      self.book_ids = book_ids.map { |book_id| (book_id.is_a?(Symbol) || book_id.is_a?(String)) ? BOOKS[book_id] : book_id }
-      raise ArgumentError, "book does not exist" if (self.book_ids - BOOKS.values).any?
+      self.book_ids = book_ids.map { |book_id| resolve_book_id!(book_id) }
     end
 
     def call
       @results = execute_query
       @results.map do |record|
         record = record.symbolize_keys
-        record[:book_name] = book_format.reduce(BOOKS_INDEX[record[:book_id]]) do |acc, format|
+        record[:book_name] = book_format.reduce(::Stern.chart.book_name(record[:book_id])) do |acc, format|
           Helpers::StringFormatHelper.format_string(acc, format)
         end
         record

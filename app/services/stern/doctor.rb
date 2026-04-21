@@ -26,7 +26,7 @@ module Stern
 
     def self.ending_balances_inconsistencies_across_books(gid:)
       entry_ids = []
-      BOOKS_INDEX.keys.each do |book_id|
+      ::Stern.chart.book_codes.each do |book_id|
         entry_ids += ending_balances_inconsistencies(book_id:, gid:)
       end
       entry_ids
@@ -61,7 +61,7 @@ module Stern
     end
 
     def self.rebuild_book_gid_balance(book_id, gid)
-      unless book_id.is_a?(Numeric) && book_id.in?(BOOKS_INDEX.keys)
+      unless book_id.is_a?(Numeric) && ::Stern.chart.book(book_id)
         raise ArgumentError, "book is not valid"
       end
 
@@ -93,7 +93,7 @@ module Stern
     end
 
     def self.rebuild_gid_balance(gid)
-      BOOKS_INDEX.keys.each do |book_id|
+      ::Stern.chart.book_codes.each do |book_id|
         rebuild_book_gid_balance(book_id, gid)
       end
     end

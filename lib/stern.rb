@@ -1,26 +1,14 @@
-require "xxhash"
 require "stern/version"
 require "stern/engine"
-
-module Kernel
-  def chart_hash(str)
-    raise Stern::ArgumentMustBeString unless str.is_a?(String) || str.is_a?(Symbol)
-
-    XXhash.xxh64(str.to_s) & Stern::INT_MASK
-  end
-end
+require "stern/chart"
 
 module Stern
-  INT_MASK = ((1 << 31) - 1).freeze
+  class << self
+    attr_accessor :chart
+  end
 
   def self.generate_gid
     ApplicationRecord.generate_gid
-  end
-
-  def self.chart_hash(str)
-    raise ArgumentMustBeString unless str.is_a?(String) || str.is_a?(Symbol)
-
-    XXhash.xxh64(str.to_s) & INT_MASK
   end
 
   def self.outstanding_balance(book_id = :merchant_balance, timestamp = DateTime.current)

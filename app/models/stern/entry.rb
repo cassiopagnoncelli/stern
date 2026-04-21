@@ -89,13 +89,13 @@ module Stern
     end
 
     def book_name
-      BOOKS_INDEX[book_id]
+      ::Stern.chart.book_name(book_id)
     end
 
     def pp
       amount_color = amount.positive? ? :green : (amount < 0 ? :red : :white)
       balance_color = ending_balance.positive? ? :green : (ending_balance < 0 ? :red : :white)
-      book_nam = BOOKS_INDEX[book_id]
+      book_nam = ::Stern.chart.book_name(book_id)
       colorize_output([
         ["Entry", :white],
         ["#{format("%5s", id)}", :white, :bold],

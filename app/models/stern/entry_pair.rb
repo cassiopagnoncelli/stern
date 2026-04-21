@@ -3,7 +3,7 @@
 # Stern engine.
 module Stern
   class EntryPair < ApplicationRecord
-    enum :code, ENTRY_PAIRS_CODES
+    enum :code, ::Stern.chart.entry_pair_codes
 
     has_many :entries, class_name: "Stern::Entry", dependent: :restrict_with_exception
     belongs_to :operation, class_name: "Stern::Operation"
@@ -29,14 +29,14 @@ module Stern
       entries.each(&:destroy!)
     end
 
-    ENTRY_PAIRS.each do |name|
-      define_singleton_method :"add_#{name}" do |uid, gid, amount, timestamp: nil, operation_id: nil|
+    ::Stern.chart.entry_pairs.each_value do |pair|
+      define_singleton_method(:"add_#{pair.name}") do |uid, gid, amount, timestamp: nil, operation_id: nil|
         double_entry_add(
-          name.to_s,
+          pair.name,
           gid,
           uid,
-          ENTRY_PAIRS_ADD[name],
-          ENTRY_PAIRS_SUB[name],
+          pair.book_add,
+          pair.book_sub,
           amount,
           timestamp,
           operation_id,
