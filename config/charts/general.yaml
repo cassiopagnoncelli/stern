@@ -4,7 +4,7 @@ operations: psp
 # Accounting books
 #
 books:
-  nop: 1
+  nop: 0
 
   # Merchant
   merchant_balance: 9000001
@@ -26,7 +26,7 @@ books:
 
   # Payment Processing: PSP, gateway
   # [X: pp] [XX: op] [X: actor] [XXX: channel]
-  pp_charge: 1110001    # pp_charge redundates to payment, skip.
+  pp_payment: 1110001    # pp_charge redundates to payment, skip.
   pp_charge_internal: 1110011
   pp_charge_manual: 1110012
   pp_charge_bank_transfer: 1110021
@@ -54,6 +54,7 @@ books:
   pp_charge_fee_partner_pix: 1128025
 
   pp_refund: 1130001
+  pp_refund_request: 1130002
   pp_refund_merchant: 1139001
   pp_refund_merchant_internal: 1139011
   pp_refund_merchant_manual: 11390012
@@ -90,6 +91,7 @@ books:
   pp_refund_fee_partner_pix: 1148025
 
   pp_chargeback: 1150001
+  pp_chargeback_request: 1150002
   pp_chargeback_merchant: 1159001
   pp_chargeback_merchant_internal: 1159011
   pp_chargeback_merchant_manual: 1159012
