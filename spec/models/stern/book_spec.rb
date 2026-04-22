@@ -21,7 +21,7 @@ module Stern
     end
 
     describe "books selectors" do
-      before { create :book, id: ::Stern.chart.book_code(book_name), name: book_name }
+      before { ::Stern::Book.find_or_create_by!(id: ::Stern.chart.book_code(book_name), name: book_name) }
 
       it "accepts a call by book name" do
         allow(described_class).to receive(book_name)

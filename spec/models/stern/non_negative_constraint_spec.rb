@@ -54,7 +54,7 @@ module Stern
           EntryPair.add_merchant_balance(
             SecureRandom.random_number(1 << 30), gid, -100, brl, operation_id: new_op.id,
           )
-        }.to raise_error(Stern::BalanceNonNegativeViolation)
+        }.to raise_error(::Stern::BalanceNonNegativeViolation)
 
         after_count = Entry.where(book_id: flagged_book_id, gid:).count
         expect(after_count).to eq(before_count)
@@ -66,7 +66,7 @@ module Stern
           EntryPair.add_merchant_balance(
             SecureRandom.random_number(1 << 30), gid, -5, brl, operation_id: new_op.id,
           )
-        }.to raise_error(Stern::InsufficientFunds)
+        }.to raise_error(::Stern::InsufficientFunds)
       end
 
       it "allows the counterpart _0 book to go negative (double-entry needs it)" do
@@ -104,7 +104,7 @@ module Stern
 
         expect {
           ForgetfulWithdraw.new(merchant_id: gid, uid: 7001, amount: -100, currency: brl).call
-        }.to raise_error(Stern::BalanceNonNegativeViolation)
+        }.to raise_error(::Stern::BalanceNonNegativeViolation)
 
         expect(::Stern.balance(gid, :merchant_balance, brl)).to eq(50)
         expect(negative_rows(gid)).to eq([])
@@ -137,7 +137,7 @@ module Stern
             ApplicationRecord.connection_pool.with_connection do
               ForgetfulStorm.new(merchant_id: gid, uid: 80_000 + i, amount: -10, currency: brl).call
               outcomes << :ok
-            rescue Stern::BalanceNonNegativeViolation
+            rescue ::Stern::BalanceNonNegativeViolation
               outcomes << :rejected
             ensure
               ApplicationRecord.connection_pool.release_connection
@@ -166,7 +166,7 @@ module Stern
             SecureRandom.random_number(1 << 30), gid, -500, brl,
             timestamp: 1.hour.ago, operation_id: new_op.id,
           )
-        }.to raise_error(Stern::BalanceNonNegativeViolation)
+        }.to raise_error(::Stern::BalanceNonNegativeViolation)
 
         expect(negative_rows(gid)).to eq([])
       end
@@ -190,7 +190,7 @@ module Stern
             SecureRandom.random_number(1 << 30), gid, -50, brl,
             timestamp: 2.hours.ago, operation_id: new_op.id,
           )
-        }.to raise_error(Stern::BalanceNonNegativeViolation)
+        }.to raise_error(::Stern::BalanceNonNegativeViolation)
 
         expect(negative_rows(gid)).to eq([])
         expect(::Stern.balance(gid, :merchant_balance, brl)).to eq(20)
@@ -212,7 +212,7 @@ module Stern
 
         positive_entry = Entry.where(book_id: flagged_book_id, gid:, currency: brl, amount: 100).first
 
-        expect { positive_entry.destroy! }.to raise_error(Stern::BalanceNonNegativeViolation)
+        expect { positive_entry.destroy! }.to raise_error(::Stern::BalanceNonNegativeViolation)
 
         expect(negative_rows(gid)).to eq([])
         expect(Entry.where(book_id: flagged_book_id, gid:, currency: brl).count).to eq(2)
@@ -245,8 +245,8 @@ module Stern
         expect {
           CheckedWithdraw.new(merchant_id: gid, uid: 9001, amount: -50, currency: brl).call
         }.to raise_error { |err|
-          expect(err).to be_a(Stern::InsufficientFunds)
-          expect(err).not_to be_a(Stern::BalanceNonNegativeViolation)
+          expect(err).to be_a(::Stern::InsufficientFunds)
+          expect(err).not_to be_a(::Stern::BalanceNonNegativeViolation)
         }
       end
     end
