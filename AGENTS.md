@@ -165,3 +165,14 @@ for a working template with a synthetic `WithdrawTest` op.
   not a method on ApplicationRecord.
 - Destructive maintenance ops live on `Stern::Repair`, not `Stern::Doctor`
   (which is read-only).
+- Every writer on `(book, gid, currency)` acquires the same Postgres advisory
+  lock via `Stern::ApplicationRecord.advisory_lock(book_id:, gid:, currency:)`.
+  Three layers in place:
+  1. `BaseOperation#acquire_advisory_locks` — the normal op path (via
+     `target_tuples`).
+  2. `create_entry` / `destroy_entry` v03 PL/pgSQL — defense-in-depth for
+     direct `Entry.create!` / `Entry#destroy!` callers.
+  3. `Stern::Repair.rebuild_book_gid_balance` — rebuilds never race against
+     in-flight ops.
+  All three use the same key (`hashtextextended('stern:book:gid:currency')`),
+  so the lock is reentrant across layers within a single transaction.

@@ -144,12 +144,7 @@ module Stern
       end
 
       resolved.sort.uniq.each do |book_id, gid, currency|
-        ApplicationRecord.connection.execute(
-          ApplicationRecord.sanitize_sql_array([
-            "SELECT pg_advisory_xact_lock(hashtextextended(format('stern:%s:%s:%s', ?, ?, ?), 0))",
-            book_id, gid, currency
-          ]),
-        )
+        ApplicationRecord.advisory_lock(book_id:, gid:, currency:)
       end
     end
 

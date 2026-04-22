@@ -13,9 +13,15 @@ module Stern
       raise ArgumentError, "gid is not valid" unless gid.is_a?(Numeric)
       raise ArgumentError, "currency is not valid" unless currency.is_a?(Numeric)
 
-      ApplicationRecord.connection.execute(
-        rebuild_book_gid_balance_sanitized_sql(book_id, gid, currency),
-      )
+      # Take the same (book, gid, currency) advisory lock every writer takes
+      # (BaseOperation#acquire_advisory_locks, create_entry / destroy_entry v03),
+      # so a rebuild cannot race against an in-flight operation on the same tuple.
+      ApplicationRecord.transaction do
+        ApplicationRecord.advisory_lock(book_id:, gid:, currency:)
+        ApplicationRecord.connection.execute(
+          rebuild_book_gid_balance_sanitized_sql(book_id, gid, currency),
+        )
+      end
     end
 
     def self.rebuild_book_gid_balance_sanitized_sql(book_id, gid, currency)
