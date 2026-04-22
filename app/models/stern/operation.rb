@@ -10,27 +10,12 @@ module Stern
       uniqueness: true,
       length: { minimum: 8, maximum: 24, allow_nil: true, allow_blank: false }
 
+    # Returns the CamelCase names of every operation class exposed by the active chart's
+    # operations module (e.g. ["ChargePix"] when the chart declares `operations: general`).
+    # Returns strings, not classes, to avoid depending on Zeitwerk having already loaded them.
     def self.list
-      # Get the engine root directory
-      engine_root = File.expand_path("../../..", __dir__)
-
-      # Get all operation files
-      operation_files = Dir[File.join(engine_root, "app", "operations", "stern", "*.rb")]
-
-      operation_classes = []
-      operation_files.each do |file|
-        # Extract filename without extension
-        filename = File.basename(file, ".rb")
-
-        # Skip base_operation
-        next if filename == "base_operation"
-
-        # Convert snake_case to CamelCase
-        class_name = filename.split("_").map(&:capitalize).join
-        operation_classes << class_name
-      end
-
-      operation_classes
+      dir = Engine.root.join("app", "operations", "stern", ::Stern.chart.operations_module)
+      Dir[dir.join("*.rb")].map { |file| File.basename(file, ".rb").camelize }.sort
     end
 
     def pp
