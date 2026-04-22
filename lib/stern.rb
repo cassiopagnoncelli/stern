@@ -13,11 +13,11 @@ module Stern
     ApplicationRecord.generate_gid
   end
 
-  def self.outstanding_balance(book_id = :merchant_balance, timestamp = DateTime.current)
+  def self.outstanding_balance(book_id, timestamp = DateTime.current)
     OutstandingBalanceQuery.new(book_id:, timestamp:).call
   end
 
-  def self.balance(gid, book_id = :merchant_balance, timestamp = DateTime.current)
+  def self.balance(gid, book_id, timestamp = DateTime.current)
     BalanceQuery.new(gid:, book_id:, timestamp:).call
   end
 
