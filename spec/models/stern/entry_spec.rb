@@ -3,7 +3,7 @@ require "rails_helper"
 module Stern
   RSpec.describe Entry, type: :model do
     def gen_entry(amount: 100, timestamp: nil)
-      Doctor.clear
+      Repair.clear
       described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 1, amount:, timestamp:)
     end
 

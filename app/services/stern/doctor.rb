@@ -1,12 +1,11 @@
 # frozen_string_literal: true
 
 module Stern
-  # Safety methods.
+  # Read-only audits of ledger consistency. Every method here is side-effect-free.
+  # For destructive repair operations see Stern::Repair.
   class Doctor
     def self.consistent?
-      return false unless amount_consistent?
-
-      true
+      amount_consistent?
     end
 
     def self.amount_consistent?
@@ -25,11 +24,9 @@ module Stern
     end
 
     def self.ending_balances_inconsistencies_across_books(gid:)
-      entry_ids = []
-      ::Stern.chart.book_codes.each do |book_id|
-        entry_ids += ending_balances_inconsistencies(book_id:, gid:)
+      ::Stern.chart.book_codes.flat_map do |book_id|
+        ending_balances_inconsistencies(book_id:, gid:)
       end
-      entry_ids
     end
 
     def self.ending_balances_inconsistencies(book_id:, gid:) # rubocop:disable Metrics/MethodLength
@@ -58,68 +55,6 @@ module Stern
       sanitized_sql = ApplicationRecord.sanitize_sql_array([ sql, { book_id:, gid: } ])
       results = ApplicationRecord.connection.execute(sanitized_sql)
       results.to_a.flatten
-    end
-
-    def self.rebuild_book_gid_balance(book_id, gid)
-      unless book_id.is_a?(Numeric) && ::Stern.chart.book(book_id)
-        raise ArgumentError, "book is not valid"
-      end
-
-      raise ArgumentError, "gid is not valid" unless gid.is_a?(Numeric)
-
-      ApplicationRecord.connection.execute(
-        rebuild_book_gid_balance_sanitized_sql(
-          book_id,
-          gid,
-        ),
-      )
-    end
-
-    def self.rebuild_book_gid_balance_sanitized_sql(book_id, gid)
-      sql = %{
-        UPDATE stern_entries
-        SET ending_balance = l.new_ending_balance
-        FROM (
-          SELECT
-            id,
-            (SUM(amount) OVER (ORDER BY timestamp)) AS new_ending_balance
-          FROM stern_entries
-          WHERE book_id = :book_id AND gid = :gid
-          ORDER BY timestamp
-        ) l
-        WHERE stern_entries.id = l.id
-      }
-      ApplicationRecord.sanitize_sql_array([ sql, { book_id:, gid: } ])
-    end
-
-    def self.rebuild_gid_balance(gid)
-      ::Stern.chart.book_codes.each do |book_id|
-        rebuild_book_gid_balance(book_id, gid)
-      end
-    end
-
-    def self.rebuild_balances(confirm: false)
-      raise ArgumentError, "You must confirm the operation" unless confirm
-
-      Entry.distinct.pluck(:gid).each do |gid|
-        rebuild_gid_balance(gid)
-      end
-    end
-
-    def self.clear
-      if Rails.env.production?
-        raise StandardError, "cannot perform in production for security reasons"
-      end
-
-      Entry.delete_all
-      EntryPair.delete_all
-      Operation.delete_all
-      ScheduledOperation.delete_all
-    end
-
-    # Queue.
-    def self.requeue
-      ScheduledOperation.requeue
     end
   end
 end
