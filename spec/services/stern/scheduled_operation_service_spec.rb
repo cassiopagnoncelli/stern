@@ -307,15 +307,27 @@ module Stern # rubocop:disable Metrics/ModuleLength
           end
         end
 
-        context "when operation raises StandardError" do
+        context "when operation raises StandardError and retries remain" do
           before do
             allow(operation).to receive(:call).and_raise(StandardError, "runtime error")
           end
 
-          it "sets status to runtime_error" do
+          it "sets status back to pending (queued for retry, not terminal)" do
             expect { service.process_operation(operation, scheduled_op) }.to change {
               scheduled_op.reload.status
-            }.from("in_progress").to("runtime_error")
+            }.from("in_progress").to("pending")
+          end
+
+          it "increments retry_count" do
+            expect { service.process_operation(operation, scheduled_op) }.to change {
+              scheduled_op.reload.retry_count
+            }.from(0).to(1)
+          end
+
+          it "pushes after_time forward by the backoff for retry_count 0" do
+            service.process_operation(operation, scheduled_op)
+            # First retry: 30 * 2**0 = 30 seconds.
+            expect(scheduled_op.reload.after_time).to be_within(2.seconds).of(30.seconds.from_now.utc)
           end
 
           it "sets error_message" do
@@ -326,6 +338,59 @@ module Stern # rubocop:disable Metrics/ModuleLength
           it "updates status_time" do
             service.process_operation(operation, scheduled_op)
             expect(scheduled_op.reload.status_time).to be_within(1.second).of(Time.current.utc)
+          end
+
+          it "applies exponential backoff on subsequent retries" do
+            scheduled_op.update!(retry_count: 3)
+            scheduled_op.update!(status: :in_progress)
+            service.process_operation(operation, scheduled_op)
+            # retry_count=3 → 30 * 2**3 = 240 seconds.
+            expect(scheduled_op.reload.after_time).to be_within(2.seconds).of(240.seconds.from_now.utc)
+            expect(scheduled_op.reload.retry_count).to eq(4)
+          end
+        end
+
+        context "when operation raises StandardError and retries are exhausted" do
+          before do
+            allow(operation).to receive(:call).and_raise(StandardError, "runtime error")
+            scheduled_op.update!(retry_count: described_class::MAX_RETRIES)
+            scheduled_op.update!(status: :in_progress)
+          end
+
+          it "sets status to runtime_error (terminal)" do
+            expect { service.process_operation(operation, scheduled_op) }.to change {
+              scheduled_op.reload.status
+            }.from("in_progress").to("runtime_error")
+          end
+
+          it "does not bump retry_count past the cap" do
+            expect { service.process_operation(operation, scheduled_op) }.not_to change {
+              scheduled_op.reload.retry_count
+            }
+          end
+
+          it "sets error_message" do
+            service.process_operation(operation, scheduled_op)
+            expect(scheduled_op.reload.error_message).to eq("runtime error")
+          end
+        end
+
+        context "when operation succeeds after previous retries" do
+          before do
+            allow(operation).to receive(:call)
+            scheduled_op.update!(retry_count: 2)
+            scheduled_op.update!(status: :in_progress)
+          end
+
+          it "transitions to finished" do
+            expect { service.process_operation(operation, scheduled_op) }.to change {
+              scheduled_op.reload.status
+            }.from("in_progress").to("finished")
+          end
+
+          it "preserves retry_count for observability" do
+            service.process_operation(operation, scheduled_op)
+            expect(scheduled_op.reload.retry_count).to eq(2)
           end
         end
       end

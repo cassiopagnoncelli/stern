@@ -1,4 +1,4 @@
-\restrict fLcF3yrdayV0Ub2tft2n5EXaSxy7eNv58ZwgSWPTgiMNzBrzASVmx8mnVptKQRb
+\restrict EaGmKkQCMMqpLVNUcavdpe86dTx4MG7FKBdQavOVbSPRfCaAff0LZj1hHl7f1iG
 
 -- Dumped from database version 17.9 (Postgres.app)
 -- Dumped by pg_dump version 17.9 (Postgres.app)
@@ -450,7 +450,8 @@ CREATE TABLE public.stern_scheduled_operations (
     after_time timestamp(6) without time zone NOT NULL,
     status integer DEFAULT 0 NOT NULL,
     status_time timestamp(6) without time zone NOT NULL,
-    error_message character varying
+    error_message character varying,
+    retry_count integer DEFAULT 0 NOT NULL
 );
 
 
@@ -638,11 +639,12 @@ CREATE INDEX index_stern_scheduled_operations_on_status ON public.stern_schedule
 -- PostgreSQL database dump complete
 --
 
-\unrestrict fLcF3yrdayV0Ub2tft2n5EXaSxy7eNv58ZwgSWPTgiMNzBrzASVmx8mnVptKQRb
+\unrestrict EaGmKkQCMMqpLVNUcavdpe86dTx4MG7FKBdQavOVbSPRfCaAff0LZj1hHl7f1iG
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260422150000'),
 ('20260422120006'),
 ('20260422120005'),
 ('20260422120004'),

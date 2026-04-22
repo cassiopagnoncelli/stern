@@ -21,6 +21,15 @@ module Stern
     BATCH_SIZE = 100
     QUEUE_ITEM_TIMEOUT_IN_SECONDS = 300
 
+    # Max number of retries after the initial attempt before a transient
+    # failure becomes the terminal `:runtime_error`. Total attempts =
+    # MAX_RETRIES + 1.
+    MAX_RETRIES = 5
+
+    # Base backoff for the first retry, in seconds. Each subsequent retry
+    # doubles it (exponential): 30s, 60s, 2m, 4m, 8m for retry_count 0..4.
+    RETRY_BACKOFF_BASE_SECONDS = 30
+
     def list
       picked_list = ScheduledOperation.picked.ids
       picked_list = enqueue_list if picked_list.empty?
@@ -82,11 +91,28 @@ module Stern
         error_message: e.message,
       )
     rescue StandardError => e
-      scheduled_op.update!(
-        status: :runtime_error,
-        status_time: DateTime.current.utc,
-        error_message: e.message,
-      )
+      if scheduled_op.retry_count < MAX_RETRIES
+        now = DateTime.current.utc
+        scheduled_op.update!(
+          status: :pending,
+          status_time: now,
+          after_time: now + retry_backoff(scheduled_op.retry_count),
+          retry_count: scheduled_op.retry_count + 1,
+          error_message: e.message,
+        )
+      else
+        scheduled_op.update!(
+          status: :runtime_error,
+          status_time: DateTime.current.utc,
+          error_message: e.message,
+        )
+      end
+    end
+
+    # Exponential backoff for the (retry_count)-th retry (0-indexed):
+    # 30s, 60s, 2m, 4m, 8m for retry_count 0..4.
+    def retry_backoff(retry_count)
+      RETRY_BACKOFF_BASE_SECONDS * (2**retry_count)
     end
 
     # Stable per-SOP idempotency key, fed to `BaseOperation#call`. Any repeat
