@@ -173,29 +173,38 @@ module Stern
   class AdjustBalance < BaseOperation
     include ActiveModel::Validations
 
-    attr_accessor :merchant_id, :amount, :currency
+    inputs :merchant_id, :amount, :currency
 
     validates :merchant_id, presence: true, numericality: { other_than: 0 }
     validates :amount, presence: true
     validates :currency, presence: true
 
-    def initialize(merchant_id:, amount:, currency:)
-      self.merchant_id = merchant_id
-      self.amount      = amount
-      self.currency    = cur(currency, result: :index)
+    # Declares which (book, gid, currency) tuples this op reads or writes.
+    # BaseOperation#call acquires a per-tuple advisory lock before perform
+    # runs, so concurrent ops on the same tuple serialize cleanly.
+    def target_tuples
+      tuples_for_pair(:merchant_balance, merchant_id, currency)
     end
 
     def perform(operation_id)
       raise ArgumentError if invalid?
-      EntryPair.add_merchant_balance(SecureRandom.random_number(1 << 31),
-                                     merchant_id, amount, operation_id:)
+      EntryPair.add_merchant_balance(
+        SecureRandom.random_number(1 << 30),
+        merchant_id, amount, currency, operation_id:,
+      )
     end
   end
 end
 ```
 
-`BaseOperation#call` wraps `perform` in a transaction with table locks and records an
-`Operation` row with the serialized params for audit.
+`BaseOperation#call` wraps `perform` in a transaction with per-tuple advisory
+locks (from `target_tuples`) and records an `Operation` row with the serialized
+inputs for audit. The `inputs` DSL generates attr accessors and drives the
+params hash — no scraping of stray instance variables, no custom `initialize`.
+`currency` is auto-normalized from its string name to its integer code before
+`target_tuples` or `perform` runs.
+
+See [AGENTS.md](AGENTS.md) for the full operation-writing contract.
 
 ## Scheduled operations
 
