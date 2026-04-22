@@ -1,149 +1,266 @@
-Double-entry ledger Rails engine.
+# Stern
 
-## Description
+A scalable double-entry bookkeeping Rails engine. Stern owns the ledger: it records every
+transaction as a pair of balanced entries, cascades running balances atomically in
+PostgreSQL, and exposes a small operations-based API for host apps to build on.
 
-A ledger is the source of truth for all entries in accounting books, this can include
-cash in/out, payments, fees, settlements, credits, and a myriad of other operations
-performed in a given account.
+## What it does
 
-This ledger provides double-entry transactions under an operations layer.
+- **Double-entry ledger.** Every transaction creates an `EntryPair` plus two `Entry` rows
+  whose amounts sum to zero. Consistency is enforced at the database level by a
+  PL/pgSQL function that recomputes `ending_balance` cascades inside the same statement.
+- **Append-only records.** `Entry` and `EntryPair` forbid updates and bare `destroy`. The
+  only write paths are `create!` (which hits the SQL function) and `destroy!` (likewise).
+- **Operations as the public API.** Host apps don't manipulate models directly; they call
+  `Operation` subclasses (`ChargePix.new(...).call`) which handle idempotency, locking,
+  and auditing.
+- **Chart-driven.** Books and entry-pair types are declared in a single YAML file,
+  selected at boot via `STERN_CHART`. Adding a book means editing the YAML and reseeding.
+- **Multi-currency aware.** Currencies are indexed integers from a separate catalog, so
+  amounts stay tight `bigint` values with no floating-point drift.
 
-Queries are available to power a variety of routine outputs like outstanding balances,
-reports, consistency checks, and so on.
-
-## License
-You need written authorization from the author for any type of usage.
-
-# Usage
-Plug into your existing app and attach it to (preferably brand new) database.
-
-To mount this engine, add the gem
+## Install
 
 ```ruby
 # Gemfile
-gem 'stern', path: 'engines/stern'
+gem "stern", git: "https://github.com/cassiopagnoncelli/stern.git"
 ```
-
-and mount the route
 
 ```ruby
 # config/routes.rb
-mount Stern::Engine, at: '/stern'
+mount Stern::Engine, at: "/stern"
 ```
 
-Before using it you have to configure
+### Database
 
-1. Local time zone
-2. Chart of accounts
-3. Define operations
+Stern uses its own PostgreSQL database. Your `config/database.yml` needs a named
+connection per environment:
 
-For further examples, you may find
-[this guide](https://dev.to/szaszolak/extracting-rails-engine-by-example-vikings-social-media-4014)
-useful.
-
-When referring to operations, you might want to consider to `include Stern` to avoid
-prefixing `Stern::` in front of operations and queries.
-
-### Timezone
-The ledger uses the versatile `DateTime` to handle events.
-Make sure it is configured in your application
-
-```ruby
-# config/application.rb
-config.time_zone = 'America/Sao_Paulo'
+```yaml
+stern_development:
+  adapter: postgresql
+  database: your_app_stern_development
+  # ... (same user/host/etc. as your primary)
+stern_test:
+  adapter: postgresql
+  database: your_app_stern_test
+stern_production:
+  adapter: postgresql
+  database: your_app_stern_production
 ```
 
-### Chart of accounts
-Defined at
+### Chart selection
 
-```
-config/chart.yaml
-```
-
-with information:
-
-1. Operations module (ie. which of the app/operations/stern subdirectories will be used).
-1. List of books, each mapping an unique id.
-1. List of double-entry transactions, each mapping an unique code and a pair of additive-subtractive books.
-
-### Migrations
-
-Stern uses Postgres as its database and as a result functions and indexes
-will not be embed in `db/schema.rb`.
-To circumvent this limitation, you may have to migrate separately to add these required functions with
+Choose a chart by setting `STERN_CHART` (defaults to `general`). Charts live under
+`config/charts/*.yaml` inside the engine; you can add your own and point to them.
 
 ```sh
-bin/rails "db:migrate:functions[development]"
+export STERN_CHART=general
 ```
 
-## Operations
+### First-time setup
 
-Ledger defines entries, entry pairs, and operations.
+```sh
+bin/setup
+```
 
-Entries are single records to accounting books; because Stern is a double-entry
-guaranteeing consistency in such a way inputs match outputs, each entry requires a
-counterpair entry, this pair is called an entry pair. Technically entry pairs are
-atomic, consistent, isolated, and durable.
+This drops the test DB, installs gems, runs migrations (including the
+`create_entry` / `destroy_entry` PL/pgSQL functions from `db/functions/*.sql`), and
+seeds the books defined by the active chart.
 
-Operations are an abstraction atop entry pairs and technically group sequences of
-entry pairs defined programmatically. Users should never input entry pairs directly
-nor entries, instead should define operations and use operations as an exposed API.
+## Concepts
 
-Operations are defined in `app/operations`.
-Following name conventions, always start with a verb.
+| Concept | What it is |
+|---|---|
+| **Book** | An accounting account (e.g. `merchant_balance`). Identified by a 31-bit integer code derived from its name. |
+| **Entry** | A single signed amount written to a `(book, gid)` pair at a timestamp. Immutable; carries the running `ending_balance`. |
+| **EntryPair** | A balanced pair of entries (amount + / amount -). The atomic unit of a transaction. |
+| **Operation** | A high-level, idempotent action recorded in `stern_operations`. Produces one or more EntryPairs. |
+| **ScheduledOperation** | An operation queued for future execution via a background job. |
+| **gid** | "Group id" — the account/entity an entry belongs to (e.g. merchant id). |
+
+## The chart
+
+[config/charts/general.yaml](config/charts/general.yaml):
+
+```yaml
+operations: general   # which app/operations/stern/<module> is active
+
+books:
+  - merchant_balance
+  - customer_balance
+  - pp_charge_pix
+  # ...
+
+entry_pairs:
+  split_merchant:
+    book_add: merchant_withholding
+    book_sub: pp_payment
+  split_partner:
+    book_add: partner_withholding
+    book_sub: pp_payment
+```
+
+Every book automatically gets a mirrored `<book>_0` counterpart for implicit entry
+pairs (where you don't need to name a distinct sub book). Every explicit `entry_pairs`
+entry declares the `book_add` / `book_sub` pair directly.
+
+At boot, the chart is parsed into `Stern.chart` (a frozen value object):
+
+```ruby
+Stern.chart.books                       # Hash{Symbol => Chart::Book}
+Stern.chart.book(:merchant_balance)     # => #<Book name=..., code=...>
+Stern.chart.entry_pair(:split_merchant) # => #<EntryPair name=..., book_add=..., book_sub=...>
+```
+
+## Usage
+
+### Run an operation
+
+```ruby
+op = Stern::ChargePix.new(
+  charge_id: 1001,
+  merchant_id: 1101,
+  customer_id: 2001,
+  amount: 9900,        # cents
+  currency: "brl",
+)
+operation_id = op.call(idem_key: "charge-1001-unique")
+```
+
+`idem_key` makes the call replay-safe: calling again with the same key and identical
+params returns the existing `operation_id`; calling with the same key but different
+params raises.
+
+### Query a balance
+
+```ruby
+Stern.balance(1101, :merchant_balance)
+# => 9900 (cents, at current time)
+
+Stern.balance(1101, :merchant_balance, 1.day.ago)
+# => 0
+
+Stern.outstanding_balance(:merchant_balance)
+# => sum of balances across every gid in the book
+```
+
+Lower-level query objects are available for more complex reports:
+
+```ruby
+Stern::BalanceSheetQuery.new(
+  start_date: 7.days.ago,
+  end_date:   Time.current,
+  book_ids:   [:merchant_balance, :customer_balance],
+).call
+```
+
+### Currencies
+
+```ruby
+Stern.cur("USD")  # => 811 (indexed integer)
+Stern.cur(811)    # => "USD"
+Stern.currencies.code(:BRL)  # => 821
+```
+
+The catalog lives in [config/currencies_catalog.yaml](config/currencies_catalog.yaml).
+
+## Writing a custom operation
+
+```ruby
+# app/operations/stern/general/adjust_balance.rb
+module Stern
+  class AdjustBalance < BaseOperation
+    include ActiveModel::Validations
+
+    attr_accessor :merchant_id, :amount, :currency
+
+    validates :merchant_id, presence: true, numericality: { other_than: 0 }
+    validates :amount, presence: true
+    validates :currency, presence: true
+
+    def initialize(merchant_id:, amount:, currency:)
+      self.merchant_id = merchant_id
+      self.amount      = amount
+      self.currency    = cur(currency, result: :index)
+    end
+
+    def perform(operation_id)
+      raise ArgumentError if invalid?
+      EntryPair.add_merchant_balance(SecureRandom.random_number(1 << 31),
+                                     merchant_id, amount, operation_id:)
+    end
+  end
+end
+```
+
+`BaseOperation#call` wraps `perform` in a transaction with table locks and records an
+`Operation` row with the serialized params for audit.
+
+## Scheduled operations
+
+Queue an operation for later:
+
+```ruby
+Stern::ScheduledOperation.build(
+  name: "ChargePix",
+  params: { charge_id: 1, merchant_id: 1101, customer_id: 2, amount: 9900, currency: "usd" },
+  after_time: 1.hour.from_now,
+).save!
+```
+
+A background job polls the queue via [`Stern::ScheduledOperationService`](app/services/stern/scheduled_operation_service.rb):
+
+```ruby
+# inside your worker (e.g. Sidekiq periodic job)
+Stern::ScheduledOperationService.enqueue_list.each do |sop_id|
+  YourJob.perform_later(sop_id)
+end
+```
+
+Each `YourJob` then calls `Stern::ScheduledOperationService.process_sop(sop_id)` which
+instantiates the operation and runs it with the stored params.
+
+## Health checks
+
+Audits (read-only, safe to call anywhere):
+
+```ruby
+Stern::Doctor.consistent?                                    # sum(all amounts) == 0
+Stern::Doctor.ending_balance_consistent?(book_id:, gid:)     # ledger cascade is intact
+Stern::Doctor.ending_balances_inconsistencies(book_id:, gid:) # => [entry_id, ...]
+```
+
+Repairs (destructive, never in production unless you're certain):
+
+```ruby
+Stern::Repair.rebuild_book_gid_balance(book_id, gid)
+Stern::Repair.rebuild_balances(confirm: true)
+Stern::Repair.clear   # wipes the ledger; non-production only
+```
+
+## Console tips
+
+```ruby
+Stern::Entry.all.pp                 # pretty-prints every row with ANSI colors
+Stern::Operation.last.pp
+Stern.chart.books.keys.size
+Stern::Operation.list               # available operation classes for the active chart
+```
+
+The `.pp` extension is installed on `Array` and `ActiveRecord::Relation` only inside
+`rails console` — web and test paths never see it.
 
 ## Testing
 
-Use RSpec to run specs. Setup the app with `bin/setup` then `bundle exec rspec`.
-
-
 ```sh
-RAILS_ENV=test bundle exec rails app:db:drop app:db:setup_env
+bundle exec rspec
+bundle exec rubocop
 ```
 
-then run RSpec as usual
+The suite is fully green and uses transactional fixtures. `spec/dummy/` is a minimal
+Rails host for engine tests.
 
-```sh
-rspec
-```
+## License
 
-## Standalone setup
-
-Then drop to console to use the ledger standalone.
-
-_Tip: You may benefit from `include Stern` so you do not need to prefix commands with
-`Stern::` for every call._
-
-## Troubleshooting
-
-Stern requires multistep setup to accommodate for engine migrations and low-level
-database PL/pgSQL.
-
-In some scenarios you may be require to
-
-```sh
-RAILS_ENV=development bundle exec rails app:db:drop app:db:setup_env
-```
-
-## Technical notes
-
-This engine was created with
-
-```
-rails plugin new stern \
-  --mountable \
-  --database postgresql \
-  --skip-action-mailer \
-  --skip-action-mailbox \
-  --skip-action-text \
-  --skip-action-storage \
-  --skip-action-cable \
-  --skip-hotwire \
-  --skip-sprockets \
-  --skip-javascript \
-  --skip-turbolinks \
-  --skip-test --skip-system-test \
-  --skip-gemfile-entry \
-  --css=tailwind \
-  --dummy_path=spec/dummy
-```
+Commercial — requires written authorization from the author for any use.
