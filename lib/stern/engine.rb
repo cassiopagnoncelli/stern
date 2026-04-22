@@ -34,6 +34,12 @@ module Stern
       end
     end
 
+    # Install Prometheus metric subscribers once Rails is fully initialized.
+    # Idempotent — safe across dev-mode reloads.
+    config.after_initialize do
+      ::Stern::Metrics.install_subscribers!
+    end
+
     console do
       require "stern/pp_extension"
       Object.include(::Stern)

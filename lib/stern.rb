@@ -4,6 +4,7 @@ require "stern/ansi_print"
 require "stern/engine"
 require "stern/chart"
 require "stern/currencies"
+require "stern/metrics"
 
 module Stern
   class << self

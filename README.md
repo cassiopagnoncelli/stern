@@ -248,6 +248,35 @@ Stern::Repair.rebuild_balances(confirm: true)
 Stern::Repair.clear   # wipes the ledger; non-production only
 ```
 
+## Metrics (Prometheus)
+
+Stern exposes a Prometheus registry populated from `ActiveSupport::Notifications`
+events the scheduled-operation pipeline emits:
+
+- `stern_sop_picked_total` — counter, SOPs picked from the pending queue
+- `stern_sop_terminal_total{outcome, op_name}` — counter, SOPs reaching a
+  terminal state (`finished` / `argument_error` / `runtime_error`)
+- `stern_sop_process_duration_seconds{outcome, op_name}` — histogram,
+  `process_operation` wall-clock per attempt
+- `stern_sop_pickup_lag_seconds` — histogram, seconds between `after_time` and
+  the actual pick
+- `stern_sop_count{status}` — gauge, queue depth by status (refresh-on-demand)
+
+Scrape from a host-app controller:
+
+```ruby
+# app/controllers/prometheus_controller.rb
+class PrometheusController < ActionController::Base
+  def index
+    Stern::Metrics.refresh_queue_gauges!
+    render plain: Prometheus::Client::Formats::Text.marshal(Stern::Metrics.registry)
+  end
+end
+```
+
+`refresh_queue_gauges!` runs one `GROUP BY status` query to populate the
+gauges; the counters/histograms update automatically as events fire.
+
 ## Console tips
 
 ```ruby

@@ -4,6 +4,7 @@ PATH
     stern (1.2.0)
       nokogiri (>= 1.15.6)
       pg (>= 1.4.5)
+      prometheus-client (>= 4.0)
       rails (>= 8.0)
       xxhash (>= 0.5)
 
@@ -155,6 +156,8 @@ GEM
       prettyprint
     prettyprint (0.2.0)
     prism (1.9.0)
+    prometheus-client (4.2.5)
+      base64
     pry (0.15.2)
       coderay (~> 1.1)
       method_source (~> 1.0)

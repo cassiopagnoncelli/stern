@@ -31,6 +31,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "pg", ">= 1.4.5"
   spec.add_dependency "nokogiri", ">= 1.15.6"
   spec.add_dependency "xxhash", ">= 0.5"
+  spec.add_dependency "prometheus-client", ">= 4.0"
 
   # Development.
   spec.add_development_dependency "rspec-rails"

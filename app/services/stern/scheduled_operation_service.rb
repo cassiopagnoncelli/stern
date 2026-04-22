@@ -44,22 +44,26 @@ module Stern
     end
 
     def enqueue_list(size = BATCH_SIZE)
-      ScheduledOperation.transaction do
-        ids = ScheduledOperation
-          .pending
-          .where("after_time <= NOW()")
-          .order(:id)
-          .limit(size)
-          .lock("FOR UPDATE SKIP LOCKED")
-          .pluck(:id)
+      ActiveSupport::Notifications.instrument("stern.sop.enqueue_list") do |payload|
+        ids = ScheduledOperation.transaction do
+          picked_ids = ScheduledOperation
+            .pending
+            .where("after_time <= NOW()")
+            .order(:id)
+            .limit(size)
+            .lock("FOR UPDATE SKIP LOCKED")
+            .pluck(:id)
 
-        if ids.any?
-          ScheduledOperation.where(id: ids).update_all(
-            status: ScheduledOperation.statuses[:picked],
-            status_time: DateTime.current.utc,
-          )
+          if picked_ids.any?
+            ScheduledOperation.where(id: picked_ids).update_all(
+              status: ScheduledOperation.statuses[:picked],
+              status_time: DateTime.current.utc,
+            )
+          end
+
+          picked_ids
         end
-
+        payload[:count] = ids.size
         ids
       end
     end
@@ -110,6 +114,9 @@ module Stern
       raise CannotProcessNonPickedSopError unless scheduled_op.picked?
       raise CannotProcessAheadOfTimeError if scheduled_op.after_time > DateTime.current.utc
 
+      lag = (DateTime.current.utc.to_time - scheduled_op.after_time.to_time).to_f
+      ActiveSupport::Notifications.instrument("stern.sop.pickup_lag", lag_seconds: lag)
+
       scheduled_op.update!(status: :in_progress, status_time: DateTime.current.utc)
 
       op_klass = Object.const_get "Stern::#{scheduled_op.name}"
@@ -118,33 +125,42 @@ module Stern
     end
 
     def process_operation(operation, scheduled_op)
-      raise ArgumentError, "sop not in progress" unless scheduled_op.in_progress?
+      ActiveSupport::Notifications.instrument("stern.sop.process_operation") do |payload|
+        payload[:op_name] = scheduled_op.name
+        payload[:outcome] = :finished
 
-      operation.call(idem_key: sop_idem_key(scheduled_op))
+        begin
+          raise ArgumentError, "sop not in progress" unless scheduled_op.in_progress?
 
-      scheduled_op.update!(status: :finished, status_time: DateTime.current.utc)
-    rescue ArgumentError => e
-      scheduled_op.update!(
-        status: :argument_error,
-        status_time: DateTime.current.utc,
-        error_message: e.message,
-      )
-    rescue StandardError => e
-      if scheduled_op.retry_count < MAX_RETRIES
-        now = DateTime.current.utc
-        scheduled_op.update!(
-          status: :pending,
-          status_time: now,
-          after_time: now + retry_backoff(scheduled_op.retry_count),
-          retry_count: scheduled_op.retry_count + 1,
-          error_message: e.message,
-        )
-      else
-        scheduled_op.update!(
-          status: :runtime_error,
-          status_time: DateTime.current.utc,
-          error_message: e.message,
-        )
+          operation.call(idem_key: sop_idem_key(scheduled_op))
+          scheduled_op.update!(status: :finished, status_time: DateTime.current.utc)
+        rescue ArgumentError => e
+          payload[:outcome] = :argument_error
+          scheduled_op.update!(
+            status: :argument_error,
+            status_time: DateTime.current.utc,
+            error_message: e.message,
+          )
+        rescue StandardError => e
+          if scheduled_op.retry_count < MAX_RETRIES
+            payload[:outcome] = :retried
+            now = DateTime.current.utc
+            scheduled_op.update!(
+              status: :pending,
+              status_time: now,
+              after_time: now + retry_backoff(scheduled_op.retry_count),
+              retry_count: scheduled_op.retry_count + 1,
+              error_message: e.message,
+            )
+          else
+            payload[:outcome] = :runtime_error
+            scheduled_op.update!(
+              status: :runtime_error,
+              status_time: DateTime.current.utc,
+              error_message: e.message,
+            )
+          end
+        end
       end
     end
 

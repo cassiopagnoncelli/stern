@@ -180,3 +180,10 @@ for a working template with a synthetic `WithdrawTest` op.
      in-flight ops.
   All three use the same key (`hashtextextended('stern:book:gid:currency')`),
   so the lock is reentrant across layers within a single transaction.
+- Scheduled-operation pipeline emits Prometheus metrics via `Stern::Metrics`.
+  The service uses `ActiveSupport::Notifications.instrument` for
+  `stern.sop.enqueue_list`, `stern.sop.pickup_lag`, and
+  `stern.sop.process_operation`; subscribers translate events into counters
+  and histograms on `Stern::Metrics.registry`. Host apps scrape by calling
+  `Stern::Metrics.refresh_queue_gauges!` then rendering the registry (see
+  `lib/stern/metrics.rb` for an example `/metrics` controller).
