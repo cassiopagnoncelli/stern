@@ -9,3 +9,5 @@
 /spec/dummy/tmp/
 
 .byebug_history
+
+.claude
