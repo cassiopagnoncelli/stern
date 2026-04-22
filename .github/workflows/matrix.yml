@@ -1,0 +1,243 @@
+name: Matrix
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # -------------------------------------------------------------------------
+  # 2a. Compatibility matrix: Ruby x Rails x Postgres.
+  #
+  # Ruby is pinned to .ruby-version (the engine is tightly versioned; skip
+  # "one-above" until we have a reason to broaden it).
+  # Rails is pinned to ~> 8.0 per the gemspec; a rails@main entry is added as
+  # informational (continue-on-error: true).
+  # Postgres 14/15/16 all support hashtextextended + SKIP LOCKED; PG 14 is the
+  # floor.
+  # -------------------------------------------------------------------------
+  compat:
+    name: RSpec (Rails ${{ matrix.rails }}, PG ${{ matrix.postgres }})
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental == true }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        rails: ['~> 8.0.0']
+        postgres: ['14', '15', '16']
+        experimental: [false]
+        include:
+          - rails: 'main'
+            postgres: '16'
+            experimental: true
+
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      RAILS_ENV: test
+      STERN_CHART: general
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      # Pick up the Rails version the matrix wants. The Gemfile reads this
+      # when resolving, so we can override without modifying gemspec.
+      RAILS_VERSION: ${{ matrix.rails }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          # Auto-reads .ruby-version when ruby-version is omitted.
+          # Can't use bundler cache when we're overriding the Rails version at
+          # resolve time — Gemfile.lock would be stale vs. the override.
+          bundler-cache: false
+
+      - name: Configure Rails version override
+        run: |
+          set -euo pipefail
+          if [ "${RAILS_VERSION}" = "main" ]; then
+            cat > Gemfile.rails <<'RUBY'
+          gem "rails", github: "rails/rails", branch: "main"
+          RUBY
+          else
+            cat > Gemfile.rails <<RUBY
+          gem "rails", "${RAILS_VERSION}"
+          RUBY
+          fi
+          # Append the override to the existing Gemfile. The gemspec still
+          # declares `rails >= 8.0`; bundler will resolve to the pinned
+          # version as long as it satisfies that.
+          cat Gemfile.rails >> Gemfile
+          rm Gemfile.rails
+          # Force re-resolution against the override.
+          rm -f Gemfile.lock
+
+      - name: Bundle install
+        run: |
+          bundle config set --local path vendor/bundle
+          bundle install --jobs 4 --retry 3
+
+      - name: Create test database
+        run: |
+          psql -h localhost -U postgres -c "CREATE DATABASE stern_dummy_test;"
+
+      - name: Load schema into test database
+        run: bundle exec rails app:db:schema:load
+
+      - name: Run RSpec
+        run: bundle exec rspec
+
+  # -------------------------------------------------------------------------
+  # 2b. Gem packaging validity.
+  #
+  # Builds the gem and then installs it from a scratch directory (no Gemfile)
+  # to prove the `spec.files` glob in stern.gemspec actually includes every
+  # file needed to load `stern`.
+  # -------------------------------------------------------------------------
+  gem-package:
+    name: Gem build + install smoke test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          # Auto-reads .ruby-version when ruby-version is omitted.
+          bundler-cache: true
+
+      - name: Build gem
+        id: build
+        run: |
+          set -euo pipefail
+          # Capture both stdout and stderr so we can fail on warnings.
+          gem build stern.gemspec 2>&1 | tee build.log
+          # Any WARNING: line from `gem build` is a packaging smell (missing
+          # license, suspicious files list, etc.) and should fail CI.
+          if grep -E '^WARNING:' build.log; then
+            echo "gem build emitted warnings (see above)" >&2
+            exit 1
+          fi
+          # Use a glob rather than ls so filenames with oddball characters
+          # would still be handled correctly (shellcheck SC2012).
+          gem_files=( stern-*.gem )
+          gem_file="${gem_files[0]}"
+          if [ ! -f "${gem_file}" ]; then
+            echo "No stern-*.gem produced by 'gem build'" >&2
+            exit 1
+          fi
+          echo "gem_file=${gem_file}" >> "$GITHUB_OUTPUT"
+          expected_version=$(ruby -Ilib -r stern/version -e 'print Stern::VERSION')
+          echo "expected_version=${expected_version}" >> "$GITHUB_OUTPUT"
+
+      - name: Install gem in scratch dir (no Gemfile) and verify it loads
+        env:
+          GEM_FILE: ${{ steps.build.outputs.gem_file }}
+          EXPECTED_VERSION: ${{ steps.build.outputs.expected_version }}
+        run: |
+          set -euo pipefail
+          gem_abs="$(pwd)/${GEM_FILE}"
+          scratch="$(mktemp -d)"
+          cd "$scratch"
+          # Isolated gem env so we don't pollute / reuse the engine's bundle.
+          export GEM_HOME="$scratch/.gem"
+          export GEM_PATH="$GEM_HOME"
+          export PATH="$GEM_HOME/bin:$PATH"
+          gem install "$gem_abs" --no-document
+          # Prove `require "stern"` works with only the installed gem on the
+          # load path and that VERSION matches what the gemspec declared.
+          # `lib/stern/engine.rb` references ::Rails::Engine at load time
+          # *and* touches `config.active_record.schema_format`, so we need
+          # `active_record/railtie` loaded before requiring stern. Rails is
+          # a runtime dep, so gem install pulled it into the scratch GEM_HOME.
+          actual=$(ruby -r active_record/railtie -r stern -e 'print Stern::VERSION')
+          echo "Stern::VERSION from installed gem: ${actual}"
+          if [ "${actual}" != "${EXPECTED_VERSION}" ]; then
+            echo "Version mismatch: expected ${EXPECTED_VERSION}, got ${actual}" >&2
+            exit 1
+          fi
+
+  # -------------------------------------------------------------------------
+  # 2c. structure.sql drift guard.
+  #
+  # Recreates the dummy DB from migrations and checks that the resulting
+  # structure.sql matches what is committed. Any drift means either someone
+  # forgot to commit a migration's schema dump, or the migration set is
+  # non-deterministic.
+  # -------------------------------------------------------------------------
+  structure-sql-drift:
+    name: structure.sql drift guard
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      STERN_CHART: general
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          # Auto-reads .ruby-version when ruby-version is omitted.
+          bundler-cache: true
+
+      - name: Drop, create, and migrate (regenerates structure.sql)
+        run: |
+          # Using development env so both stern_dummy_development and
+          # stern_dummy_test databases get created/dropped per the YAML,
+          # matching what bin/setup does locally.
+          bundle exec rails app:db:drop app:db:create app:db:migrate
+        env:
+          RAILS_ENV: development
+
+      - name: Compare structure.sql to committed version
+        run: |
+          if ! git diff --exit-code -- spec/dummy/db/structure.sql; then
+            echo ""
+            echo "::error::spec/dummy/db/structure.sql drifted from the committed version."
+            echo "Run 'bin/rails app:db:drop app:db:create app:db:migrate' locally and commit the result."
+            exit 1
+          fi

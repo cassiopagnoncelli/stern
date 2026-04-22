@@ -1,4 +1,3 @@
-\restrict EaGmKkQCMMqpLVNUcavdpe86dTx4MG7FKBdQavOVbSPRfCaAff0LZj1hHl7f1iG
 
 -- Dumped from database version 17.9 (Postgres.app)
 -- Dumped by pg_dump version 17.9 (Postgres.app)
@@ -639,7 +638,6 @@ CREATE INDEX index_stern_scheduled_operations_on_status ON public.stern_schedule
 -- PostgreSQL database dump complete
 --
 
-\unrestrict EaGmKkQCMMqpLVNUcavdpe86dTx4MG7FKBdQavOVbSPRfCaAff0LZj1hHl7f1iG
 
 SET search_path TO "$user", public;
 
