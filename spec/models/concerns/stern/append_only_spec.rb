@@ -2,9 +2,7 @@ require "rails_helper"
 
 module Stern
   RSpec.describe AppendOnly do
-    # Minimal AR class that includes the concern, backed by the simple stern_books table.
-    # Overriding `.name` keeps the demodulized error message stable regardless of the anonymous
-    # class id that Rails assigns to `Class.new(...)`.
+    # Minimal AR class that includes the concern, backed by stern_books.
     let(:test_class) do
       klass = Class.new(ApplicationRecord) do
         self.table_name = "stern_books"
@@ -32,19 +30,9 @@ module Stern
     end
 
     describe "class-level overrides" do
-      it ".create raises NotImplementedError directing the caller to create!" do
-        expect { test_class.create(id: probe_id, name: "anything") }
-          .to raise_error(NotImplementedError, "Use create! instead")
-      end
-
       it ".update_all raises with the record-type message" do
         expect { test_class.update_all(name: "x") }
           .to raise_error(NotImplementedError, "AppendOnlyTestRecord records cannot be updated by design")
-      end
-
-      it ".destroy_all raises directing the caller to delete_all" do
-        expect { test_class.destroy_all }
-          .to raise_error(NotImplementedError, /Ledger is append-only.*use delete_all/)
       end
     end
 
@@ -60,11 +48,6 @@ module Stern
         expect { instance.update!(name: "x") }
           .to raise_error(NotImplementedError, "AppendOnlyTestRecord records cannot be updated by design")
       end
-
-      it "#destroy raises directing the caller to destroy!" do
-        expect { instance.destroy }
-          .to raise_error(NotImplementedError, "Use destroy! instead")
-      end
     end
 
     describe "before_update callback" do
@@ -78,12 +61,19 @@ module Stern
     end
 
     describe "allowed paths" do
-      it ".create! still persists a new record" do
+      it ".create! persists a new record" do
         expect { test_class.create!(id: probe_id, name: "ok") }
           .to change { test_class.where(id: probe_id).count }.from(0).to(1)
       end
 
-      it "reads do not raise (the concern only blocks writes)" do
+      it "#destroy! removes a record (the concern does not block destroys)" do
+        test_class.create!(id: probe_id, name: "transient")
+        instance = test_class.find(probe_id)
+        expect { instance.destroy! }
+          .to change { test_class.where(id: probe_id).count }.from(1).to(0)
+      end
+
+      it "reads do not raise" do
         test_class.create!(id: probe_id, name: "readable")
         expect(test_class.find(probe_id).name).to eq("readable")
       end

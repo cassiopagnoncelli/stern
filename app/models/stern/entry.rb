@@ -29,6 +29,10 @@ module Stern
         .last(1)
     }
 
+    def self.create(**_attrs)
+      raise NotImplementedError, "Use create! instead"
+    end
+
     def self.create!(book_id:, gid:, entry_pair_id:, amount:, timestamp: nil)
       ApplicationRecord.connection.execute(
         sanitized_sql(
@@ -53,6 +57,14 @@ module Stern
         )
       }.squish
       ApplicationRecord.sanitize_sql_array([ sql, { book_id:, gid:, entry_pair_id:, amount:, timestamp: } ])
+    end
+
+    def self.destroy_all
+      raise NotImplementedError, "Ledger is append-only; use delete_all if you really mean it"
+    end
+
+    def destroy
+      raise NotImplementedError, "Use destroy! instead"
     end
 
     def destroy!

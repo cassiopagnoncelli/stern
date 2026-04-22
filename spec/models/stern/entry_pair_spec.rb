@@ -4,7 +4,7 @@ module Stern
   RSpec.describe EntryPair, type: :model do
     subject(:entry_pair) { described_class.find_by!(id: entry_pair_id, code:, uid:) }
     let(:entry_pair_id) do
-      described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, timestamp, operation_id)
+      described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, timestamp, operation_id)
     end
 
     let(:first_pair) { ::Stern.chart.entry_pairs.values.first }
@@ -15,7 +15,7 @@ module Stern
     let(:book_sub) { first_pair.book_sub }
     let(:amount) { 100 }
     let(:timestamp) { DateTime.current }
-    let(:operation_id) { (create(:operation)).id }
+    let(:operation_id) { create(:operation).id }
 
     describe "validations" do
       it { should validate_presence_of(:code) }
@@ -23,11 +23,10 @@ module Stern
       it { should validate_presence_of(:amount) }
       it { should belong_to(:operation) }
       it { should have_many(:entries) }
-      it { should belong_to(:operation) }
     end
 
     describe ".double_entry_add" do
-      it "created two entries" do
+      it "creates two entries" do
         expect {
           entry_pair_id
         }.to change(Entry, :count).by(2)
@@ -40,8 +39,8 @@ module Stern
 
       it "forbids duplicates" do
         expect {
-          described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, timestamp, operation_id)
-          described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, nil, timestamp, operation_id)
+          described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, timestamp, operation_id)
+          described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, timestamp, operation_id)
         }.to raise_error(ActiveRecord::RecordNotUnique)
       end
     end
@@ -57,57 +56,11 @@ module Stern
       end
     end
 
-    describe ".generate_entry_pair_credit_id" do
-      it "returns a number" do
-        expect(described_class.generate_entry_pair_credit_id).to be_a_kind_of(Integer)
-      end
-    end
-
-    describe "book-derived singleton methods" do
+    describe "chart-derived singleton methods" do
       ::Stern.chart.entry_pairs.each_key do |pair_name|
         it "defines .add_#{pair_name}" do
           expect(described_class).to respond_to(:"add_#{pair_name}")
         end
-      end
-    end
-
-    describe ".add_<book> (forward/backward)" do
-      let(:book_name) { ::Stern.chart.books.keys.first }
-      let(:book_code) { ::Stern.chart.book_code(book_name) }
-      let(:uid) { Integer(rand * 1e5) }
-      let(:gid) { 1 }
-      let(:amount) { 100 }
-      let(:timestamp) { DateTime.current }
-      let(:operation_id) { create(:operation).id }
-      let(:credit_entry_pair_id) { nil }
-
-      it "issues a forward and a backward double_entry_add with mirrored book codes" do
-        expect(described_class).to receive(:double_entry_add).with(
-          "add_#{book_name}", gid, uid,
-          book_code, -book_code,
-          amount, credit_entry_pair_id, timestamp, operation_id,
-        ).ordered
-        expect(described_class).to receive(:double_entry_add).with(
-          "sub_#{book_name}", gid, uid,
-          -book_code, book_code,
-          amount, credit_entry_pair_id, timestamp, operation_id,
-        ).ordered
-
-        described_class.public_send(
-          :"add_#{book_name}", uid, gid, amount, credit_entry_pair_id,
-          timestamp: timestamp, operation_id: operation_id,
-        )
-      end
-
-      it "defaults credit_entry_pair_id, timestamp and operation_id when omitted" do
-        expect(described_class).to receive(:double_entry_add).with(
-          "add_#{book_name}", gid, uid, book_code, -book_code, amount, nil, nil, nil,
-        ).ordered
-        expect(described_class).to receive(:double_entry_add).with(
-          "sub_#{book_name}", gid, uid, -book_code, book_code, amount, nil, nil, nil,
-        ).ordered
-
-        described_class.public_send(:"add_#{book_name}", uid, gid, amount)
       end
     end
   end

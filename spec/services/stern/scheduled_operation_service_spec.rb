@@ -5,8 +5,8 @@ module Stern # rubocop:disable Metrics/ModuleLength
     subject(:service) { described_class }
 
     let(:scheduled_op) { ScheduledOperation.build(name:, params:, after_time:) }
-    let(:name) { "PayPix" }
-    let(:params) { { payment_id: 123, merchant_id: 1101, amount: 9900, fee: 65 } }
+    let(:name) { "ChargePix" }
+    let(:params) { { charge_id: 1, merchant_id: 1101, customer_id: 2, amount: 9900, currency: "usd" } }
     let(:after_time) { described_class::QUEUE_ITEM_TIMEOUT_IN_SECONDS.seconds.ago.utc }
 
     describe ".list" do
@@ -110,7 +110,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
             scheduled_op.status = status
             scheduled_op.save!
             expect { service.process_sop(scheduled_op.id) }.to raise_error(
-              service::CannotProcessNonPickedSopError,
+              CannotProcessNonPickedSopError,
             )
           end
         end
@@ -125,7 +125,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
 
         it "raises CannotProcessAheadOfTimeError" do
           expect { service.process_sop(scheduled_op.id) }.to raise_error(
-            service::CannotProcessAheadOfTimeError
+            CannotProcessAheadOfTimeError
           )
         end
       end
@@ -152,19 +152,20 @@ module Stern # rubocop:disable Metrics/ModuleLength
         it "calls process_operation with the operation and scheduled_op" do
           service.process_sop(scheduled_op.id)
           expect(service).to have_received(:process_operation).with(
-            an_instance_of(::Stern::PayPix),
+            an_instance_of(::Stern::ChargePix),
             scheduled_op
           )
         end
 
         it "creates the operation with symbolized params" do
-          allow(::Stern::PayPix).to receive(:new).and_call_original
+          allow(::Stern::ChargePix).to receive(:new).and_call_original
           service.process_sop(scheduled_op.id)
-          expect(::Stern::PayPix).to have_received(:new).with(
-            payment_id: 123,
+          expect(::Stern::ChargePix).to have_received(:new).with(
+            charge_id: 1,
             merchant_id: 1101,
+            customer_id: 2,
             amount: 9900,
-            fee: 65
+            currency: "usd"
           )
         end
       end

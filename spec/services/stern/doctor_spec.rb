@@ -2,24 +2,19 @@ require "rails_helper"
 
 module Stern
   RSpec.describe Doctor, type: :model do
-    def uid
-      Integer(rand * 1e5)
-    end
+    let(:gid) { 1101 }
+    let(:book_id) { ::Stern.chart.book_code(:merchant_balance) }
+    let(:entries) { Entry.where(book_id:, gid:).order(:timestamp) }
+    let(:operation) { create(:operation) }
 
-    def ts
-      DateTime.current
+    def seed_entries(count: 3, amount: 100)
+      count.times do |i|
+        EntryPair.add_merchant_balance(i + 1, gid, amount, operation_id: operation.id)
+      end
     end
 
     context "when consistent balance" do
-      let(:gid) { 1101 }
-      let(:book_id) { ::Stern.chart.book_code(:merchant_balance) }
-      let(:entries) { Entry.where(book_id:, gid:).order(:timestamp) }
-
-      before do
-        PayBoleto.new(payment_id: 101, merchant_id: gid, amount: 100, fee: 0).call
-        PayBoleto.new(payment_id: 102, merchant_id: gid, amount: 100, fee: 0).call
-        PayBoleto.new(payment_id: 103, merchant_id: gid, amount: 100, fee: 0).call
-      end
+      before { seed_entries }
 
       it "has consistent balance" do
         expect(described_class).to be_ending_balance_consistent(book_id:, gid:)
@@ -27,16 +22,10 @@ module Stern
     end
 
     context "when inconsistent balance" do
-      let(:gid) { 1101 }
-      let(:book_id) { ::Stern.chart.book_code(:merchant_balance) }
-      let(:entries) { Entry.where(book_id:, gid:).order(:timestamp) }
-
       before do
-        PayBoleto.new(payment_id: 101, merchant_id: gid, amount: 100, fee: 0).call
-        PayBoleto.new(payment_id: 102, merchant_id: gid, amount: 100, fee: 0).call
-        PayBoleto.new(payment_id: 103, merchant_id: gid, amount: 100, fee: 0).call
-
-        # Using update_column to circumvent validations.
+        seed_entries
+        # Using update_column to circumvent validations — required because the records
+        # are intentionally being corrupted to test the repair path.
         # rubocop:disable Rails/SkipsModelValidations
         entries.second.update_column(:amount, 50)
         entries.second.update_column(:ending_balance, 9999)
