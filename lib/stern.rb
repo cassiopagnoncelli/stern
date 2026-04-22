@@ -5,6 +5,7 @@ require "stern/engine"
 require "stern/chart"
 require "stern/currencies"
 require "stern/metrics"
+require "stern/workers"
 
 module Stern
   class << self

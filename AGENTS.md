@@ -180,6 +180,13 @@ for a working template with a synthetic `WithdrawTest` op.
      in-flight ops.
   All three use the same key (`hashtextextended('stern:book:gid:currency')`),
   so the lock is reentrant across layers within a single transaction.
+- Scheduled-operation loop is run via `Stern::Workers::Runner` — host apps
+  start it with `bundle exec rake stern:worker:start`, configurable via
+  `STERN_WORKER_CONCURRENCY` / `STERN_POLL_INTERVAL` / `STERN_JANITOR_INTERVAL`
+  env vars. The runner owns the poll-pick-process loop, thread pool,
+  graceful SIGTERM shutdown, and janitor cadence (`clear_picked` +
+  `clear_in_progress`). Per-op errors stay inside the thread pool; the
+  runner never dies on a single SOP failure.
 - Scheduled-operation pipeline emits Prometheus metrics via `Stern::Metrics`.
   The service uses `ActiveSupport::Notifications.instrument` for
   `stern.sop.enqueue_list`, `stern.sop.pickup_lag`, and

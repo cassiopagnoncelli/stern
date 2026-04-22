@@ -248,6 +248,35 @@ Stern::Repair.rebuild_balances(confirm: true)
 Stern::Repair.clear   # wipes the ledger; non-production only
 ```
 
+## Running the scheduled-operation worker
+
+Stern ships a worker loop — host apps don't need to reinvent one:
+
+```sh
+bundle exec rake stern:worker:start
+```
+
+Configurable via environment variables (defaults shown):
+
+```sh
+STERN_WORKER_CONCURRENCY=1   # threads in the processing pool
+STERN_POLL_INTERVAL=5        # seconds between polls for ready SOPs
+STERN_JANITOR_INTERVAL=60    # seconds between clear_picked/clear_in_progress runs
+```
+
+Embedding programmatically (e.g. inside another long-running process):
+
+```ruby
+Stern::Workers::Runner.new(
+  concurrency: 4,
+  install_signal_handlers: false,  # if the host owns SIGTERM handling
+).start
+```
+
+`Runner#start` blocks until the process receives SIGTERM/SIGINT or
+`Runner#stop` is called. In-flight SOPs are allowed to finish within
+`SHUTDOWN_TIMEOUT` (30s).
+
 ## Metrics (Prometheus)
 
 Stern exposes a Prometheus registry populated from `ActiveSupport::Notifications`

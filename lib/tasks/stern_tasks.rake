@@ -1,28 +1,16 @@
-# namespace :db do
-#   desc "Reset test and development databases"
-#   task :setup_env => :environment do
-#     Rake::Task["db:create"].invoke
-#     Rake::Task["db:migrate"].invoke
-#     Rake::Task["db:schema:load"].invoke
-#     Rake::Task["app:db:migrate:functions"].invoke(ENV["RAILS_ENV"])
+# frozen_string_literal: true
 
-#     if Rails.env.development?
-#       Rake::Task["app:db:seed"].invoke
-#     end
-#   end
-
-#   namespace :migrate do
-#     desc "migrate db functions"
-#     task :functions, [:env] => :environment do |task, args|
-#       env = args.fetch(:env)
-#       unless %w[development test production qa].include?(env)
-#         raise ArgumentError, "invalid environment"
-#       end
-
-#       file_path = Rails.root.join("..", "..", "db", "seeds", "functions.sql").to_s
-#       exec_line = "RAILS_ENV=#{env} bundle exec rails db < #{file_path}"
-#       puts "#{exec_line}"
-#       system(exec_line)
-#     end
-#   end
-# end
+namespace :stern do
+  namespace :worker do
+    desc "Run the Stern scheduled-operation worker loop. Configurable via " \
+         "STERN_WORKER_CONCURRENCY, STERN_POLL_INTERVAL, STERN_JANITOR_INTERVAL."
+    task start: :environment do
+      require "stern/workers/runner"
+      Stern::Workers::Runner.new(
+        concurrency:      ENV.fetch("STERN_WORKER_CONCURRENCY", Stern::Workers::Runner::DEFAULT_CONCURRENCY.to_s).to_i,
+        poll_interval:    ENV.fetch("STERN_POLL_INTERVAL",      Stern::Workers::Runner::DEFAULT_POLL_INTERVAL.to_s).to_f,
+        janitor_interval: ENV.fetch("STERN_JANITOR_INTERVAL",   Stern::Workers::Runner::DEFAULT_JANITOR_INTERVAL.to_s).to_f,
+      ).start
+    end
+  end
+end
