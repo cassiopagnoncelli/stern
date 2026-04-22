@@ -1,4 +1,4 @@
-\restrict m76JocNXHerDtoqyfelKJ9d7qSWZdfpRI7n96Ja7NgdcvyDgYWFIjcIzh3HFDOm
+\restrict VNLm0W5umbqbqrtNjHIVgsWgJxMVOLy8Kqo8QyNgaiP6CiXeA2KrZ6pCdkGqzNT
 
 -- Dumped from database version 17.9 (Postgres.app)
 -- Dumped by pg_dump version 17.9 (Postgres.app)
@@ -73,7 +73,7 @@ BEGIN
     END IF;
   ELSE
     cascade := TRUE;
-    entry.timestamp := in_timestamp_utc::timestamp WITH TIME ZONE AT TIME ZONE 'UTC'; -- CAST(timezone('UTC', in_timestamp_utc) AS TIMESTAMP(6) WITHOUT TIME ZONE);
+    entry.timestamp := in_timestamp_utc::timestamp WITH TIME ZONE AT TIME ZONE 'UTC';
     IF verbose_mode THEN
       RAISE DEBUG '-- entry.timestamp = %', entry.timestamp;
     END IF;
@@ -176,7 +176,7 @@ BEGIN
     RAISE EXCEPTION 'id is undefined';
   END IF;
 
-  SELECT * INTO entry FROM stern_entries WHERE id = in_id LIMIT 1; 
+  SELECT * INTO entry FROM stern_entries WHERE id = in_id LIMIT 1;
 
   RAISE NOTICE 'Selected row: %', format('%I', entry);
 
@@ -559,7 +559,7 @@ CREATE INDEX index_stern_scheduled_operations_on_status ON public.stern_schedule
 -- PostgreSQL database dump complete
 --
 
-\unrestrict m76JocNXHerDtoqyfelKJ9d7qSWZdfpRI7n96Ja7NgdcvyDgYWFIjcIzh3HFDOm
+\unrestrict VNLm0W5umbqbqrtNjHIVgsWgJxMVOLy8Kqo8QyNgaiP6CiXeA2KrZ6pCdkGqzNT
 
 SET search_path TO "$user", public;
 
