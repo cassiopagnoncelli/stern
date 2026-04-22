@@ -38,6 +38,23 @@ module Stern
     # Hook for subclasses to coerce/transform assigned inputs.
     def normalize_inputs; end
 
+    # Declares the `(book, gid, currency)` tuples this operation reads from or writes
+    # to. `BaseOperation#call` takes a per-tuple Postgres advisory lock on each before
+    # `perform` runs, so concurrent ops on the same tuples serialize while ops on
+    # disjoint tuples run in parallel.
+    #
+    # Subclasses override with something like:
+    #
+    #   def target_tuples
+    #     tuples_for_pair(:pp_charge_pix, merchant_id, currency)
+    #   end
+    #
+    # Book references can be Symbols/Strings (resolved via the chart) or integer codes.
+    # Return [] to opt out of locking (the operation has no data dependency).
+    def target_tuples
+      []
+    end
+
     def cur(name_or_index, result: :both)
       ::Stern.cur(name_or_index, result:)
     end
@@ -55,7 +72,7 @@ module Stern
 
       if transaction
         ApplicationRecord.transaction do
-          lock_tables
+          acquire_advisory_locks(target_tuples)
           record_and_perform(idem_key)
         end
       else
@@ -102,9 +119,38 @@ module Stern
       operation.id
     end
 
-    def lock_tables
-      ApplicationRecord.lock_table(table: EntryPair.table_name)
-      ApplicationRecord.lock_table(table: Entry.table_name)
+    # Helper for the common double-entry pattern: returns the two `(book, gid, currency)`
+    # tuples `EntryPair.add_<pair_name>(...)` will write to.
+    def tuples_for_pair(pair_name, gid, currency)
+      pair = ::Stern.chart.entry_pair(pair_name)
+      raise ArgumentError, "unknown entry pair #{pair_name.inspect}" unless pair
+
+      [ [ pair.book_add, gid, currency ], [ pair.book_sub, gid, currency ] ]
+    end
+
+    # Takes a transaction-scoped Postgres advisory lock on each `(book_id, gid, currency)`
+    # tuple. Sorts by `[book_id, gid, currency]` to eliminate deadlock risk: any two
+    # concurrent operations requesting overlapping tuples will acquire them in the same
+    # order regardless of how their `target_tuples` is written. `pg_advisory_xact_lock`
+    # is reentrant and releases at commit/rollback.
+    def acquire_advisory_locks(tuples)
+      return if tuples.empty?
+
+      resolved = tuples.map do |book_ref, gid, currency|
+        book_id = book_ref.is_a?(Integer) ? book_ref : ::Stern.chart.book_code(book_ref)
+        raise ArgumentError, "unknown book #{book_ref.inspect}" unless book_id
+
+        [ book_id, gid, currency ]
+      end
+
+      resolved.sort.uniq.each do |book_id, gid, currency|
+        ApplicationRecord.connection.execute(
+          ApplicationRecord.sanitize_sql_array([
+            "SELECT pg_advisory_xact_lock(hashtextextended(format('stern:%s:%s:%s', ?, ?, ?), 0))",
+            book_id, gid, currency
+          ]),
+        )
+      end
     end
 
     def operation_name

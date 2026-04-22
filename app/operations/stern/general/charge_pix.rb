@@ -12,6 +12,10 @@ module Stern
     validates :amount, presence: true
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
+    def target_tuples
+      tuples_for_pair(:pp_charge_pix, merchant_id, currency)
+    end
+
     def perform(operation_id)
       raise ArgumentError if invalid? || operation_id.blank?
 
