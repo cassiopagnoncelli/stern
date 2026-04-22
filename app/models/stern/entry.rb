@@ -3,6 +3,7 @@
 module Stern
   class Entry < ApplicationRecord
     include AppendOnly
+    include NoFutureTimestamp
 
     validates :book_id, presence: true
     validates :gid, presence: true
@@ -15,10 +16,6 @@ module Stern
     belongs_to :book, class_name: "Stern::Book", optional: true
 
     before_create do
-      if timestamp.presence && timestamp > DateTime.current
-        raise(ArgumentError,
-              "timestamp cannot be in the future",)
-      end
       raise ArgumentError, "amount must be non-zero integer" if amount.blank? || amount.zero?
       raise ArgumentError, "book_id undefined" if book_id.blank?
       raise ArgumentError, "gid undefined" if gid.blank?

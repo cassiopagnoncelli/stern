@@ -4,6 +4,7 @@
 module Stern
   class EntryPair < ApplicationRecord
     include AppendOnly
+    include NoFutureTimestamp
 
     enum :code, ::Stern.chart.entry_pair_codes
 
@@ -17,12 +18,6 @@ module Stern
       greater_than_or_equal_to: -9_223_372_036_854_775_808,
       less_than_or_equal_to: 9_223_372_036_854_775_807
     }
-    validate :no_future_timestamp, on: :create
-
-    before_save do
-      raise ArgumentError, "timestamp was set" if timestamp.present? && timestamp > DateTime.current
-    end
-
     before_destroy do
       entries.each(&:destroy!)
     end
@@ -76,14 +71,6 @@ module Stern
         [ "| verb", :white ],
         [ format("%s", code || "N/A"), :orange, :bold ]
       ])
-    end
-
-    private
-
-    def no_future_timestamp
-      return unless timestamp.presence && timestamp > DateTime.current
-
-      errors.add(:timestamp, "cannot be in the future")
     end
   end
 end
