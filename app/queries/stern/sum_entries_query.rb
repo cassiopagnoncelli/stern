@@ -11,16 +11,18 @@ module Stern
   # Example at the end of the file.
   #
   class SumEntriesQuery < BaseQuery
-    attr_accessor :gid, :book_id, :time_grouping, :start_date, :end_date, :results
+    attr_accessor :gid, :book_id, :currency, :time_grouping, :start_date, :end_date, :results
 
     # @param gid [Bignum] group id, eg. merchant id
     # @param book_id [DateTime] consolidating book, eg. merchant balance
+    # @param currency [String, Symbol, Integer] currency name or index
     # @param time_grouping [Symbol] bins to consolidate time, from :hourly to :yearly
     # @param start_date [DateTime] report starting date/time
     # @param end_date [DateTime] report ending date/time
-    def initialize(gid:, book_id:, time_grouping:, start_date:, end_date:)
+    def initialize(gid:, book_id:, currency:, time_grouping:, start_date:, end_date:)
       self.gid = gid
       self.book_id = resolve_book_id!(book_id)
+      self.currency = resolve_currency!(currency)
       self.time_grouping = Helpers::FrequencyHelper.frequency_in_sql(time_grouping)
       self.start_date = Helpers::NormalizeTimeHelper.normalize_time(start_date, true)
       self.end_date = Helpers::NormalizeTimeHelper.normalize_time(end_date, true)
@@ -46,12 +48,13 @@ module Stern
         WHERE
           gid = :gid
           AND es.book_id = :book_id
+          AND es.currency = :currency
           AND (entry_pairs.timestamp BETWEEN :start_date AND :end_date)
         GROUP BY time_window, code
         ORDER BY time_window, code
       }
       ApplicationRecord.sanitize_sql_array([ sql,
-                                            { time_grouping:, gid:, book_id:, start_date:,
+                                            { time_grouping:, gid:, book_id:, currency:, start_date:,
                                               end_date: } ])
     end
   end
@@ -62,6 +65,7 @@ __END__
 SumEntriesQuery.new(
   gid: 1101,
   book_id: :boleto,
+  currency: :BRL,
   time_grouping: :hourly,
   start_date: DateTime.current.last_month.beginning_of_month,
   end_date: DateTime.current

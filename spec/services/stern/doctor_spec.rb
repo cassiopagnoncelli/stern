@@ -4,12 +4,13 @@ module Stern
   RSpec.describe Doctor, type: :model do
     let(:gid) { 1101 }
     let(:book_id) { ::Stern.chart.book_code(:merchant_balance) }
-    let(:entries) { Entry.where(book_id:, gid:).order(:timestamp) }
+    let(:currency) { ::Stern.cur("BRL") }
+    let(:entries) { Entry.where(book_id:, gid:, currency:).order(:timestamp) }
     let(:operation) { create(:operation) }
 
     def seed_entries(count: 3, amount: 100)
       count.times do |i|
-        EntryPair.add_merchant_balance(i + 1, gid, amount, operation_id: operation.id)
+        EntryPair.add_merchant_balance(i + 1, gid, amount, currency, operation_id: operation.id)
       end
     end
 
@@ -17,7 +18,7 @@ module Stern
       before { seed_entries }
 
       it "has consistent balance" do
-        expect(described_class).to be_ending_balance_consistent(book_id:, gid:)
+        expect(described_class).to be_ending_balance_consistent(book_id:, gid:, currency:)
       end
 
       it "has amount consistency" do
@@ -38,7 +39,7 @@ module Stern
 
       it "has amount and ending balances inconsistent" do
         expect(described_class).not_to be_amount_consistent
-        expect(described_class).not_to be_ending_balance_consistent(book_id:, gid:)
+        expect(described_class).not_to be_ending_balance_consistent(book_id:, gid:, currency:)
       end
     end
 
@@ -46,7 +47,7 @@ module Stern
       before { seed_entries }
 
       it "returns an array of inconsistent entry ids (empty when consistent)" do
-        expect(described_class.ending_balances_inconsistencies_across_books(gid:)).to eq([])
+        expect(described_class.ending_balances_inconsistencies_across_books(gid:, currency:)).to eq([])
       end
     end
   end

@@ -9,16 +9,18 @@ module Stern
   # Examples at the end of the file.
   #
   class BalanceQuery < BaseQuery
-    attr_accessor :gid, :book_id, :timestamp, :results
+    attr_accessor :gid, :book_id, :currency, :timestamp, :results
 
     # @param gid [Bignum] group id, eg. merchant id
     # @param book_id [Bignum] book id
+    # @param currency [String, Symbol, Integer] currency name or index
     # @param timestamp [DateTime] balance at the given time
-    def initialize(gid:, book_id:, timestamp:)
+    def initialize(gid:, book_id:, currency:, timestamp:)
       raise ArgumentError, "should be Date or DateTime" unless timestamp.is_a?(Date) || timestamp.is_a?(DateTime)
 
       self.gid = gid
       self.book_id = resolve_book_id!(book_id)
+      self.currency = resolve_currency!(currency)
       self.timestamp = Helpers::NormalizeTimeHelper.normalize_time(timestamp, true)
     end
 
@@ -28,7 +30,7 @@ module Stern
     end
 
     def execute_query
-      Entry.last_entry(book_id, gid, timestamp)
+      Entry.last_entry(book_id, gid, currency, timestamp)
     end
   end
 end
@@ -38,5 +40,6 @@ __END__
 BalanceQuery.new(
   gid: 1101,
   book_id: :merchant_balance,
+  currency: :BRL,
   timestamp: DateTime.current
 ).call

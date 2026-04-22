@@ -2,15 +2,18 @@ require "rails_helper"
 
 module Stern
   RSpec.describe Entry, type: :model do
+    let(:currency) { ::Stern.cur("BRL") }
+
     def gen_entry(amount: 100, timestamp: nil)
       Repair.clear
-      described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 1, amount:, timestamp:)
+      described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 1, amount:, currency:, timestamp:)
     end
 
     describe "validations" do
       it { should validate_presence_of(:book_id) }
       it { should validate_presence_of(:gid) }
       it { should validate_presence_of(:entry_pair_id) }
+      it { should validate_presence_of(:currency) }
       it { should validate_presence_of(:amount) }
       it { should allow_value(DateTime.current.last_week).for(:timestamp) }
       it { should belong_to(:entry_pair).class_name("Stern::EntryPair").optional }
@@ -40,7 +43,7 @@ module Stern
 
       it "does not create without bang operator" do
         expect {
-          described_class.create(book_id: 1, gid: 1101, entry_pair_id: 1, amount: 100, timestamp: nil)
+          described_class.create(book_id: 1, gid: 1101, entry_pair_id: 1, amount: 100, currency:, timestamp: nil)
         }.to raise_error(NotImplementedError, "Use create! instead")
       end
     end
@@ -92,7 +95,7 @@ module Stern
       before { gen_entry }
 
       it "returns a record" do
-        expect(described_class.last_entry(1, 1101, DateTime.current).count).to be(1)
+        expect(described_class.last_entry(1, 1101, currency, DateTime.current).count).to be(1)
       end
     end
   end

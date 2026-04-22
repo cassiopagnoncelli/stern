@@ -14,12 +14,12 @@ module Stern
     ApplicationRecord.generate_gid
   end
 
-  def self.outstanding_balance(book_id, timestamp = DateTime.current)
-    OutstandingBalanceQuery.new(book_id:, timestamp:).call
+  def self.outstanding_balance(book_id, currency, timestamp = DateTime.current)
+    OutstandingBalanceQuery.new(book_id:, currency:, timestamp:).call
   end
 
-  def self.balance(gid, book_id, timestamp = DateTime.current)
-    BalanceQuery.new(gid:, book_id:, timestamp:).call
+  def self.balance(gid, book_id, currency, timestamp = DateTime.current)
+    BalanceQuery.new(gid:, book_id:, currency:, timestamp:).call
   end
 
   def self.cur(name_or_index, result: :both)

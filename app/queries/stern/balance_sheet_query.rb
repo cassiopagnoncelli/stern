@@ -6,15 +6,17 @@ module Stern
   # Example at the end of the file.
   #
   class BalanceSheetQuery < BaseQuery
-    attr_accessor :start_date, :end_date, :book_format, :book_ids
+    attr_accessor :start_date, :end_date, :currency, :book_format, :book_ids
 
     # @param start_date [DateTime] report starting date/time
     # @param end_date [DateTime] report ending date/time
+    # @param currency [String, Symbol, Integer] currency name or index
     # @param book_ids [Array<Bignum>] book ids, eg. %i[customer_balance_available_usd merchant_balance_available_usd]
     # @param book_format [Array<Symbol>] format of the code, eg. %i[titleize]
-    def initialize(start_date:, end_date:, book_ids: ::Stern.chart.book_codes, book_format: %i[titleize])
+    def initialize(start_date:, end_date:, currency:, book_ids: ::Stern.chart.book_codes, book_format: %i[titleize])
       self.start_date = Helpers::NormalizeTimeHelper.normalize_time(start_date, true)
       self.end_date = Helpers::NormalizeTimeHelper.normalize_time(end_date, true)
+      self.currency = resolve_currency!(currency)
       self.book_format = book_format
       self.book_ids = book_ids.map { |book_id| resolve_book_id!(book_id) }
     end
@@ -47,7 +49,7 @@ module Stern
                 PARTITION BY gid, book_id ORDER BY timestamp DESC
               ) AS ending_balance
             FROM stern_entries
-            WHERE timestamp < :start_date
+            WHERE timestamp < :start_date AND currency = :currency
           ) ending_balances
           WHERE book_id IN (:book_ids)
           GROUP BY book_id
@@ -60,6 +62,7 @@ module Stern
             SUM(amount) AS net
           FROM stern_entries
           WHERE timestamp BETWEEN :start_date AND :end_date
+          AND currency = :currency
           AND book_id IN (:book_ids)
           GROUP BY book_id
         )
@@ -75,7 +78,7 @@ module Stern
         LEFT JOIN previous_balances pb ON b.book_id = pb.book_id
         ORDER BY b.book_id
       }
-      ApplicationRecord.sanitize_sql_array([ sql, { start_date:, end_date:, book_ids: } ])
+      ApplicationRecord.sanitize_sql_array([ sql, { start_date:, end_date:, currency:, book_ids: } ])
     end
   end
 end
@@ -87,6 +90,7 @@ __END__
 BalanceSheetQuery.new(
   start_date: DateTime.current.yesterday,
   end_date: DateTime.current + 1.minute,
+  currency: :USD,
   book_ids: %i[customer_balance_available_usd bops_pl_usd],
   book_format: %i[titleize]
 ).call

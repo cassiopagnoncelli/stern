@@ -12,9 +12,9 @@ module Stern
       Entry.sum(:amount).zero?
     end
 
-    def self.ending_balance_consistent?(book_id:, gid:)
+    def self.ending_balance_consistent?(book_id:, gid:, currency:)
       current_ending_balance = 0
-      Entry.where(book_id:, gid:).order(:timestamp).each do |e|
+      Entry.where(book_id:, gid:, currency:).order(:timestamp).each do |e|
         return false unless e.ending_balance == e.amount + current_ending_balance
 
         current_ending_balance += e.amount
@@ -23,13 +23,13 @@ module Stern
       true
     end
 
-    def self.ending_balances_inconsistencies_across_books(gid:)
+    def self.ending_balances_inconsistencies_across_books(gid:, currency:)
       ::Stern.chart.book_codes.flat_map do |book_id|
-        ending_balances_inconsistencies(book_id:, gid:)
+        ending_balances_inconsistencies(book_id:, gid:, currency:)
       end
     end
 
-    def self.ending_balances_inconsistencies(book_id:, gid:) # rubocop:disable Metrics/MethodLength
+    def self.ending_balances_inconsistencies(book_id:, gid:, currency:) # rubocop:disable Metrics/MethodLength
       sql = %{
         SELECT entry_id
         FROM (
@@ -39,20 +39,20 @@ module Stern
           FROM (
             SELECT id, ending_balance
             FROM stern_entries
-            WHERE book_id = :book_id AND gid = :gid
+            WHERE book_id = :book_id AND gid = :gid AND currency = :currency
           ) se
           LEFT JOIN (
             SELECT
               id,
               (SUM(amount) OVER (ORDER BY timestamp)) AS checked_ending_balance
             FROM stern_entries
-            WHERE book_id = :book_id AND gid = :gid
+            WHERE book_id = :book_id AND gid = :gid AND currency = :currency
             ORDER BY timestamp
           ) se2 ON se.id = se2.id
         ) inconsistencies_results
         WHERE inconsistent = 1
       }
-      sanitized_sql = ApplicationRecord.sanitize_sql_array([ sql, { book_id:, gid: } ])
+      sanitized_sql = ApplicationRecord.sanitize_sql_array([ sql, { book_id:, gid:, currency: } ])
       results = ApplicationRecord.connection.execute(sanitized_sql)
       results.to_a.flatten
     end

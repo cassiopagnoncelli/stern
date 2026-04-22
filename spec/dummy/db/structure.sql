@@ -1,4 +1,4 @@
-\restrict VNLm0W5umbqbqrtNjHIVgsWgJxMVOLy8Kqo8QyNgaiP6CiXeA2KrZ6pCdkGqzNT
+\restrict XyEM5NLDjMP3FNE2TyO7R9xQVhLf947chN5rm4mffD0Ij6iKfBatIMrblnG6HAN
 
 -- Dumped from database version 17.9 (Postgres.app)
 -- Dumped by pg_dump version 17.9 (Postgres.app)
@@ -32,15 +32,16 @@ CREATE TABLE public.stern_entries (
     entry_pair_id bigint NOT NULL,
     amount bigint NOT NULL,
     ending_balance bigint NOT NULL,
-    "timestamp" timestamp(6) without time zone NOT NULL
+    "timestamp" timestamp(6) without time zone NOT NULL,
+    currency integer NOT NULL
 );
 
 
 --
--- Name: create_entry(integer, bigint, bigint, bigint, timestamp without time zone, boolean); Type: FUNCTION; Schema: public; Owner: -
+-- Name: create_entry(integer, bigint, bigint, integer, bigint, timestamp without time zone, boolean); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.create_entry(in_book_id integer, in_gid bigint, in_entry_pair_id bigint, in_amount bigint, in_timestamp_utc timestamp without time zone DEFAULT NULL::timestamp without time zone, verbose_mode boolean DEFAULT false) RETURNS public.stern_entries
+CREATE FUNCTION public.create_entry(in_book_id integer, in_gid bigint, in_entry_pair_id bigint, in_currency integer, in_amount bigint, in_timestamp_utc timestamp without time zone DEFAULT NULL::timestamp without time zone, verbose_mode boolean DEFAULT false) RETURNS public.stern_entries
     LANGUAGE plpgsql
     AS $$
 DECLARE
@@ -48,8 +49,9 @@ DECLARE
   ts TIMESTAMP(6) WITHOUT TIME ZONE;
   cascade BOOLEAN;
 BEGIN
-  IF in_book_id IS NULL OR in_gid IS NULL OR in_entry_pair_id IS NULL OR in_amount IS NULL OR in_amount = 0 THEN
-    RAISE EXCEPTION 'book_id, gid, entry_pair_id should be defined, amount should be non-zero integer';
+  IF in_book_id IS NULL OR in_gid IS NULL OR in_entry_pair_id IS NULL
+      OR in_currency IS NULL OR in_amount IS NULL OR in_amount = 0 THEN
+    RAISE EXCEPTION 'book_id, gid, entry_pair_id, currency should be defined, amount should be non-zero integer';
   END IF;
 
   ts := CAST(timezone('UTC', clock_timestamp()) AS TIMESTAMP(6) WITHOUT TIME ZONE);
@@ -61,6 +63,7 @@ BEGIN
   entry.book_id := in_book_id;
   entry.gid := in_gid;
   entry.entry_pair_id := in_entry_pair_id;
+  entry.currency := in_currency;
   entry.amount := in_amount;
   entry.created_at := ts;
   entry.updated_at := ts;
@@ -84,6 +87,7 @@ BEGIN
     FROM stern_entries
     WHERE book_id = entry.book_id
       AND gid = entry.gid
+      AND currency = entry.currency
       AND timestamp < entry.timestamp
     ORDER BY timestamp DESC, id DESC
     LIMIT 1
@@ -93,7 +97,10 @@ BEGIN
     RAISE DEBUG '-- last ending_balance is %', (
       SELECT timestamp
       FROM stern_entries
-      WHERE timestamp < entry.timestamp
+      WHERE book_id = entry.book_id
+        AND gid = entry.gid
+        AND currency = entry.currency
+        AND timestamp < entry.timestamp
       ORDER BY timestamp DESC, id DESC
       LIMIT 1
     );
@@ -104,6 +111,7 @@ BEGIN
     book_id,
     gid,
     entry_pair_id,
+    currency,
     amount,
     ending_balance,
     timestamp,
@@ -113,6 +121,7 @@ BEGIN
     entry.book_id,
     entry.gid,
     entry.entry_pair_id,
+    entry.currency,
     entry.amount,
     entry.ending_balance,
     entry.timestamp,
@@ -128,19 +137,24 @@ BEGIN
   IF cascade THEN
     IF verbose_mode THEN
       RAISE DEBUG '-- with timestamp, ending_balance will be cascaded for the next records';
-      RAISE DEBUG '-- (book_id, gid) has % records, % records will be updated', (
+      RAISE DEBUG '-- (book_id, gid, currency) has % records, % records will be updated', (
         SELECT COUNT(*) FROM (
           SELECT
             id,
             (SUM(amount) OVER (ORDER BY timestamp)) AS new_ending_balance
           FROM stern_entries
-          WHERE book_id = entry.book_id AND gid = entry.gid
+          WHERE book_id = entry.book_id
+            AND gid = entry.gid
+            AND currency = entry.currency
           ORDER BY timestamp, id
         ) x
       ), (
         SELECT COUNT(*)
         FROM stern_entries
-        WHERE book_id = entry.book_id AND gid = entry.gid AND timestamp > entry.timestamp
+        WHERE book_id = entry.book_id
+          AND gid = entry.gid
+          AND currency = entry.currency
+          AND timestamp > entry.timestamp
       );
     END IF;
 
@@ -151,7 +165,150 @@ BEGIN
         id,
         (SUM(amount) OVER (ORDER BY timestamp)) AS new_ending_balance
       FROM stern_entries
-      WHERE book_id = entry.book_id AND gid = entry.gid
+      WHERE book_id = entry.book_id
+        AND gid = entry.gid
+        AND currency = entry.currency
+      ORDER BY timestamp, id
+    ) mirror
+    WHERE stern_entries.id = mirror.id AND stern_entries.timestamp > entry.timestamp;
+  END IF;
+
+  RETURN entry;
+END;
+$$;
+
+
+--
+-- Name: create_entry(integer, bigint, bigint, bigint, integer, timestamp without time zone, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_entry(in_book_id integer, in_gid bigint, in_entry_pair_id bigint, in_amount bigint, in_currency integer, in_timestamp_utc timestamp without time zone DEFAULT NULL::timestamp without time zone, verbose_mode boolean DEFAULT false) RETURNS public.stern_entries
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  entry stern_entries;
+  ts TIMESTAMP(6) WITHOUT TIME ZONE;
+  cascade BOOLEAN;
+BEGIN
+  IF in_book_id IS NULL OR in_gid IS NULL OR in_entry_pair_id IS NULL
+      OR in_amount IS NULL OR in_amount = 0 OR in_currency IS NULL THEN
+    RAISE EXCEPTION 'book_id, gid, entry_pair_id, currency should be defined, amount should be non-zero integer';
+  END IF;
+
+  ts := CAST(timezone('UTC', clock_timestamp()) AS TIMESTAMP(6) WITHOUT TIME ZONE);
+
+  IF in_timestamp_utc IS NOT NULL AND in_timestamp_utc > ts THEN
+    RAISE EXCEPTION 'timestamp %s cannot be in the future', in_timestamp_utc;
+  END IF;
+
+  entry.book_id := in_book_id;
+  entry.gid := in_gid;
+  entry.entry_pair_id := in_entry_pair_id;
+  entry.amount := in_amount;
+  entry.currency := in_currency;
+  entry.created_at := ts;
+  entry.updated_at := ts;
+
+  IF in_timestamp_utc IS NULL THEN
+    cascade := FALSE;
+    entry.timestamp := ts;
+    IF verbose_mode THEN
+      RAISE DEBUG '-- entry.timestamp is null and was set to be %', entry.timestamp;
+    END IF;
+  ELSE
+    cascade := TRUE;
+    entry.timestamp := in_timestamp_utc::timestamp WITH TIME ZONE AT TIME ZONE 'UTC';
+    IF verbose_mode THEN
+      RAISE DEBUG '-- entry.timestamp = %', entry.timestamp;
+    END IF;
+  END IF;
+
+  entry.ending_balance := COALESCE((
+    SELECT COALESCE(stern_entries.ending_balance, 0)
+    FROM stern_entries
+    WHERE book_id = entry.book_id
+      AND gid = entry.gid
+      AND currency = entry.currency
+      AND timestamp < entry.timestamp
+    ORDER BY timestamp DESC, id DESC
+    LIMIT 1
+  ), 0) + entry.amount;
+
+  IF verbose_mode THEN
+    RAISE DEBUG '-- last ending_balance is %', (
+      SELECT timestamp
+      FROM stern_entries
+      WHERE book_id = entry.book_id
+        AND gid = entry.gid
+        AND currency = entry.currency
+        AND timestamp < entry.timestamp
+      ORDER BY timestamp DESC, id DESC
+      LIMIT 1
+    );
+    RAISE DEBUG '-- ending_balance for the new record is %', entry.ending_balance;
+  END IF;
+
+  INSERT INTO stern_entries (
+    book_id,
+    gid,
+    entry_pair_id,
+    amount,
+    currency,
+    ending_balance,
+    timestamp,
+    created_at,
+    updated_at
+  ) VALUES (
+    entry.book_id,
+    entry.gid,
+    entry.entry_pair_id,
+    entry.amount,
+    entry.currency,
+    entry.ending_balance,
+    entry.timestamp,
+    entry.created_at,
+    entry.updated_at
+  )
+  RETURNING * INTO entry;
+
+  IF verbose_mode THEN
+    RAISE DEBUG '-- row is now recorded';
+  END IF;
+
+  IF cascade THEN
+    IF verbose_mode THEN
+      RAISE DEBUG '-- with timestamp, ending_balance will be cascaded for the next records';
+      RAISE DEBUG '-- (book_id, gid, currency) has % records, % records will be updated', (
+        SELECT COUNT(*) FROM (
+          SELECT
+            id,
+            (SUM(amount) OVER (ORDER BY timestamp)) AS new_ending_balance
+          FROM stern_entries
+          WHERE book_id = entry.book_id
+            AND gid = entry.gid
+            AND currency = entry.currency
+          ORDER BY timestamp, id
+        ) x
+      ), (
+        SELECT COUNT(*)
+        FROM stern_entries
+        WHERE book_id = entry.book_id
+          AND gid = entry.gid
+          AND currency = entry.currency
+          AND timestamp > entry.timestamp
+      );
+    END IF;
+
+    UPDATE stern_entries
+    SET ending_balance = mirror.new_ending_balance
+    FROM (
+      SELECT
+        id,
+        (SUM(amount) OVER (ORDER BY timestamp)) AS new_ending_balance
+      FROM stern_entries
+      WHERE book_id = entry.book_id
+        AND gid = entry.gid
+        AND currency = entry.currency
       ORDER BY timestamp, id
     ) mirror
     WHERE stern_entries.id = mirror.id AND stern_entries.timestamp > entry.timestamp;
@@ -183,8 +340,8 @@ BEGIN
   DELETE FROM stern_entries WHERE id = in_id;
 
   IF verbose_mode THEN
-    RAISE DEBUG '-- updating ending_balance in (book_id=%, gid=%) pair after %',
-      entry.book_id, entry.gid, entry.timestamp;
+    RAISE DEBUG '-- updating ending_balance in (book_id=%, gid=%, currency=%) partition after %',
+      entry.book_id, entry.gid, entry.currency, entry.timestamp;
   END IF;
 
   -- This operation is not particularly fast.
@@ -197,7 +354,9 @@ BEGIN
       id,
       (SUM(amount) OVER (ORDER BY timestamp)) AS new_ending_balance
     FROM stern_entries
-    WHERE book_id = entry.book_id AND gid = entry.gid
+    WHERE book_id = entry.book_id
+      AND gid = entry.gid
+      AND currency = entry.currency
     ORDER BY timestamp, id
   ) mirror
   WHERE stern_entries.id = mirror.id;
@@ -302,7 +461,8 @@ CREATE TABLE public.stern_entry_pairs (
     uid bigint NOT NULL,
     amount bigint NOT NULL,
     "timestamp" timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    operation_id bigint NOT NULL
+    operation_id bigint NOT NULL,
+    currency integer NOT NULL
 );
 
 
@@ -493,24 +653,24 @@ CREATE UNIQUE INDEX index_stern_books_on_name ON public.stern_books USING btree 
 
 
 --
--- Name: index_stern_entries_on_book_id_and_gid_and_entry_pair_id; Type: INDEX; Schema: public; Owner: -
+-- Name: index_stern_entries_on_bgce; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_stern_entries_on_book_id_and_gid_and_entry_pair_id ON public.stern_entries USING btree (book_id, gid, entry_pair_id);
-
-
---
--- Name: index_stern_entries_on_book_id_and_gid_and_timestamp; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_stern_entries_on_book_id_and_gid_and_timestamp ON public.stern_entries USING btree (book_id, gid, "timestamp");
+CREATE UNIQUE INDEX index_stern_entries_on_bgce ON public.stern_entries USING btree (book_id, gid, currency, entry_pair_id);
 
 
 --
--- Name: index_stern_entry_pairs_on_code_and_uid; Type: INDEX; Schema: public; Owner: -
+-- Name: index_stern_entries_on_bgct; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_stern_entry_pairs_on_code_and_uid ON public.stern_entry_pairs USING btree (code, uid);
+CREATE UNIQUE INDEX index_stern_entries_on_bgct ON public.stern_entries USING btree (book_id, gid, currency, "timestamp");
+
+
+--
+-- Name: index_stern_entry_pairs_on_code_and_currency_and_uid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_stern_entry_pairs_on_code_and_currency_and_uid ON public.stern_entry_pairs USING btree (code, currency, uid);
 
 
 --
@@ -559,11 +719,15 @@ CREATE INDEX index_stern_scheduled_operations_on_status ON public.stern_schedule
 -- PostgreSQL database dump complete
 --
 
-\unrestrict VNLm0W5umbqbqrtNjHIVgsWgJxMVOLy8Kqo8QyNgaiP6CiXeA2KrZ6pCdkGqzNT
+\unrestrict XyEM5NLDjMP3FNE2TyO7R9xQVhLf947chN5rm4mffD0Ij6iKfBatIMrblnG6HAN
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260422120003'),
+('20260422120002'),
+('20260422120001'),
+('20260422120000'),
 ('20250530090922'),
 ('20250530090921'),
 ('20250530090920'),

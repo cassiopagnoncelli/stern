@@ -9,21 +9,23 @@ module Stern
   # Example at the end of the file.
   #
   class EntriesQuery < BaseQuery
-    attr_accessor :gid, :book_id, :start_date, :end_date, :code_format, :page, :per_page, :results
+    attr_accessor :gid, :book_id, :currency, :start_date, :end_date, :code_format, :page, :per_page, :results
 
     # @param gid [Bignum] group id, eg. merchant id (optional)
     # @param book_id [DateTime] consolidating book, eg. merchant balance
+    # @param currency [String, Symbol, Integer] currency name or index
     # @param start_date [DateTime] report starting date/time
     # @param end_date [DateTime] report ending date/time
     # @param code_format [Array<Symbol>] format of the code, eg. %i[titleize drop_first_word]
     # @param page [Integer] page number (-3, -2, -1, 1, 2, 3, ..., defaults to -1, page 0 does not exist)
     # @param per_page [Integer] records per page (defaults to 50)
-    def initialize(book_id:, start_date:, end_date:, gid: nil, code_format: %i[titleize drop_first_word], page: -1, per_page: 50)
+    def initialize(book_id:, currency:, start_date:, end_date:, gid: nil, code_format: %i[titleize drop_first_word], page: -1, per_page: 50)
       raise ArgumentError, "page cannot be 0" if page == 0
       raise ArgumentError, "per_page must be positive" if per_page <= 0
 
       self.gid = gid
       self.book_id = resolve_book_id!(book_id)
+      self.currency = resolve_currency!(currency)
       self.start_date = Helpers::NormalizeTimeHelper.normalize_time(start_date, true)
       self.end_date = Helpers::NormalizeTimeHelper.normalize_time(end_date, true)
       self.code_format = code_format
@@ -48,7 +50,7 @@ module Stern
     def sql
       query = Entry.joins(:entry_pair)
         .select("stern_entries.*, stern_entry_pairs.code")
-        .where(book_id:)
+        .where(book_id:, currency:)
         .where("stern_entries.timestamp BETWEEN ? AND ?", start_date, end_date)
       query = query.where(gid:) if gid.present?
       query = paginate(query)
@@ -80,6 +82,7 @@ __END__
 
 EntriesQuery.new(
   book_id: :customer_balance_available_usd,
+  currency: :USD,
   start_date: DateTime.current.yesterday,
   end_date: DateTime.current + 1.minute,
   gid: 1,

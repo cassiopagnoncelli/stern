@@ -4,12 +4,13 @@ module Stern
   RSpec.describe Repair, type: :model do
     let(:gid) { 1101 }
     let(:book_id) { ::Stern.chart.book_code(:merchant_balance) }
-    let(:entries) { Entry.where(book_id:, gid:).order(:timestamp) }
+    let(:currency) { ::Stern.cur("BRL") }
+    let(:entries) { Entry.where(book_id:, gid:, currency:).order(:timestamp) }
     let(:operation) { create(:operation) }
 
     def seed_entries(count: 3, amount: 100)
       count.times do |i|
-        EntryPair.add_merchant_balance(i + 1, gid, amount, operation_id: operation.id)
+        EntryPair.add_merchant_balance(i + 1, gid, amount, currency, operation_id: operation.id)
       end
     end
 
@@ -36,35 +37,40 @@ module Stern
       describe ".rebuild_gid_balance" do
         it "rebuilds every book for the given gid" do
           allow(described_class).to receive(:rebuild_book_gid_balance)
-          described_class.rebuild_gid_balance(gid)
+          described_class.rebuild_gid_balance(gid, currency)
           expect(described_class).to have_received(:rebuild_book_gid_balance)
-            .with(anything, gid).at_least(:once)
+            .with(anything, gid, currency).at_least(:once)
         end
       end
 
       describe ".rebuild_book_gid_balance" do
         it "fixes ending balances" do
-          described_class.rebuild_book_gid_balance(book_id, gid)
-          expect(Doctor).to be_ending_balance_consistent(book_id:, gid:)
+          described_class.rebuild_book_gid_balance(book_id, gid, currency)
+          expect(Doctor).to be_ending_balance_consistent(book_id:, gid:, currency:)
         end
 
         it "does not fix previously spoiled amounts" do
-          described_class.rebuild_book_gid_balance(book_id, gid)
+          described_class.rebuild_book_gid_balance(book_id, gid, currency)
           expect(Doctor).not_to be_amount_consistent
         end
 
         it "raises ArgumentError for a non-numeric book_id" do
-          expect { described_class.rebuild_book_gid_balance("x", gid) }
+          expect { described_class.rebuild_book_gid_balance("x", gid, currency) }
             .to raise_error(ArgumentError)
         end
 
         it "raises ArgumentError for an unknown numeric book_id" do
-          expect { described_class.rebuild_book_gid_balance(0, gid) }
+          expect { described_class.rebuild_book_gid_balance(0, gid, currency) }
             .to raise_error(ArgumentError)
         end
 
         it "raises ArgumentError for a non-numeric gid" do
-          expect { described_class.rebuild_book_gid_balance(book_id, "x") }
+          expect { described_class.rebuild_book_gid_balance(book_id, "x", currency) }
+            .to raise_error(ArgumentError)
+        end
+
+        it "raises ArgumentError for a non-numeric currency" do
+          expect { described_class.rebuild_book_gid_balance(book_id, gid, "x") }
             .to raise_error(ArgumentError)
         end
       end

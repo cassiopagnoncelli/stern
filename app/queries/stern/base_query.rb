@@ -34,5 +34,25 @@ module Stern
 
       book.code
     end
+
+    # Resolves a currency reference (Symbol, String, or Integer index) to its integer index.
+    # Raises ArgumentError if the currency is not in the catalog.
+    def resolve_currency!(currency)
+      raise ArgumentError, "currency must be provided" if currency.nil?
+
+      case currency
+      when Integer
+        raise ArgumentError, "unknown currency #{currency}" unless ::Stern.currencies.name(currency)
+
+        currency
+      when String, Symbol
+        code = ::Stern.currencies.code(currency.to_s.strip.upcase)
+        raise ArgumentError, "unknown currency #{currency}" unless code
+
+        code
+      else
+        raise ArgumentError, "currency must be an integer code or currency name"
+      end
+    end
   end
 end

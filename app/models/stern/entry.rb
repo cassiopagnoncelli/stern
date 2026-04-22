@@ -8,15 +8,16 @@ module Stern
     validates :book_id, presence: true
     validates :gid, presence: true
     validates :entry_pair_id, presence: true
+    validates :currency, presence: true
     validates :amount, presence: true, exclusion: { in: [ 0 ] }
-    validates :entry_pair_id, uniqueness: { scope: [ :book_id, :gid ] }
-    validates :timestamp, uniqueness: { scope: [ :book_id, :gid ] }
+    validates :entry_pair_id, uniqueness: { scope: [ :book_id, :gid, :currency ] }
+    validates :timestamp, uniqueness: { scope: [ :book_id, :gid, :currency ] }
 
     belongs_to :entry_pair, class_name: "Stern::EntryPair", optional: true
     belongs_to :book, class_name: "Stern::Book", optional: true
 
-    scope :last_entry, lambda { |book_id, gid, timestamp|
-      where(book_id:, gid:)
+    scope :last_entry, lambda { |book_id, gid, currency, timestamp|
+      where(book_id:, gid:, currency:)
         .where("timestamp <= ?", timestamp || DateTime.current)
         .order(:timestamp, :id)
         .last(1)
@@ -26,30 +27,32 @@ module Stern
       raise NotImplementedError, "Use create! instead"
     end
 
-    def self.create!(book_id:, gid:, entry_pair_id:, amount:, timestamp: nil)
+    def self.create!(book_id:, gid:, entry_pair_id:, amount:, currency:, timestamp: nil)
       ApplicationRecord.connection.execute(
         sanitized_sql(
           book_id:,
           gid:,
           entry_pair_id:,
           amount:,
+          currency:,
           timestamp:,
         ),
       )
     end
 
-    def self.sanitized_sql(book_id:, gid:, entry_pair_id:, amount:, timestamp:)
+    def self.sanitized_sql(book_id:, gid:, entry_pair_id:, amount:, currency:, timestamp:)
       sql = %{
         SELECT * FROM create_entry(
           in_book_id := :book_id,
           in_gid := :gid,
           in_entry_pair_id := :entry_pair_id,
           in_amount := :amount,
+          in_currency := :currency,
           in_timestamp_utc := :timestamp,
           verbose_mode := FALSE
         )
       }.squish
-      ApplicationRecord.sanitize_sql_array([ sql, { book_id:, gid:, entry_pair_id:, amount:, timestamp: } ])
+      ApplicationRecord.sanitize_sql_array([ sql, { book_id:, gid:, entry_pair_id:, amount:, currency:, timestamp: } ])
     end
 
     def self.destroy_all
