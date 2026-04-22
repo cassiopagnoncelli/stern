@@ -21,6 +21,13 @@ module Stern
     BATCH_SIZE = 100
     QUEUE_ITEM_TIMEOUT_IN_SECONDS = 300
 
+    # How long a SOP may sit in `:in_progress` before `clear_in_progress`
+    # considers the consumer dead and recycles it. Set longer than
+    # `QUEUE_ITEM_TIMEOUT_IN_SECONDS` because in-progress means the op is
+    # actually running — we want to give legitimate long-running ops time
+    # to finish before assuming a crash.
+    IN_PROGRESS_TIMEOUT_IN_SECONDS = 600
+
     # Max number of retries after the initial attempt before a transient
     # failure becomes the terminal `:runtime_error`. Total attempts =
     # MAX_RETRIES + 1.
@@ -62,6 +69,38 @@ module Stern
         .picked
         .where("status_time < ?", QUEUE_ITEM_TIMEOUT_IN_SECONDS.seconds.ago.utc)
         .each_update!(status: :pending, status_time: DateTime.current.utc)
+    end
+
+    # Recovers SOPs stuck in `:in_progress` past IN_PROGRESS_TIMEOUT_IN_SECONDS
+    # — typically caused by a consumer crashing mid-op (OOM, SIGKILL, pod
+    # eviction). On recovery, the crash counts as a failed attempt:
+    # retry_count bumps, status returns to `:pending` with the same
+    # exponential backoff as the StandardError rescue, and the op gets
+    # another shot on the next picker tick. If retries are exhausted, the
+    # SOP is marked `:runtime_error` terminally so it stops recycling.
+    #
+    # Intended to run periodically (host-app janitor job, alongside
+    # `clear_picked`).
+    def clear_in_progress
+      threshold = IN_PROGRESS_TIMEOUT_IN_SECONDS.seconds.ago.utc
+      ScheduledOperation.in_progress.where("status_time < ?", threshold).find_each do |sop|
+        now = DateTime.current.utc
+        if sop.retry_count < MAX_RETRIES
+          sop.update!(
+            status: :pending,
+            status_time: now,
+            after_time: now + retry_backoff(sop.retry_count),
+            retry_count: sop.retry_count + 1,
+            error_message: "recovered from stuck in_progress state",
+          )
+        else
+          sop.update!(
+            status: :runtime_error,
+            status_time: now,
+            error_message: "exceeded retries after stuck in_progress state",
+          )
+        end
+      end
     end
 
     def process_sop(scheduled_op_id)

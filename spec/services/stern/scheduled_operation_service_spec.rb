@@ -96,6 +96,80 @@ module Stern # rubocop:disable Metrics/ModuleLength
       end
     end
 
+    # Rescue for SOPs stuck in `:in_progress`. If a consumer dies mid-op
+    # (OOM, SIGKILL, pod eviction), the SOP is left in `:in_progress`
+    # forever: `clear_picked` doesn't touch it, and redelivery's retry of
+    # `process_sop` trips `CannotProcessNonPickedSopError` and is swallowed.
+    # `clear_in_progress` recycles those SOPs: on recovery, it counts the
+    # crash as a failed attempt (bumps retry_count, pushes `after_time`
+    # forward with the same backoff as the StandardError path) if retries
+    # remain; otherwise marks the SOP `:runtime_error` terminally.
+    describe ".clear_in_progress" do
+      let(:timeout) { described_class::IN_PROGRESS_TIMEOUT_IN_SECONDS }
+
+      before do
+        scheduled_op.status = :in_progress
+        scheduled_op.status_time = timeout.seconds.ago.utc - 1.minute
+        scheduled_op.save!
+      end
+
+      context "when retries remain" do
+        it "resets status back to pending (retry)" do
+          expect { service.clear_in_progress }.to change {
+            scheduled_op.reload.status
+          }.from("in_progress").to("pending")
+        end
+
+        it "increments retry_count" do
+          expect { service.clear_in_progress }.to change {
+            scheduled_op.reload.retry_count
+          }.from(0).to(1)
+        end
+
+        it "pushes after_time forward with backoff" do
+          service.clear_in_progress
+          expect(scheduled_op.reload.after_time).to be_within(2.seconds).of(30.seconds.from_now.utc)
+        end
+
+        it "updates status_time" do
+          service.clear_in_progress
+          expect(scheduled_op.reload.status_time).to be_within(1.second).of(Time.current.utc)
+        end
+
+        it "records an error_message explaining the recovery" do
+          service.clear_in_progress
+          expect(scheduled_op.reload.error_message).to match(/stuck/i)
+        end
+      end
+
+      context "when retries are exhausted" do
+        before { scheduled_op.update!(retry_count: described_class::MAX_RETRIES) }
+
+        it "marks the SOP terminally :runtime_error" do
+          expect { service.clear_in_progress }.to change {
+            scheduled_op.reload.status
+          }.from("in_progress").to("runtime_error")
+        end
+
+        it "records an error_message" do
+          service.clear_in_progress
+          expect(scheduled_op.reload.error_message).to match(/stuck/i)
+        end
+      end
+
+      it "leaves recently-updated in_progress SOPs alone" do
+        scheduled_op.update!(status_time: 1.minute.ago.utc)
+        expect { service.clear_in_progress }.not_to change { scheduled_op.reload.status }
+      end
+
+      [ :pending, :picked, :finished, :canceled, :argument_error, :runtime_error ].each do |other|
+        it "leaves #{other} SOPs alone" do
+          scheduled_op.update!(status: other)
+          expect { service.clear_in_progress }.not_to change { scheduled_op.reload.status }
+        end
+      end
+    end
+
     describe ".process_sop" do
       context "when scheduled operation not found" do
         it "raises ArgumentError" do
