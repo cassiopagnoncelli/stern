@@ -36,6 +36,13 @@ module Stern
     let(:customer_book_id) { ::Stern.chart.book_code(:customer_balance) }
 
     before { Repair.clear }
+    # Structural invariants run before Repair.clear (LIFO). Every stress test in
+    # this file now validates the record-graph shape as well as the numeric
+    # cascade — see spec/support/stern/ledger_invariants.rb.
+    after do
+      assert_entry_pairs_structurally_sound!
+      assert_operations_integral!
+    end
     after { Repair.clear }
 
     def seed_balance(gid:, currency: brl, amount:, book: :merchant_balance)

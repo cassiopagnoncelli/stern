@@ -22,26 +22,31 @@ module Stern
     BalanceQuery.new(gid:, book_id:, currency:, timestamp:).call
   end
 
+  # Look up a currency by name or index. `result:` controls the return type:
+  #   - `:index` always returns the Integer code
+  #   - `:string` always returns the canonical uppercase name
+  #   - `:both`  (default) returns the "other" representation — the Integer if
+  #     given a name, the name if given an Integer. Symmetric with the identity
+  #     that `cur(cur(x, result: :both), result: :both) == x`.
   def self.cur(name_or_index, result: :both)
     raise UnknownCurrencyError if name_or_index.blank?
     raise UnrecognizedArgument unless [ :both, :index, :string ].include?(result)
 
-    case name_or_index
-    when String
-      name = name_or_index.strip.upcase
-      code = currencies.code(name)
-      raise UnknownCurrencyError unless code
-      raise ArgumentMustBeInteger if result == :string
+    name, code =
+      case name_or_index
+      when String  then [ name_or_index.strip.upcase, nil ]
+      when Integer then [ nil, name_or_index ]
+      else raise UnknownCurrencyError
+      end
 
-      code
-    when Integer
-      name = currencies.name(name_or_index)
-      raise UnknownCurrencyError unless name
-      raise ArgumentMustBeString if result == :integer
+    code ||= currencies.code(name)
+    name ||= currencies.name(code)
+    raise UnknownCurrencyError unless code && name
 
-      name
-    else
-      raise UnknownCurrencyError
+    case result
+    when :index  then code
+    when :string then name
+    when :both   then name_or_index.is_a?(String) ? code : name
     end
   end
 end

@@ -1,7 +1,6 @@
 module Stern
   UnknownCurrencyError = Class.new(StandardError)
   UnrecognizedArgument = Class.new(StandardError)
-  ArgumentMustBeInteger = Class.new(StandardError)
   ArgumentMustBeString = Class.new(StandardError)
 
   CannotProcessNonPickedSopError = Class.new(StandardError)

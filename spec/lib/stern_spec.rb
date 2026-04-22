@@ -77,6 +77,7 @@ RSpec.describe Stern do
       end
 
       Stern.currencies.each do |name, idx|
+        # `:both` returns the OTHER representation (name ↔ index).
         it "returns the index for #{name.inspect} with result: :both" do
           expect(described_class.cur(name, result: :both)).to eq(idx)
         end
@@ -85,21 +86,26 @@ RSpec.describe Stern do
           expect(described_class.cur(idx, result: :both)).to eq(name)
         end
 
+        # `:index` ALWAYS returns the Integer code, regardless of input type.
+        # (Previously passing an integer with :index returned the String name —
+        # that surprising behavior has been corrected.)
         it "returns the index for #{name.inspect} with result: :index" do
           expect(described_class.cur(name, result: :index)).to eq(idx)
         end
 
-        it "returns the name for #{idx} with result: :index" do
-          expect(described_class.cur(idx, result: :index)).to eq(name)
+        it "returns the index for #{idx} with result: :index" do
+          expect(described_class.cur(idx, result: :index)).to eq(idx)
         end
 
+        # `:string` ALWAYS returns the canonical uppercase name, regardless of
+        # input type. (Previously passing a name with :string raised
+        # ArgumentMustBeInteger — the method now returns the normalized name.)
         it "returns the name for #{idx} with result: :string" do
           expect(described_class.cur(idx, result: :string)).to eq(name)
         end
 
-        it "raises ArgumentMustBeInteger when asking for :string from name #{name.inspect}" do
-          expect { described_class.cur(name, result: :string) }
-            .to raise_error(Stern::ArgumentMustBeInteger)
+        it "returns the name for #{name.inspect} with result: :string" do
+          expect(described_class.cur(name, result: :string)).to eq(name)
         end
       end
     end

@@ -121,10 +121,11 @@ module Stern
 
     # Coerces shared inputs common across operations (e.g. `currency` from its
     # string name to its integer code). Runs before the subclass `normalize_inputs`
-    # hook so subclasses see already-canonical values. Integer codes pass through
-    # untouched — they're already in the target representation.
+    # hook so subclasses see already-canonical values. `Stern.cur(_, result: :index)`
+    # is idempotent for integer inputs, so this is safe whether the caller passed
+    # a name or a code.
     def normalize_shared_inputs
-      self.currency = cur(currency, result: :index) if self.class.inputs.include?(:currency) && currency.is_a?(String)
+      self.currency = cur(currency, result: :index) if self.class.inputs.include?(:currency) && currency
     end
 
     # Creates the Operation audit record and dispatches to the subclass's `perform`.

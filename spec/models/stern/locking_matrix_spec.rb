@@ -40,6 +40,12 @@ module Stern
       Repair.clear
     end
 
+    # Structural invariants run before Repair.clear (LIFO) — every cross-actor
+    # concurrency test validates record-graph shape too.
+    after do
+      assert_entry_pairs_structurally_sound!
+      assert_operations_integral!
+    end
     after { Repair.clear }
 
     def seed(gid:, amount:)

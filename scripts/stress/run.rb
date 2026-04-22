@@ -64,7 +64,7 @@ opts = {
   currency: "BRL",
   seed: 1,
   reset: true,
-  run_id: Time.now.to_i,
+  run_id: Time.now.to_i
 }
 
 parser = OptionParser.new do |o|
