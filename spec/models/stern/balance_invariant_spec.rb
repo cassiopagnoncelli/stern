@@ -615,7 +615,6 @@ module Stern
         observations = Queue.new
         errors = Queue.new
 
-        t0 = Time.now
         threads = n.times.map do |i|
           Thread.new do
             ApplicationRecord.connection_pool.with_connection do
@@ -630,9 +629,6 @@ module Stern
           end
         end
         threads.each(&:join)
-        wall = Time.now - t0
-        # Useful perf signal; harmless noise if you don't read it.
-        warn "[stress 1000-thread] wall=#{wall.round(2)}s throughput=#{(n / wall).round} ops/s"
 
         error_list = []
         error_list << errors.pop until errors.empty?
