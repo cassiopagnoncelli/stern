@@ -71,5 +71,42 @@ module Stern
       expect(Entry.where(book_id:, gid:, currency:).sum(:amount)).to eq(200)
       expect(Entry.where(book_id:, gid:, currency:).order(:timestamp, :id).last.ending_balance).to eq(200)
     end
+
+    # The operation-level advisory lock (BaseOperation#acquire_advisory_locks) only
+    # protects code paths that go through `BaseOperation#call`. Direct callers of
+    # `Entry.create!` (admin tools, raw scripts, future code that forgets the
+    # convention) still see the cascade race. This test spawns concurrent
+    # `Entry.create!` calls WITHOUT any Ruby-layer lock and asserts consistency —
+    # which the current engine does not guarantee. Passing this test requires
+    # defense-in-depth inside the `create_entry` PL/pgSQL function.
+    def run_concurrent_inserts_unlocked(n:, amount:)
+      threads = n.times.map do |i|
+        Thread.new do
+          ApplicationRecord.connection_pool.with_connection do
+            ApplicationRecord.transaction do
+              sleep 0.05
+
+              pair = EntryPair.create!(
+                code: pair_code, uid: 9000 + i, amount:, currency:, operation_id: operation.id,
+              )
+              Entry.create!(book_id:, gid:, entry_pair_id: pair.id, amount:, currency:)
+            end
+          ensure
+            ApplicationRecord.connection_pool.release_connection
+          end
+        end
+      end
+      threads.each(&:join)
+    end
+
+    it "keeps the cascade consistent even for direct Entry.create! bypassing operations" do
+      seed_prior(amount: 100)
+      run_concurrent_inserts_unlocked(n: 2, amount: 50)
+
+      expect(Doctor.ending_balance_consistent?(book_id:, gid:, currency:)).to be(true)
+      ending_balances = Entry.where(book_id:, gid:, currency:).order(:timestamp, :id).pluck(:ending_balance)
+      # Correct cascade: 100, 150, 200. Race produces 100, 150, 150.
+      expect(ending_balances.last).to eq(200)
+    end
   end
 end

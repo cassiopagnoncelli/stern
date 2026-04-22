@@ -1,4 +1,4 @@
-\restrict XyEM5NLDjMP3FNE2TyO7R9xQVhLf947chN5rm4mffD0Ij6iKfBatIMrblnG6HAN
+\restrict sBIbW0KTDhYN9ABRQCSarNzni8DfHBpGdnhWV2jmSoCqiHzrVBqYYpPFo2Zvk1D
 
 -- Dumped from database version 17.9 (Postgres.app)
 -- Dumped by pg_dump version 17.9 (Postgres.app)
@@ -38,147 +38,6 @@ CREATE TABLE public.stern_entries (
 
 
 --
--- Name: create_entry(integer, bigint, bigint, integer, bigint, timestamp without time zone, boolean); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.create_entry(in_book_id integer, in_gid bigint, in_entry_pair_id bigint, in_currency integer, in_amount bigint, in_timestamp_utc timestamp without time zone DEFAULT NULL::timestamp without time zone, verbose_mode boolean DEFAULT false) RETURNS public.stern_entries
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-  entry stern_entries;
-  ts TIMESTAMP(6) WITHOUT TIME ZONE;
-  cascade BOOLEAN;
-BEGIN
-  IF in_book_id IS NULL OR in_gid IS NULL OR in_entry_pair_id IS NULL
-      OR in_currency IS NULL OR in_amount IS NULL OR in_amount = 0 THEN
-    RAISE EXCEPTION 'book_id, gid, entry_pair_id, currency should be defined, amount should be non-zero integer';
-  END IF;
-
-  ts := CAST(timezone('UTC', clock_timestamp()) AS TIMESTAMP(6) WITHOUT TIME ZONE);
-
-  IF in_timestamp_utc IS NOT NULL AND in_timestamp_utc > ts THEN
-    RAISE EXCEPTION 'timestamp %s cannot be in the future', in_timestamp_utc;
-  END IF;
-
-  entry.book_id := in_book_id;
-  entry.gid := in_gid;
-  entry.entry_pair_id := in_entry_pair_id;
-  entry.currency := in_currency;
-  entry.amount := in_amount;
-  entry.created_at := ts;
-  entry.updated_at := ts;
-
-  IF in_timestamp_utc IS NULL THEN
-    cascade := FALSE;
-    entry.timestamp := ts;
-    IF verbose_mode THEN
-      RAISE DEBUG '-- entry.timestamp is null and was set to be %', entry.timestamp;
-    END IF;
-  ELSE
-    cascade := TRUE;
-    entry.timestamp := in_timestamp_utc::timestamp WITH TIME ZONE AT TIME ZONE 'UTC';
-    IF verbose_mode THEN
-      RAISE DEBUG '-- entry.timestamp = %', entry.timestamp;
-    END IF;
-  END IF;
-
-  entry.ending_balance := COALESCE((
-    SELECT COALESCE(stern_entries.ending_balance, 0)
-    FROM stern_entries
-    WHERE book_id = entry.book_id
-      AND gid = entry.gid
-      AND currency = entry.currency
-      AND timestamp < entry.timestamp
-    ORDER BY timestamp DESC, id DESC
-    LIMIT 1
-  ), 0) + entry.amount;
-
-  IF verbose_mode THEN
-    RAISE DEBUG '-- last ending_balance is %', (
-      SELECT timestamp
-      FROM stern_entries
-      WHERE book_id = entry.book_id
-        AND gid = entry.gid
-        AND currency = entry.currency
-        AND timestamp < entry.timestamp
-      ORDER BY timestamp DESC, id DESC
-      LIMIT 1
-    );
-    RAISE DEBUG '-- ending_balance for the new record is %', entry.ending_balance;
-  END IF;
-
-  INSERT INTO stern_entries (
-    book_id,
-    gid,
-    entry_pair_id,
-    currency,
-    amount,
-    ending_balance,
-    timestamp,
-    created_at,
-    updated_at
-  ) VALUES (
-    entry.book_id,
-    entry.gid,
-    entry.entry_pair_id,
-    entry.currency,
-    entry.amount,
-    entry.ending_balance,
-    entry.timestamp,
-    entry.created_at,
-    entry.updated_at
-  )
-  RETURNING * INTO entry;
-
-  IF verbose_mode THEN
-    RAISE DEBUG '-- row is now recorded';
-  END IF;
-
-  IF cascade THEN
-    IF verbose_mode THEN
-      RAISE DEBUG '-- with timestamp, ending_balance will be cascaded for the next records';
-      RAISE DEBUG '-- (book_id, gid, currency) has % records, % records will be updated', (
-        SELECT COUNT(*) FROM (
-          SELECT
-            id,
-            (SUM(amount) OVER (ORDER BY timestamp)) AS new_ending_balance
-          FROM stern_entries
-          WHERE book_id = entry.book_id
-            AND gid = entry.gid
-            AND currency = entry.currency
-          ORDER BY timestamp, id
-        ) x
-      ), (
-        SELECT COUNT(*)
-        FROM stern_entries
-        WHERE book_id = entry.book_id
-          AND gid = entry.gid
-          AND currency = entry.currency
-          AND timestamp > entry.timestamp
-      );
-    END IF;
-
-    UPDATE stern_entries
-    SET ending_balance = mirror.new_ending_balance
-    FROM (
-      SELECT
-        id,
-        (SUM(amount) OVER (ORDER BY timestamp)) AS new_ending_balance
-      FROM stern_entries
-      WHERE book_id = entry.book_id
-        AND gid = entry.gid
-        AND currency = entry.currency
-      ORDER BY timestamp, id
-    ) mirror
-    WHERE stern_entries.id = mirror.id AND stern_entries.timestamp > entry.timestamp;
-  END IF;
-
-  RETURN entry;
-END;
-$$;
-
-
---
 -- Name: create_entry(integer, bigint, bigint, bigint, integer, timestamp without time zone, boolean); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -194,6 +53,15 @@ BEGIN
       OR in_amount IS NULL OR in_amount = 0 OR in_currency IS NULL THEN
     RAISE EXCEPTION 'book_id, gid, entry_pair_id, currency should be defined, amount should be non-zero integer';
   END IF;
+
+  -- Defense-in-depth: serialize cascade computation on this (book_id, gid, currency)
+  -- tuple against any other concurrent writer, even if the caller bypassed the
+  -- operation-level advisory lock in BaseOperation#call. Transaction-scoped;
+  -- releases at commit/rollback. Same hash shape as BaseOperation#acquire_advisory_locks
+  -- so the two layers grab the same lock and are reentrant.
+  PERFORM pg_advisory_xact_lock(
+    hashtextextended(format('stern:%s:%s:%s', in_book_id, in_gid, in_currency), 0)
+  );
 
   ts := CAST(timezone('UTC', clock_timestamp()) AS TIMESTAMP(6) WITHOUT TIME ZONE);
 
@@ -334,6 +202,14 @@ BEGIN
   END IF;
 
   SELECT * INTO entry FROM stern_entries WHERE id = in_id LIMIT 1;
+
+  -- Defense-in-depth: serialize cascade recomputation on this
+  -- (book_id, gid, currency) tuple against concurrent writers. Taken after the
+  -- initial SELECT because we need the row's columns to derive the lock key.
+  -- Transaction-scoped; releases at commit/rollback.
+  PERFORM pg_advisory_xact_lock(
+    hashtextextended(format('stern:%s:%s:%s', entry.book_id, entry.gid, entry.currency), 0)
+  );
 
   RAISE NOTICE 'Selected row: %', format('%I', entry);
 
@@ -719,11 +595,12 @@ CREATE INDEX index_stern_scheduled_operations_on_status ON public.stern_schedule
 -- PostgreSQL database dump complete
 --
 
-\unrestrict XyEM5NLDjMP3FNE2TyO7R9xQVhLf947chN5rm4mffD0Ij6iKfBatIMrblnG6HAN
+\unrestrict sBIbW0KTDhYN9ABRQCSarNzni8DfHBpGdnhWV2jmSoCqiHzrVBqYYpPFo2Zvk1D
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260422120004'),
 ('20260422120003'),
 ('20260422120002'),
 ('20260422120001'),
