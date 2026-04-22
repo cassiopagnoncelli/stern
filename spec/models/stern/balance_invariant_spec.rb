@@ -20,6 +20,12 @@ require "rails_helper"
 # This file exercises the locking primitives against adversarial concurrent
 # loads and asserts S1, S2, S3 via `assert_sacred!` always; S4 in targeted
 # monotonic tests; S5 in the withdraw/overdraft test.
+#
+# S5 here is the APP-level path: each operation pre-checks the balance and
+# raises `InsufficientFunds` before writing. The DB-level backstop — a chart
+# flag `non_negative: true` that pushes the check into `create_entry` so
+# forgetful operations also can't corrupt the invariant — is covered in
+# `spec/models/stern/non_negative_constraint_spec.rb`.
 module Stern
   RSpec.describe "Balance invariants under concurrent load", type: :model do
     self.use_transactional_tests = false
