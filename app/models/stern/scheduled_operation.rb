@@ -1,5 +1,7 @@
 module Stern
   class ScheduledOperation < ApplicationRecord
+    include EachUpdate
+
     enum :status, {
       pending: 0,
       picked: 1,
