@@ -1,6 +1,5 @@
 FactoryBot.define do
   factory :book, class: "Stern::Book" do
-    id { 0 }
-    name { "customer_balance" }
+    sequence(:name) { |n| "factory_book_#{n}" }
   end
 end

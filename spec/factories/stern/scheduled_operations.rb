@@ -1,9 +1,9 @@
 FactoryBot.define do
   factory :scheduled_operation, class: "Stern::ScheduledOperation" do
-    name { "scheduled_operation" }
-    params { { payment_id: 888, merchant_id: 1101, amount: 9900, fee: 250 } }
-    after_time { "2023-05-24 09:39:50" }
+    name { "ChargePix" }
+    params { { charge_id: 1, merchant_id: 1101, customer_id: 2, amount: 9900, currency: "usd" } }
+    after_time { 1.minute.ago }
     status { :pending }
-    status_time { "2023-05-24 09:39:50" }
+    status_time { Time.current }
   end
 end
