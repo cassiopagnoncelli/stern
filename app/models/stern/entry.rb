@@ -15,13 +15,6 @@ module Stern
     belongs_to :entry_pair, class_name: "Stern::EntryPair", optional: true
     belongs_to :book, class_name: "Stern::Book", optional: true
 
-    before_create do
-      raise ArgumentError, "amount must be non-zero integer" if amount.blank? || amount.zero?
-      raise ArgumentError, "book_id undefined" if book_id.blank?
-      raise ArgumentError, "gid undefined" if gid.blank?
-      raise ArgumentError, "entry_pair_id undefined" if entry_pair_id.blank?
-    end
-
     scope :last_entry, lambda { |book_id, gid, timestamp|
       where(book_id:, gid:)
         .where("timestamp <= ?", timestamp || DateTime.current)
