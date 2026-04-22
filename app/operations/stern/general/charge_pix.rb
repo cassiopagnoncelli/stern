@@ -21,11 +21,5 @@ module Stern
 
       EntryPair.add_pp_charge_pix(charge_id, merchant_id, amount, currency, operation_id:)
     end
-
-    private
-
-    def normalize_inputs
-      self.currency = cur(currency, result: :index) if currency
-    end
   end
 end

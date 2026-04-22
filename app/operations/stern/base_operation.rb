@@ -32,10 +32,12 @@ module Stern
       raise ArgumentError, "unknown inputs for #{self.class.name}: #{extra}" if extra.any?
 
       self.class.inputs.each { |n| public_send("#{n}=", kwargs[n]) }
+      normalize_shared_inputs
       normalize_inputs
     end
 
-    # Hook for subclasses to coerce/transform assigned inputs.
+    # Hook for subclasses to coerce/transform assigned inputs. Runs after
+    # `normalize_shared_inputs`, so subclasses don't need to call `super`.
     def normalize_inputs; end
 
     # Declares the `(book, gid, currency)` tuples this operation reads from or writes
@@ -105,6 +107,14 @@ module Stern
     end
 
     private
+
+    # Coerces shared inputs common across operations (e.g. `currency` from its
+    # string name to its integer code). Runs before the subclass `normalize_inputs`
+    # hook so subclasses see already-canonical values. Integer codes pass through
+    # untouched — they're already in the target representation.
+    def normalize_shared_inputs
+      self.currency = cur(currency, result: :index) if self.class.inputs.include?(:currency) && currency.is_a?(String)
+    end
 
     # Creates the Operation audit record and dispatches to the subclass's `perform`.
     # Mutates `self.operation` so the subclass can access it via attr_accessor.

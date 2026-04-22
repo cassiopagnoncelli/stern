@@ -41,7 +41,7 @@ module Stern
       end
     end
 
-    describe "#normalize_inputs" do
+    describe "currency normalization" do
       it "converts a currency string to its integer index" do
         op = described_class.new(**valid_inputs(currency: "brl"))
         expect(op.currency).to eq(::Stern.cur("BRL"))

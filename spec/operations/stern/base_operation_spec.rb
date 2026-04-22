@@ -67,6 +67,55 @@ module Stern
         end
         expect(klass.new(value: 5).value).to eq(10)
       end
+
+      context "with a :currency input" do
+        let(:klass) { Class.new(described_class) { inputs :currency } }
+
+        it "coerces a currency string to its integer code" do
+          expect(klass.new(currency: "BRL").currency).to eq(::Stern.cur("BRL"))
+        end
+
+        it "is case- and whitespace-insensitive" do
+          expect(klass.new(currency: " usd ").currency).to eq(::Stern.cur("USD"))
+        end
+
+        it "passes integer codes through untouched" do
+          code = ::Stern.cur("BRL")
+          expect(klass.new(currency: code).currency).to eq(code)
+        end
+
+        it "leaves nil currency as nil" do
+          expect(klass.new(currency: nil).currency).to be_nil
+        end
+
+        it "raises on an unknown currency" do
+          expect { klass.new(currency: "ZZZ") }.to raise_error(UnknownCurrencyError)
+        end
+
+        it "runs before the subclass normalize_inputs hook" do
+          subclass = Class.new(described_class) do
+            inputs :currency
+            attr_reader :currency_seen_by_hook
+            def normalize_inputs
+              @currency_seen_by_hook = currency
+            end
+          end
+          op = subclass.new(currency: "BRL")
+          expect(op.currency_seen_by_hook).to eq(::Stern.cur("BRL"))
+        end
+      end
+
+      context "without a :currency input" do
+        it "does not touch an attribute that happens to be named currency" do
+          klass = Class.new(described_class) do
+            inputs :amount
+            attr_accessor :currency
+          end
+          op = klass.new(amount: 1)
+          op.currency = "BRL"
+          expect(op.currency).to eq("BRL")
+        end
+      end
     end
 
     describe "#operation_params" do

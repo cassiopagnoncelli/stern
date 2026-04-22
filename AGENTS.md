@@ -53,15 +53,14 @@ module Stern
       raise ArgumentError if invalid? || operation_id.blank?
       EntryPair.add_pp_charge_pix(charge_id, merchant_id, amount, currency, operation_id:)
     end
-
-    private
-
-    def normalize_inputs
-      self.currency = cur(currency, result: :index) if currency
-    end
   end
 end
 ```
+
+Declaring `:currency` as an input is all you need — `BaseOperation` normalizes
+it from its string name to its integer code automatically, before `perform` and
+`target_tuples` run. Override `normalize_inputs` only for op-specific coercion
+not covered by the shared normalizer.
 
 ## The `target_tuples` contract
 
@@ -76,8 +75,9 @@ Formats accepted per triple:
 
 - Book can be a Symbol (`:merchant_balance`), String (`"merchant_balance"`),
   or Integer book code. Symbols/Strings are resolved through `Stern.chart`.
-- `gid` and `currency` must be integers. Currencies are integer codes — run
-  the input string through `cur(name, result: :index)` in `normalize_inputs`.
+- `gid` and `currency` must be integers. Currencies are integer codes — if
+  `:currency` is declared as an input, `BaseOperation` normalizes the string
+  name to its integer code before `target_tuples` is consulted.
 
 ### Helpers
 
