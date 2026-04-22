@@ -21,6 +21,22 @@ module Stern
     BATCH_SIZE = 100
     QUEUE_ITEM_TIMEOUT_IN_SECONDS = 300
 
+    # How long a SOP may sit in `:in_progress` before `clear_in_progress`
+    # considers the consumer dead and recycles it. Set longer than
+    # `QUEUE_ITEM_TIMEOUT_IN_SECONDS` because in-progress means the op is
+    # actually running — we want to give legitimate long-running ops time
+    # to finish before assuming a crash.
+    IN_PROGRESS_TIMEOUT_IN_SECONDS = 600
+
+    # Max number of retries after the initial attempt before a transient
+    # failure becomes the terminal `:runtime_error`. Total attempts =
+    # MAX_RETRIES + 1.
+    MAX_RETRIES = 5
+
+    # Base backoff for the first retry, in seconds. Each subsequent retry
+    # doubles it (exponential): 30s, 60s, 2m, 4m, 8m for retry_count 0..4.
+    RETRY_BACKOFF_BASE_SECONDS = 30
+
     def list
       picked_list = ScheduledOperation.picked.ids
       picked_list = enqueue_list if picked_list.empty?
@@ -28,9 +44,23 @@ module Stern
     end
 
     def enqueue_list(size = BATCH_SIZE)
-      ScheduledOperation.pending.where("after_time <= NOW()").limit(size).then do |batch|
-        batch.each_update!(status: :picked, status_time: DateTime.current.utc)
-        batch.collect(&:id)
+      ScheduledOperation.transaction do
+        ids = ScheduledOperation
+          .pending
+          .where("after_time <= NOW()")
+          .order(:id)
+          .limit(size)
+          .lock("FOR UPDATE SKIP LOCKED")
+          .pluck(:id)
+
+        if ids.any?
+          ScheduledOperation.where(id: ids).update_all(
+            status: ScheduledOperation.statuses[:picked],
+            status_time: DateTime.current.utc,
+          )
+        end
+
+        ids
       end
     end
 
@@ -39,6 +69,38 @@ module Stern
         .picked
         .where("status_time < ?", QUEUE_ITEM_TIMEOUT_IN_SECONDS.seconds.ago.utc)
         .each_update!(status: :pending, status_time: DateTime.current.utc)
+    end
+
+    # Recovers SOPs stuck in `:in_progress` past IN_PROGRESS_TIMEOUT_IN_SECONDS
+    # — typically caused by a consumer crashing mid-op (OOM, SIGKILL, pod
+    # eviction). On recovery, the crash counts as a failed attempt:
+    # retry_count bumps, status returns to `:pending` with the same
+    # exponential backoff as the StandardError rescue, and the op gets
+    # another shot on the next picker tick. If retries are exhausted, the
+    # SOP is marked `:runtime_error` terminally so it stops recycling.
+    #
+    # Intended to run periodically (host-app janitor job, alongside
+    # `clear_picked`).
+    def clear_in_progress
+      threshold = IN_PROGRESS_TIMEOUT_IN_SECONDS.seconds.ago.utc
+      ScheduledOperation.in_progress.where("status_time < ?", threshold).find_each do |sop|
+        now = DateTime.current.utc
+        if sop.retry_count < MAX_RETRIES
+          sop.update!(
+            status: :pending,
+            status_time: now,
+            after_time: now + retry_backoff(sop.retry_count),
+            retry_count: sop.retry_count + 1,
+            error_message: "recovered from stuck in_progress state",
+          )
+        else
+          sop.update!(
+            status: :runtime_error,
+            status_time: now,
+            error_message: "exceeded retries after stuck in_progress state",
+          )
+        end
+      end
     end
 
     def process_sop(scheduled_op_id)
@@ -58,7 +120,7 @@ module Stern
     def process_operation(operation, scheduled_op)
       raise ArgumentError, "sop not in progress" unless scheduled_op.in_progress?
 
-      operation.call
+      operation.call(idem_key: sop_idem_key(scheduled_op))
 
       scheduled_op.update!(status: :finished, status_time: DateTime.current.utc)
     rescue ArgumentError => e
@@ -68,11 +130,37 @@ module Stern
         error_message: e.message,
       )
     rescue StandardError => e
-      scheduled_op.update!(
-        status: :runtime_error,
-        status_time: DateTime.current.utc,
-        error_message: e.message,
-      )
+      if scheduled_op.retry_count < MAX_RETRIES
+        now = DateTime.current.utc
+        scheduled_op.update!(
+          status: :pending,
+          status_time: now,
+          after_time: now + retry_backoff(scheduled_op.retry_count),
+          retry_count: scheduled_op.retry_count + 1,
+          error_message: e.message,
+        )
+      else
+        scheduled_op.update!(
+          status: :runtime_error,
+          status_time: DateTime.current.utc,
+          error_message: e.message,
+        )
+      end
+    end
+
+    # Exponential backoff for the (retry_count)-th retry (0-indexed):
+    # 30s, 60s, 2m, 4m, 8m for retry_count 0..4.
+    def retry_backoff(retry_count)
+      RETRY_BACKOFF_BASE_SECONDS * (2**retry_count)
+    end
+
+    # Stable per-SOP idempotency key, fed to `BaseOperation#call`. Any repeat
+    # `process_sop` on the same SOP (at-least-once redelivery, manual re-pick,
+    # clear_picked race) short-circuits to the existing Operation row instead
+    # of re-running perform. Zero-padded so small ids still clear the
+    # `Operation#idem_key` length floor of 8.
+    def sop_idem_key(scheduled_op)
+      "sop-#{scheduled_op.id.to_s.rjust(8, '0')}"
     end
   end
 end

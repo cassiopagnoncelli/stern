@@ -22,6 +22,7 @@ module Stern
       self.params ||= {}
       self.status ||= :pending
       self.status_time ||= DateTime.current.utc
+      self.retry_count ||= 0
     end
 
     def self.build(name:, params:, after_time:, status: :pending, status_time: DateTime.current.utc)
