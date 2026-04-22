@@ -13,13 +13,14 @@ engine. Stern only exposes the service API:
 
 | Method | Purpose | Where it's called |
 | --- | --- | --- |
-| `Stern::ScheduledOperationService.enqueue_list` | returns SOP ids ready to pick (and flips them to `:picked`) | host app's picker job |
-| `Stern::ScheduledOperationService.process_sop(id)` | runs one SOP end-to-end, updates its status | host app's consumer |
+| `Stern::ScheduledOperationService.enqueue_list` | reserves due SOPs with `SELECT ... FOR UPDATE SKIP LOCKED`, flips them to `:picked`, returns their ids | host app's picker job |
+| `Stern::ScheduledOperationService.process_sop(id)` | runs one SOP end-to-end; op-level errors land the SOP in `:pending`-with-backoff (retryable) or `:argument_error` / `:runtime_error` (terminal) | host app's consumer |
 | `Stern::ScheduledOperationService.clear_picked` | resets SOPs stuck in `:picked` for > 300s back to `:pending` | host app's janitor job |
+| `Stern::ScheduledOperationService.clear_in_progress` | recycles SOPs stuck in `:in_progress` for > 600s (consumer crashed mid-op); bumps `retry_count` and backs off, or terminally marks `:runtime_error` past `MAX_RETRIES` | host app's janitor job |
 
 Stern has no dependency on `sidekiq`, `sidekiq-cron`, or `bunny` — those are
 host-app choices. The integration can be swapped for any equivalent stack
-(ActiveJob + solid_queue, cron + `rails runner`, SQS + ECS, etc.); the three
+(ActiveJob + solid_queue, cron + `rails runner`, SQS + ECS, etc.); the four
 methods above are the only contract.
 
 Service source: [app/services/stern/scheduled_operation_service.rb](../app/services/stern/scheduled_operation_service.rb).
@@ -111,8 +112,14 @@ end
 
 ## Host-app janitor job
 
-Resets SOPs stuck in `:picked` past `QUEUE_ITEM_TIMEOUT_IN_SECONDS` (300s)
-back to `:pending` so they reappear on the next pick.
+Runs two recoveries. `clear_picked` resets SOPs stuck in `:picked` past
+`QUEUE_ITEM_TIMEOUT_IN_SECONDS` (300s) — published to RabbitMQ but never
+acked by a consumer, so safe to re-publish. `clear_in_progress` handles
+SOPs stuck in `:in_progress` past `IN_PROGRESS_TIMEOUT_IN_SECONDS` (600s) —
+a consumer started the op and then died (OOM, SIGKILL, pod eviction). The
+crash counts as a failed attempt, so `retry_count` bumps and the SOP goes
+back to `:pending` with the same exponential backoff the `StandardError`
+rescue uses; past `MAX_RETRIES` it settles in `:runtime_error`.
 
 ```ruby
 # your_app/app/jobs/sop_janitor_job.rb
@@ -122,6 +129,7 @@ class SopJanitorJob
 
   def perform
     Stern::ScheduledOperationService.clear_picked
+    Stern::ScheduledOperationService.clear_in_progress
   end
 end
 ```
@@ -187,29 +195,50 @@ them; `prefetch` keeps one consumer from starving the others.
 only job is **ack after that commit** — the `rescue` block above gives you
 exactly that, so an OS-level kill redelivers the message.
 
-## Known race: double-picking inside `enqueue_list`
+### Two layers of retry
 
-Two pickers ticking in parallel can both read the same pending rows and both
-`UPDATE status = :picked` before the other commits. Each publishes the same
-id, and two consumers run `process_sop` on it — two Operation rows, two
-EntryPair sets.
+Business-level errors never reach the consumer's generic `rescue => e`
+branch. `process_operation` catches them internally: `ArgumentError` lands
+the SOP terminally in `:argument_error`; `StandardError` pushes it back to
+`:pending` with exponential backoff (30s, 60s, 2m, 4m, 8m) and an
+incremented `retry_count`, up to `MAX_RETRIES = 5`, after which it settles
+in `:runtime_error`. The next picker tick re-publishes; redelivery is
+idempotent via the propagated `idem_key` (see "Picker hardening" below).
 
-Called out in [TODO.md](../TODO.md); **not fixed at the time of writing**.
-Two complementary fixes:
+The consumer's `nack`-and-redeliver path therefore fires only for
+infrastructure failures — OS kill, DB connection loss, network blips
+between Stern and Postgres. RabbitMQ's redeliver + `ack-after-commit` gives
+the guarantee there; Stern's own retry loop gives it for op-level
+transient failures. The two layers don't churn each other: op errors stay
+in Stern, infra errors stay in RabbitMQ.
 
-1. **Exclusive pick in the same statement.** Change [`enqueue_list`](../app/services/stern/scheduled_operation_service.rb:30)
-   to use `SELECT ... FOR UPDATE SKIP LOCKED` so concurrent pickers partition
-   the pending set.
+## Picker hardening
 
-2. **Idempotency at the write.** Propagate an `idem_key` (e.g.
-   `"sop-#{sop.id}"`) into `op.call` inside `process_sop`. Even if a duplicate
-   slips past RabbitMQ or the picker, only the first write commits —
-   `BaseOperation#find_existing_operation` already short-circuits matching
-   keys ([app/operations/stern/base_operation.rb:172](../app/operations/stern/base_operation.rb:172)).
+Two pickers ticking in parallel would otherwise both read the same pending
+rows and both `UPDATE status = :picked` before either commits, publishing
+the same id twice and running `process_sop` twice — two Operation rows,
+two EntryPair sets.
 
-Until (1) ships, rely on (2) plus ack-after-commit for safety. A duplicate
-publish then yields one committed Operation and one redundant `:finished`
-update; no ledger corruption.
+Two fixes are in place, complementary:
+
+1. **Exclusive pick in the same statement.** [`enqueue_list`](../app/services/stern/scheduled_operation_service.rb:39)
+   reserves ids inside a transaction with `SELECT ... FOR UPDATE SKIP
+   LOCKED`, so concurrent pickers partition the pending set — worker B's
+   SELECT skips rows worker A already locked.
+
+2. **Idempotency at the write.** [`process_sop`](../app/services/stern/scheduled_operation_service.rb:67)
+   passes a stable `idem_key` (`"sop-<zero-padded-id>"`) into
+   `BaseOperation#call`. Any repeat `process_sop` on the same SOP
+   short-circuits via
+   [`find_existing_operation`](../app/operations/stern/base_operation.rb:172);
+   the race between two concurrent callers that both pass that check is
+   resolved by a partial unique index on `idem_key` + a `RecordNotUnique`
+   rescue in [`BaseOperation#call`](../app/operations/stern/base_operation.rb:71)
+   that returns the winner's id.
+
+Belt-and-braces: (1) prevents the double-publish at the picker, and (2)
+keeps a duplicate benign even if it slips through RabbitMQ redelivery or a
+`clear_picked`-then-re-pick flow.
 
 ## Verification from the host app
 
