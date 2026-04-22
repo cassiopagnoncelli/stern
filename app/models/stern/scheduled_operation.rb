@@ -57,7 +57,7 @@ module Stern
       else :white
       end
 
-      colorize_output([
+      AnsiPrint.puts_colorized([
         [ "ScheduledOperation", :white ],
         [ "#{format("%5s", id)}", :white, :bold ],
         [ "|", :white ],

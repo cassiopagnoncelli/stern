@@ -22,7 +22,7 @@ module Stern
       params_flat = flatten_params(params).map { |k, v| "#{k}:#{v}" }.join(" ") if params
       params_flat ||= "N/A"
 
-      colorize_output([
+      AnsiPrint.puts_colorized([
         [ "Operation", :white ],
         [ "#{format("%5s", id)}", :white, :bold ],
         [ "|", :white ],

@@ -79,7 +79,7 @@ module Stern
       amount_color = amount.positive? ? :green : (amount < 0 ? :red : :white)
       balance_color = ending_balance.positive? ? :green : (ending_balance < 0 ? :red : :white)
       book_nam = ::Stern.chart.book_name(book_id)
-      colorize_output([
+      AnsiPrint.puts_colorized([
         [ "Entry", :white ],
         [ "#{format("%5s", id)}", :white, :bold ],
         [ "|", :white ],

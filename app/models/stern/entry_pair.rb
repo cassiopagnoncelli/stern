@@ -57,7 +57,7 @@ module Stern
     def pp
       amount_color = amount > 0 ? :green : (amount < 0 ? :red : :white)
 
-      colorize_output([
+      AnsiPrint.puts_colorized([
         [ "EntryPair", :white ],
         [ "#{format("%5s", id)}", :white, :bold ],
         [ "|", :white ],
