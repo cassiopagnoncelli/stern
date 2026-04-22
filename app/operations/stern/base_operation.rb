@@ -17,6 +17,27 @@ module Stern
   class BaseOperation
     attr_accessor :operation
 
+    class << self
+      def inputs(*names)
+        @inputs ||= []
+        return @inputs if names.empty?
+
+        @inputs.concat(names)
+        attr_accessor(*names)
+      end
+    end
+
+    def initialize(**kwargs)
+      extra = kwargs.keys - self.class.inputs
+      raise ArgumentError, "unknown inputs for #{self.class.name}: #{extra}" if extra.any?
+
+      self.class.inputs.each { |n| public_send("#{n}=", kwargs[n]) }
+      normalize_inputs
+    end
+
+    # Hook for subclasses to coerce/transform assigned inputs.
+    def normalize_inputs; end
+
     def cur(name_or_index, result: :both)
       ::Stern.cur(name_or_index, result:)
     end
@@ -91,9 +112,7 @@ module Stern
     end
 
     def operation_params
-      instance_variables.to_h do |ivar|
-        [ ivar.to_s.delete_prefix("@"), instance_variable_get(ivar) ]
-      end
+      self.class.inputs.to_h { |n| [ n.to_s, public_send(n) ] }
     end
 
     # Looks up an Operation by idem_key. Returns the matching Operation if params also
