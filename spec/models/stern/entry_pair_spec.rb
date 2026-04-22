@@ -73,5 +73,58 @@ module Stern
         end
       end
     end
+
+    describe "currency stamping on entries" do
+      it "stamps both the add and sub entries with the given currency" do
+        entry_pair_id
+        entries = Entry.where(entry_pair_id:).order(:amount)
+        expect(entries.pluck(:currency).uniq).to eq([ currency ])
+      end
+    end
+
+    describe "currency-partitioned running balances" do
+      let(:usd) { ::Stern.cur("USD") }
+      let(:pair) { ::Stern.chart.entry_pairs.values.first }
+
+      it "keeps independent ending_balance across currencies on the add-book" do
+        described_class.double_entry_add(pair.name, gid, 1, pair.book_add, pair.book_sub, 100, currency, DateTime.current, operation_id)
+        described_class.double_entry_add(pair.name, gid, 2, pair.book_add, pair.book_sub, 300, usd, DateTime.current, operation_id)
+        described_class.double_entry_add(pair.name, gid, 3, pair.book_add, pair.book_sub, 25, currency, DateTime.current, operation_id)
+
+        add_book_id = ::Stern.chart.book_code(pair.book_add)
+        brl = Entry.where(book_id: add_book_id, gid:, currency:).order(:timestamp, :id).pluck(:ending_balance)
+        usd_balances = Entry.where(book_id: add_book_id, gid:, currency: usd).order(:timestamp, :id).pluck(:ending_balance)
+        expect(brl).to eq([ 100, 125 ])
+        expect(usd_balances).to eq([ 300 ])
+      end
+
+      it "keeps independent ending_balance across currencies on the sub-book" do
+        described_class.double_entry_add(pair.name, gid, 4, pair.book_add, pair.book_sub, 100, currency, DateTime.current, operation_id)
+        described_class.double_entry_add(pair.name, gid, 5, pair.book_add, pair.book_sub, 300, usd, DateTime.current, operation_id)
+
+        sub_book_id = ::Stern.chart.book_code(pair.book_sub)
+        brl = Entry.where(book_id: sub_book_id, gid:, currency:).pluck(:ending_balance)
+        usd_balances = Entry.where(book_id: sub_book_id, gid:, currency: usd).pluck(:ending_balance)
+        expect(brl).to eq([ -100 ])
+        expect(usd_balances).to eq([ -300 ])
+      end
+    end
+
+    describe ".add_<pair_name> via generated singleton" do
+      let(:pair) { ::Stern.chart.entry_pairs.values.first }
+      let(:method_name) { :"add_#{pair.name}" }
+
+      it "requires currency as a positional argument" do
+        expect {
+          described_class.public_send(method_name, 101, gid, 100, operation_id:)
+        }.to raise_error(ArgumentError)
+      end
+
+      it "accepts an integer currency code" do
+        expect {
+          described_class.public_send(method_name, 101, gid, 100, currency, operation_id:)
+        }.to change(Entry, :count).by(2)
+      end
+    end
   end
 end

@@ -97,6 +97,83 @@ module Stern
       it "returns a record" do
         expect(described_class.last_entry(1, 1101, currency, DateTime.current).count).to be(1)
       end
+
+      context "with entries in multiple currencies" do
+        let(:usd) { ::Stern.cur("USD") }
+
+        before do
+          described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 2, amount: 200, currency: usd)
+        end
+
+        it "scopes to the requested currency" do
+          brl_row = described_class.last_entry(1, 1101, currency, DateTime.current).first
+          usd_row = described_class.last_entry(1, 1101, usd, DateTime.current).first
+          expect(brl_row.amount).to eq(100)
+          expect(usd_row.amount).to eq(200)
+        end
+
+        it "returns no rows for a currency with no entries" do
+          eur = ::Stern.cur("EUR")
+          expect(described_class.last_entry(1, 1101, eur, DateTime.current).count).to eq(0)
+        end
+      end
+    end
+
+    describe "running balance" do
+      let(:usd) { ::Stern.cur("USD") }
+
+      before { Repair.clear }
+
+      it "starts each currency's ending_balance from zero" do
+        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 1, amount: 100, currency:)
+        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 2, amount: 200, currency: usd)
+
+        expect(described_class.find_by!(currency:).ending_balance).to eq(100)
+        expect(described_class.find_by!(currency: usd).ending_balance).to eq(200)
+      end
+
+      it "sums within a currency without leaking into another currency" do
+        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 1, amount: 100, currency:)
+        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 2, amount: 200, currency: usd)
+        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 3, amount: 50, currency:)
+        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 4, amount: -80, currency: usd)
+
+        brl_balances = described_class.where(currency:).order(:timestamp, :id).pluck(:ending_balance)
+        usd_balances = described_class.where(currency: usd).order(:timestamp, :id).pluck(:ending_balance)
+        expect(brl_balances).to eq([ 100, 150 ])
+        expect(usd_balances).to eq([ 200, 120 ])
+      end
+
+      it "keeps (book_id, gid) partitioned separately by currency for same-ts uniqueness" do
+        ts = DateTime.current - 1.hour
+        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 1, amount: 100, currency:, timestamp: ts)
+        expect {
+          described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 2, amount: 200, currency: usd, timestamp: ts)
+        }.to change(described_class, :count).by(1)
+      end
+
+      it "rejects duplicate (book_id, gid, currency, timestamp)" do
+        ts = DateTime.current - 1.hour
+        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 1, amount: 100, currency:, timestamp: ts)
+        expect {
+          described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 2, amount: 50, currency:, timestamp: ts)
+        }.to raise_error(ActiveRecord::StatementInvalid, /duplicate key/)
+      end
+
+      it "cascades ending_balance recalc only within the inserting currency" do
+        now = DateTime.current
+        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 1, amount: 100, currency:, timestamp: now - 2.hours)
+        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 2, amount: 50, currency:, timestamp: now - 1.hour)
+        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 3, amount: 999, currency: usd, timestamp: now - 1.hour)
+
+        # Insert a past entry in BRL — this must cascade across BRL, not USD.
+        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 4, amount: 10, currency:, timestamp: now - 3.hours)
+
+        brl = described_class.where(currency:).order(:timestamp, :id).pluck(:amount, :ending_balance)
+        usd_balance = described_class.find_by!(currency: usd).ending_balance
+        expect(brl).to eq([ [ 10, 10 ], [ 100, 110 ], [ 50, 160 ] ])
+        expect(usd_balance).to eq(999)
+      end
     end
   end
 end
