@@ -15,7 +15,7 @@ module Stern
     def perform(operation_id)
       raise ArgumentError if invalid? || operation_id.blank?
 
-      EntryPair.add_pp_charge_pix(charge_id, merchant_id, amount, operation_id:) if amount.present?
+      EntryPair.add_pp_charge_pix(charge_id, merchant_id, amount, operation_id:)
     end
 
     private

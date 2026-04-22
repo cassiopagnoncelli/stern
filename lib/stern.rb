@@ -1,5 +1,6 @@
 require "stern/version"
 require "stern/errors"
+require "stern/ansi_print"
 require "stern/engine"
 require "stern/chart"
 require "stern/currencies"
