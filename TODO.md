@@ -2,6 +2,11 @@
 
 - [s] Benchmark
 - [D] Operations
+- [x] R. Chart-level non-negative constraint — `non_negative: true` on a book
+  definition pushes the "balance can't go negative" check into `create_entry`
+  v04 / `destroy_entry` v04. The DB refuses any write that would leave
+  `ending_balance < 0` on a marked book, including the past-timestamp cascade
+  and destroy cascade. Specs in `spec/models/stern/non_negative_constraint_spec.rb`.
 - [d] Replicate frontend from CRM
 - [d] SOP job must be durable, AL/E-OD, idem key; use RabbitMQ + Sidekiq
   - known bug inside the current picker: `ScheduledOperationService.enqueue_list`
