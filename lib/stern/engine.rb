@@ -36,9 +36,9 @@ module Stern
 
     console do
       require "stern/pp_extension"
-      Object.include(Stern)
-      Array.include(Stern::PpExtension)
-      ActiveRecord::Relation.include(Stern::PpExtension)
+      Object.include(::Stern)
+      Array.include(::Stern::PpExtension)
+      ActiveRecord::Relation.include(::Stern::PpExtension)
     end
   end
 end
