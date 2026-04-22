@@ -4,6 +4,10 @@ This file contains the conventions a coding agent (or a human) should follow whe
 modifying or extending the Stern engine. It is not user-facing documentation —
 the README covers that.
 
+## Review process
+
+OpenAI Codex will review your output once you are done. Make your best.
+
 ## Writing an operation
 
 Operations are the public API. They extend `Stern::BaseOperation`, live under
