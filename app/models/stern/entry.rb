@@ -38,6 +38,17 @@ module Stern
           timestamp:,
         ),
       )
+    rescue ActiveRecord::StatementInvalid => e
+      raise ::Stern::BalanceNonNegativeViolation, e.message if non_negative_violation?(e)
+
+      raise
+    end
+
+    def self.non_negative_violation?(err)
+      cause = err.cause
+      return false unless defined?(PG::CheckViolation) && cause.is_a?(PG::CheckViolation)
+
+      cause.result&.error_field(PG::Result::PG_DIAG_CONSTRAINT_NAME) == "stern_books_non_negative"
     end
 
     def self.sanitized_sql(book_id:, gid:, entry_pair_id:, amount:, currency:, timestamp:)
@@ -72,6 +83,10 @@ module Stern
       }.squish
       sanitized_sql = ApplicationRecord.sanitize_sql_array([ sql, { id: } ])
       ApplicationRecord.connection.execute(sanitized_sql)
+    rescue ActiveRecord::StatementInvalid => e
+      raise ::Stern::BalanceNonNegativeViolation, e.message if self.class.non_negative_violation?(e)
+
+      raise
     end
 
     def book_name

@@ -1,4 +1,4 @@
-\restrict sBIbW0KTDhYN9ABRQCSarNzni8DfHBpGdnhWV2jmSoCqiHzrVBqYYpPFo2Zvk1D
+\restrict fLcF3yrdayV0Ub2tft2n5EXaSxy7eNv58ZwgSWPTgiMNzBrzASVmx8mnVptKQRb
 
 -- Dumped from database version 17.9 (Postgres.app)
 -- Dumped by pg_dump version 17.9 (Postgres.app)
@@ -48,6 +48,7 @@ DECLARE
   entry stern_entries;
   ts TIMESTAMP(6) WITHOUT TIME ZONE;
   cascade BOOLEAN;
+  nn BOOLEAN;
 BEGIN
   IF in_book_id IS NULL OR in_gid IS NULL OR in_entry_pair_id IS NULL
       OR in_amount IS NULL OR in_amount = 0 OR in_currency IS NULL THEN
@@ -62,6 +63,12 @@ BEGIN
   PERFORM pg_advisory_xact_lock(
     hashtextextended(format('stern:%s:%s:%s', in_book_id, in_gid, in_currency), 0)
   );
+
+  -- Chart-level non_negative flag: if set, reject any write that leaves
+  -- ending_balance < 0 on this book, either on the inserted row or on any row
+  -- downstream of a past-timestamp cascade.
+  SELECT non_negative INTO nn FROM stern_books WHERE id = in_book_id;
+  nn := COALESCE(nn, FALSE);
 
   ts := CAST(timezone('UTC', clock_timestamp()) AS TIMESTAMP(6) WITHOUT TIME ZONE);
 
@@ -114,6 +121,12 @@ BEGIN
       LIMIT 1
     );
     RAISE DEBUG '-- ending_balance for the new record is %', entry.ending_balance;
+  END IF;
+
+  IF nn AND entry.ending_balance < 0 THEN
+    RAISE EXCEPTION 'balance would go negative on non_negative book (book_id=%, gid=%, currency=%, computed=%)',
+      in_book_id, in_gid, in_currency, entry.ending_balance
+      USING ERRCODE = '23514', CONSTRAINT = 'stern_books_non_negative';
   END IF;
 
   INSERT INTO stern_entries (
@@ -180,6 +193,19 @@ BEGIN
       ORDER BY timestamp, id
     ) mirror
     WHERE stern_entries.id = mirror.id AND stern_entries.timestamp > entry.timestamp;
+
+    IF nn AND EXISTS (
+      SELECT 1 FROM stern_entries
+      WHERE book_id = entry.book_id
+        AND gid = entry.gid
+        AND currency = entry.currency
+        AND timestamp > entry.timestamp
+        AND ending_balance < 0
+    ) THEN
+      RAISE EXCEPTION 'past-timestamp insert would leave subsequent ending_balance negative on non_negative book (book_id=%, gid=%, currency=%)',
+        entry.book_id, entry.gid, entry.currency
+        USING ERRCODE = '23514', CONSTRAINT = 'stern_books_non_negative';
+    END IF;
   END IF;
 
   RETURN entry;
@@ -196,6 +222,7 @@ CREATE FUNCTION public.destroy_entry(in_id bigint, verbose_mode boolean DEFAULT 
     AS $$
 DECLARE
   entry stern_entries%ROWTYPE;
+  nn BOOLEAN;
 BEGIN
   IF in_id IS NULL THEN
     RAISE EXCEPTION 'id is undefined';
@@ -210,6 +237,9 @@ BEGIN
   PERFORM pg_advisory_xact_lock(
     hashtextextended(format('stern:%s:%s:%s', entry.book_id, entry.gid, entry.currency), 0)
   );
+
+  SELECT non_negative INTO nn FROM stern_books WHERE id = entry.book_id;
+  nn := COALESCE(nn, FALSE);
 
   RAISE NOTICE 'Selected row: %', format('%I', entry);
 
@@ -236,6 +266,18 @@ BEGIN
     ORDER BY timestamp, id
   ) mirror
   WHERE stern_entries.id = mirror.id;
+
+  IF nn AND EXISTS (
+    SELECT 1 FROM stern_entries
+    WHERE book_id = entry.book_id
+      AND gid = entry.gid
+      AND currency = entry.currency
+      AND ending_balance < 0
+  ) THEN
+    RAISE EXCEPTION 'destroy_entry would leave ending_balance negative on non_negative book (book_id=%, gid=%, currency=%)',
+      entry.book_id, entry.gid, entry.currency
+      USING ERRCODE = '23514', CONSTRAINT = 'stern_books_non_negative';
+  END IF;
 
   RETURN entry.id;
 END;
@@ -283,7 +325,8 @@ CREATE TABLE public.stern_books (
     id bigint NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    name character varying NOT NULL
+    name character varying NOT NULL,
+    non_negative boolean DEFAULT false NOT NULL
 );
 
 
@@ -595,11 +638,13 @@ CREATE INDEX index_stern_scheduled_operations_on_status ON public.stern_schedule
 -- PostgreSQL database dump complete
 --
 
-\unrestrict sBIbW0KTDhYN9ABRQCSarNzni8DfHBpGdnhWV2jmSoCqiHzrVBqYYpPFo2Zvk1D
+\unrestrict fLcF3yrdayV0Ub2tft2n5EXaSxy7eNv58ZwgSWPTgiMNzBrzASVmx8mnVptKQRb
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260422120006'),
+('20260422120005'),
 ('20260422120004'),
 ('20260422120003'),
 ('20260422120002'),

@@ -5,19 +5,22 @@ operations: general
 #
 books:
   # Merchant
-  - merchant_balance
+  - merchant_balance:
+      non_negative: true
   - merchant_adjusted
   - merchant_withholding
   - merchant_locked
 
   # Partner
-  - partner_balance
+  - partner_balance:
+      non_negative: true
   - partner_adjusted
   - partner_withholding
   - partner_locked
 
   # Customer
-  - customer_balance
+  - customer_balance:
+      non_negative: true
   - customer_adjusted
   - customer_withholding
   - customer_locked

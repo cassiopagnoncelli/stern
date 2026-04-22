@@ -12,3 +12,13 @@
     Broader fix: also propagate an `idem_key` into `process_sop`'s `op.call`
     so that even if double-processing happens, only one write commits.
 - [s] Prometheus
+
+## Test safety net
+
+- Structural integrity invariants not yet verified after every stress run:
+  - Every EntryPair has exactly 2 Entry rows that sum to 0 ("S").
+  - Every Operation row has ≥ 1 associated EntryPair, every EntryPair has a
+    valid operation, and per-op params match the written (gid, currency) ("T").
+  - Pattern: add `assert_entry_pairs_structurally_sound!` and
+    `assert_operations_integral!` to spec/support/, call from every stress
+    test in balance_invariant_spec.rb and locking_matrix_spec.rb.

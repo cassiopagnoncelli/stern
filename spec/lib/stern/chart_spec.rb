@@ -33,6 +33,39 @@ module Stern
         expect(chart.books.keys).to contain_exactly(:foo, :bar, :foo_0, :bar_0)
       end
 
+      it "defaults non_negative to false for string-form books" do
+        expect(chart.book(:foo).non_negative).to be(false)
+      end
+
+      it "sets non_negative from hash-form options" do
+        defs_with_flag = defs.merge(books: [ "foo", { "bar" => { "non_negative" => true } } ])
+        flagged = described_class.new(defs_with_flag.deep_symbolize_keys)
+        expect(flagged.book(:bar).non_negative).to be(true)
+        expect(flagged.book(:foo).non_negative).to be(false)
+      end
+
+      it "accepts hash-form books with empty options" do
+        defs_with_empty = defs.merge(books: [ "foo", { "bar" => nil } ])
+        chart = described_class.new(defs_with_empty.deep_symbolize_keys)
+        expect(chart.book(:bar).non_negative).to be(false)
+      end
+
+      it "forces implicit _0 counterparts to non_negative: false" do
+        defs_with_flag = defs.merge(books: [ { "foo" => { "non_negative" => true } }, "bar" ])
+        flagged = described_class.new(defs_with_flag.deep_symbolize_keys)
+        expect(flagged.book(:foo_0).non_negative).to be(false)
+      end
+
+      it "rejects a hash book entry with more than one key" do
+        bad = defs.merge(books: [ { "foo" => {}, "bar" => {} } ])
+        expect { described_class.new(bad.deep_symbolize_keys) }.to raise_error(ArgumentError)
+      end
+
+      it "rejects a malformed book entry" do
+        bad = defs.merge(books: [ 42 ])
+        expect { described_class.new(bad.deep_symbolize_keys) }.to raise_error(ArgumentError)
+      end
+
       it "resolves a book by Symbol, String, or integer code" do
         book = chart.book(:foo)
         expect(chart.book("foo")).to eq(book)
