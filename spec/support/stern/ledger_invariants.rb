@@ -7,7 +7,11 @@
 #   S. Every EntryPair has exactly two balanced Entry rows:
 #      - ep.entries.count == 2
 #      - amounts sum to zero (one +amount, one -amount)
-#      - two distinct book_ids (book_add vs book_sub)
+#      - each side lands on the book the chart declares for this pair:
+#        the +ep.amount entry on `pair.book_add`, the -ep.amount entry on
+#        `pair.book_sub`. Implies different book_ids (when the chart declares
+#        different books) — strictly stronger: also catches a pair written
+#        to two *wrong* books, which the schema cannot detect.
 #      - same gid, same currency across both entries and the pair
 #
 #   T. Every Operation's audit graph is sound:
@@ -34,14 +38,12 @@ module Stern
         end
 
         a, b = entries
-        if a.amount + b.amount != 0
+        amounts_cancel = a.amount + b.amount == 0
+        unless amounts_cancel
           offenders << {
             entry_pair_id: ep.id,
             problem: "amounts do not cancel (#{a.amount} + #{b.amount} != 0)"
           }
-        end
-        if a.book_id == b.book_id
-          offenders << { entry_pair_id: ep.id, problem: "both entries on same book_id=#{a.book_id}" }
         end
         if a.gid != b.gid
           offenders << { entry_pair_id: ep.id, problem: "entries on different gids (#{a.gid} vs #{b.gid})" }
@@ -56,6 +58,32 @@ module Stern
           offenders << {
             entry_pair_id: ep.id,
             problem: "pair.currency=#{ep.currency} disagrees with entries' currency=#{a.currency}"
+          }
+        end
+
+        # Each side must land on the book the chart declares for this pair.
+        # Identify sides by matching amount sign to ep.amount — only meaningful
+        # when amounts cancel (otherwise the two-entry shape is already broken
+        # and the side assignment is ambiguous).
+        next unless amounts_cancel
+
+        pair_def = ::Stern.chart.entry_pair(ep.code.to_sym)
+        next unless pair_def
+
+        expected_add = ::Stern.chart.book_code(pair_def.book_add)
+        expected_sub = ::Stern.chart.book_code(pair_def.book_sub)
+        add_side, sub_side = a.amount == ep.amount ? [ a, b ] : [ b, a ]
+
+        if add_side.book_id != expected_add
+          offenders << {
+            entry_pair_id: ep.id,
+            problem: "book_add side on book_id=#{add_side.book_id}, expected #{expected_add} (:#{pair_def.book_add})"
+          }
+        end
+        if sub_side.book_id != expected_sub
+          offenders << {
+            entry_pair_id: ep.id,
+            problem: "book_sub side on book_id=#{sub_side.book_id}, expected #{expected_sub} (:#{pair_def.book_sub})"
           }
         end
       end

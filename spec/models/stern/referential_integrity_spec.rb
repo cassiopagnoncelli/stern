@@ -54,23 +54,23 @@ module Stern
           .to raise_error(RSpec::Expectations::ExpectationNotMetError, /amounts do not cancel/)
       end
 
-      it "catches two Entries on the same book_id" do
+      it "catches an Entry written to a book not declared for the pair" do
         seed_one_pair
         ep = EntryPair.order(:id).last
-        other_book = ::Stern.chart.book_code(:merchant_balance_0)
-        # Flip the "add" side's book_id to match the "sub" side. Also shift gid
-        # so we don't trip the (book_id, gid, currency, entry_pair_id) unique
-        # index — that index is in fact the schema-level guard making this
-        # specific violation infeasible in practice, but a broken migration or
-        # index drop could expose it, so the helper still checks it.
+        # Flip the book_add side to an entirely unrelated book (not the
+        # declared book_add and not the declared book_sub). The schema's
+        # unique index (book_id, gid, currency, entry_pair_id) does not block
+        # this — we're moving to a different book_id, not colliding with the
+        # other half's book_id.
+        wrong_book = ::Stern.chart.book_code(:customer_balance)
         Entry.connection.execute(<<~SQL)
           UPDATE stern_entries
-          SET book_id = #{other_book}, gid = gid + 1
+          SET book_id = #{wrong_book}
           WHERE entry_pair_id = #{ep.id} AND amount > 0
         SQL
 
         expect { assert_entry_pairs_structurally_sound! }
-          .to raise_error(RSpec::Expectations::ExpectationNotMetError, /same book_id/)
+          .to raise_error(RSpec::Expectations::ExpectationNotMetError, /book_add side on book_id=/)
       end
 
       it "catches an EntryPair whose entries span different gids" do
