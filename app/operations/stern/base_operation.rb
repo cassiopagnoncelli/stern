@@ -21,28 +21,27 @@ module Stern
       ::Stern.cur(name_or_index, result:)
     end
 
+    # Runs the operation. Returns the Operation id (either a new one or, when `idem_key`
+    # matches an existing operation with identical params, the existing one).
+    #
+    # @param transaction [Boolean] wrap log + perform in a transaction with table locks.
+    #   Defaults to true; set false when the caller is already managing a transaction.
+    # @param idem_key [String, nil] idempotency key. If present and an Operation with this
+    #   key already exists with identical name/params, returns its id without re-running.
     def call(transaction: true, idem_key: nil)
-      base_operation = self
+      existing = find_existing_operation(idem_key)
+      return existing.id if existing
 
-      op_id = find_existing_operation(transaction, idem_key)
-      return op_id if op_id.present?
-
-      operation_id = nil
-
-      fun = lambda {
-        operation_id = log_operation(base_operation, idem_key)
-        perform(base_operation.operation.id)
-      }
       if transaction
         ApplicationRecord.transaction do
           lock_tables
-          fun.call
+          record_and_perform(idem_key)
         end
       else
-        fun.call
+        record_and_perform(idem_key)
       end
 
-      operation_id
+      operation.id
     end
 
     def perform
@@ -67,17 +66,20 @@ module Stern
       )
     end
 
-    def log_operation(base_operation = self, idem_key = nil)
-      base_operation.operation = Operation.new(
-        name: operation_name,
-        params: operation_params,
-        idem_key:,
-      )
-      base_operation.operation.save!
-      base_operation.operation.id
+    private
+
+    # Creates the Operation audit record and dispatches to the subclass's `perform`.
+    # Mutates `self.operation` so the subclass can access it via attr_accessor.
+    def record_and_perform(idem_key)
+      log_operation(idem_key)
+      perform(operation.id)
     end
 
-    private
+    def log_operation(idem_key)
+      self.operation = Operation.new(name: operation_name, params: operation_params, idem_key:)
+      operation.save!
+      operation.id
+    end
 
     def lock_tables
       ApplicationRecord.lock_table(table: EntryPair.table_name)
@@ -85,30 +87,24 @@ module Stern
     end
 
     def operation_name
-      self.class.to_s.gsub("Stern::", "")
+      self.class.name.demodulize
     end
 
     def operation_params
-      attr_accessor_hash = {}
-
-      instance_variables.each do |ivar|
-        attr_name = ivar.to_s.gsub("@", "")
-        attr_value = instance_variable_get(ivar)
-        attr_accessor_hash[attr_name] = attr_value
+      instance_variables.to_h do |ivar|
+        [ ivar.to_s.delete_prefix("@"), instance_variable_get(ivar) ]
       end
-
-      attr_accessor_hash
     end
 
-    def find_existing_operation(transaction, idem_key)
+    # Looks up an Operation by idem_key. Returns the matching Operation if params also
+    # match, nil if no Operation with that key exists, and raises if one exists with
+    # different params (attempted replay with changed inputs).
+    def find_existing_operation(idem_key)
       return nil if idem_key.nil?
 
       op = Operation.find_by(idem_key:)
       return nil if op.nil?
-
-      return op.id if
-        op.name == operation_name &&
-        op.params == operation_params
+      return op if op.name == operation_name && op.params == operation_params
 
       raise "Operation with idem_key #{idem_key} already exists with different parameters"
     end
