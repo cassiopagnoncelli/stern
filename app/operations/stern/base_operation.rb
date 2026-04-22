@@ -72,13 +72,24 @@ module Stern
       existing = find_existing_operation(idem_key)
       return existing.id if existing
 
-      if transaction
-        ApplicationRecord.transaction do
-          acquire_advisory_locks(target_tuples)
+      begin
+        if transaction
+          ApplicationRecord.transaction do
+            acquire_advisory_locks(target_tuples)
+            record_and_perform(idem_key)
+          end
+        else
           record_and_perform(idem_key)
         end
-      else
-        record_and_perform(idem_key)
+      rescue ActiveRecord::RecordNotUnique => e
+        # Lost the race against another concurrent caller with the same
+        # idem_key. Our transaction has rolled back; the other caller's
+        # Operation row is now committed. Return its id so the race is
+        # benign from this caller's perspective. Any RecordNotUnique not
+        # tied to idem_key propagates unchanged.
+        winner = idem_key && Operation.find_by(idem_key: idem_key)
+        raise e if winner.nil?
+        return winner.id
       end
 
       operation.id

@@ -169,6 +169,49 @@ module Stern # rubocop:disable Metrics/ModuleLength
           )
         end
       end
+
+      # Defense in depth: even if the SOP ends up being picked and processed
+      # more than once (e.g. at-least-once redelivery once a real queue lands,
+      # or a clear_picked-then-re-pick flow), the logical operation must not
+      # run twice. `BaseOperation#call(idem_key:)` already provides that — it
+      # short-circuits with the existing Operation row when one matches — but
+      # only if `process_sop` propagates a stable idem_key derived from the
+      # SOP id. Without that propagation, the second op.call either duplicates
+      # the work or trips a downstream DB unique constraint and bleeds into
+      # `:runtime_error`, even though nothing actually failed.
+      context "when the same SOP is processed more than once (idempotent retry)" do
+        before do
+          scheduled_op.status = :picked
+          scheduled_op.after_time = after_time
+          scheduled_op.save!
+        end
+
+        it "propagates a stable idem_key derived from the SOP id to op.call" do
+          op_spy = ::Stern::ChargePix.new(**params.symbolize_keys)
+          allow(::Stern::ChargePix).to receive(:new).and_return(op_spy)
+          allow(op_spy).to receive(:call)
+
+          service.process_sop(scheduled_op.id)
+
+          expected_key = "sop-#{scheduled_op.id.to_s.rjust(8, '0')}"
+          expect(op_spy).to have_received(:call).with(idem_key: expected_key)
+        end
+
+        it "leaves SOP in :finished (not :runtime_error) on a repeat process_sop" do
+          service.process_sop(scheduled_op.id)
+          expect(scheduled_op.reload.status).to eq("finished")
+
+          # Simulate a retry: flip status back to :picked (as if clear_picked
+          # recycled the row and enqueue_list re-picked it) and call again.
+          scheduled_op.reload.update!(status: :picked)
+
+          service.process_sop(scheduled_op.id)
+          scheduled_op.reload
+
+          expect(scheduled_op.status).to eq("finished")
+          expect(scheduled_op.error_message).to be_blank
+        end
+      end
     end
 
     describe ".process_operation" do

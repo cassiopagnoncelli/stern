@@ -28,9 +28,23 @@ module Stern
     end
 
     def enqueue_list(size = BATCH_SIZE)
-      ScheduledOperation.pending.where("after_time <= NOW()").limit(size).then do |batch|
-        batch.each_update!(status: :picked, status_time: DateTime.current.utc)
-        batch.collect(&:id)
+      ScheduledOperation.transaction do
+        ids = ScheduledOperation
+          .pending
+          .where("after_time <= NOW()")
+          .order(:id)
+          .limit(size)
+          .lock("FOR UPDATE SKIP LOCKED")
+          .pluck(:id)
+
+        if ids.any?
+          ScheduledOperation.where(id: ids).update_all(
+            status: ScheduledOperation.statuses[:picked],
+            status_time: DateTime.current.utc,
+          )
+        end
+
+        ids
       end
     end
 
@@ -58,7 +72,7 @@ module Stern
     def process_operation(operation, scheduled_op)
       raise ArgumentError, "sop not in progress" unless scheduled_op.in_progress?
 
-      operation.call
+      operation.call(idem_key: sop_idem_key(scheduled_op))
 
       scheduled_op.update!(status: :finished, status_time: DateTime.current.utc)
     rescue ArgumentError => e
@@ -73,6 +87,15 @@ module Stern
         status_time: DateTime.current.utc,
         error_message: e.message,
       )
+    end
+
+    # Stable per-SOP idempotency key, fed to `BaseOperation#call`. Any repeat
+    # `process_sop` on the same SOP (at-least-once redelivery, manual re-pick,
+    # clear_picked race) short-circuits to the existing Operation row instead
+    # of re-running perform. Zero-padded so small ids still clear the
+    # `Operation#idem_key` length floor of 8.
+    def sop_idem_key(scheduled_op)
+      "sop-#{scheduled_op.id.to_s.rjust(8, '0')}"
     end
   end
 end
