@@ -277,6 +277,14 @@ Stern::Workers::Runner.new(
 `Runner#stop` is called. In-flight SOPs are allowed to finish within
 `SHUTDOWN_TIMEOUT` (30s).
 
+**Low-latency pickup via Postgres LISTEN/NOTIFY.** The runner also listens
+on a dedicated connection for `NOTIFY`s fired by `stern_sop_notify_trigger`
+whenever a SOP enters `pending`. On notify, the runner's main loop wakes
+immediately — so freshly-scheduled work gets picked up in milliseconds
+regardless of `STERN_POLL_INTERVAL`. This lets you set `poll_interval` high
+(e.g. 30s) for cheap idle load while still reacting near-instantly to new
+arrivals. Opt out with `listen_for_notifications: false` when embedding.
+
 ## Metrics (Prometheus)
 
 Stern exposes a Prometheus registry populated from `ActiveSupport::Notifications`

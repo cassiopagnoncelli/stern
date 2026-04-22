@@ -22,12 +22,18 @@ module Stern
       DEFAULT_JANITOR_INTERVAL = 60.0
       SHUTDOWN_TIMEOUT = 30.0
 
+      # Postgres channel the `stern_sop_notify_trigger` NOTIFYs on when a SOP
+      # enters `pending`. Workers LISTEN on this channel to get low-latency
+      # pickup without tight polling.
+      NOTIFY_CHANNEL = "stern_sop_pending"
+
       def initialize(
         concurrency: DEFAULT_CONCURRENCY,
         poll_interval: DEFAULT_POLL_INTERVAL,
         janitor_interval: DEFAULT_JANITOR_INTERVAL,
         logger: Rails.logger,
-        install_signal_handlers: true
+        install_signal_handlers: true,
+        listen_for_notifications: true
       )
         @concurrency = Integer(concurrency)
         raise ArgumentError, "concurrency must be > 0" if @concurrency <= 0
@@ -36,24 +42,32 @@ module Stern
         @janitor_interval = Float(janitor_interval)
         @logger = logger
         @install_signal_handlers = install_signal_handlers
+        @listen_for_notifications = listen_for_notifications
         @stop = Concurrent::AtomicBoolean.new(false)
         @in_flight = Concurrent::AtomicFixnum.new(0)
         @last_janitor_at = nil
+        @wake_event = Concurrent::Event.new
+        @listen_thread = nil
       end
 
       # Long-running daemon entry point. Returns only on shutdown.
       def start
         install_signal_handlers if @install_signal_handlers
+        start_listen_thread if @listen_for_notifications
         @logger.info(log_prefix + "starting " \
-          "concurrency=#{@concurrency} poll=#{@poll_interval}s janitor=#{@janitor_interval}s")
+          "concurrency=#{@concurrency} poll=#{@poll_interval}s janitor=#{@janitor_interval}s " \
+          "listen=#{@listen_for_notifications}")
 
         until stopping?
           run_once
-          interruptible_sleep(@poll_interval)
+          # Wait up to poll_interval OR until NOTIFY wakes us. Either way,
+          # the next iteration runs a full tick.
+          wait_with_notify(@poll_interval)
         end
 
         @logger.info(log_prefix + "stopping; waiting for #{@in_flight.value} in-flight SOP(s)")
         wait_for_in_flight(SHUTDOWN_TIMEOUT)
+        @listen_thread&.join(5)
         @logger.info(log_prefix + "stopped")
       end
 
@@ -69,8 +83,11 @@ module Stern
       end
 
       # Signals the loop to stop. In-flight SOPs are allowed to finish.
+      # Setting the wake event wakes the main loop immediately if it's
+      # currently blocked on `wait_with_notify`.
       def stop
         @stop.make_true
+        @wake_event.set
       end
 
       def stopping?
@@ -145,6 +162,42 @@ module Stern
         deadline = Time.now + seconds
         while Time.now < deadline && !stopping?
           sleep [ deadline - Time.now, 0.1 ].min
+        end
+      end
+
+      # Wait up to `seconds` OR until the LISTEN thread sets @wake_event
+      # (indicating a new pending SOP arrived). Returns early so the next
+      # loop iteration picks the work up in milliseconds instead of waiting
+      # for the full poll interval.
+      def wait_with_notify(seconds)
+        @wake_event.reset
+        deadline = Time.now + seconds
+        until stopping? || @wake_event.set? || Time.now >= deadline
+          @wake_event.wait([ deadline - Time.now, 0.1 ].min)
+        end
+      end
+
+      # Dedicated thread holding one connection, LISTENing on NOTIFY_CHANNEL.
+      # On each notify — or on timeout — it sets @wake_event so the main
+      # loop can iterate. The with_connection block keeps the connection
+      # checked out for the lifetime of the thread; UNLISTEN runs on exit.
+      def start_listen_thread
+        @listen_thread = Thread.new do
+          ::Stern::ApplicationRecord.connection_pool.with_connection do |conn|
+            raw = conn.raw_connection
+            raw.async_exec("LISTEN #{NOTIFY_CHANNEL}")
+            begin
+              until stopping?
+                # Block up to 1s. Returns nil on timeout; [channel, pid, payload] on notify.
+                notify = raw.wait_for_notify(1.0)
+                @wake_event.set if notify
+              end
+            ensure
+              raw.async_exec("UNLISTEN #{NOTIFY_CHANNEL}") rescue nil
+            end
+          end
+        rescue StandardError => e
+          @logger.error(log_prefix + "listen thread error: #{e.class}: #{e.message}")
         end
       end
 

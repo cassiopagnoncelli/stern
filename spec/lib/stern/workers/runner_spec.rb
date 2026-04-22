@@ -163,6 +163,120 @@ module Stern
         end
       end
 
+      describe "LISTEN/NOTIFY low-latency pickup" do
+        # These tests prove that a freshly-inserted pending SOP is picked up
+        # in milliseconds even when poll_interval is much longer — the
+        # stern_sop_notify_trigger fires NOTIFY, the runner's LISTEN thread
+        # wakes the main loop, and the next tick picks the work up.
+
+        # These unit tests run LISTEN on a separate thread with a separate
+        # checked-out connection (NOT the test thread's AR connection), then
+        # mutate status from the test thread. That mirrors how the Runner's
+        # LISTEN thread operates in production and avoids ambiguity about
+        # which connection the NOTIFY is delivered to when LISTEN + INSERT
+        # share a session.
+        # Returns `[channel, pid, payload]` tuple if a notify arrives within
+        # `timeout`, else nil. Uses the block form of `wait_for_notify` because
+        # without a block pg returns just the channel String.
+        def listen_once(timeout: 2.0)
+          notification = Concurrent::MVar.new
+          listener_ready = Concurrent::Event.new
+          thread = Thread.new do
+            ::Stern::ApplicationRecord.connection_pool.with_connection do |conn|
+              raw = conn.raw_connection
+              raw.async_exec("LISTEN #{described_class::NOTIFY_CHANNEL}")
+              listener_ready.set
+              begin
+                tuple = nil
+                raw.wait_for_notify(timeout) { |channel, pid, payload| tuple = [ channel, pid, payload ] }
+                notification.put(tuple)
+              ensure
+                raw.async_exec("UNLISTEN #{described_class::NOTIFY_CHANNEL}") rescue nil
+              end
+            end
+          end
+          listener_ready.wait(2.0)
+          yield
+          thread.join(timeout + 1)
+          notification.take
+        end
+
+        it "fires a NOTIFY on insert of a pending SOP" do
+          notify = listen_once { seed_sop }
+          expect(notify).not_to be_nil
+          channel, _pid, payload = notify
+          expect(channel).to eq(described_class::NOTIFY_CHANNEL)
+          expect(payload).to match(/\A\d+\z/)
+        end
+
+        it "fires a NOTIFY when a SOP transitions back to pending after a retry" do
+          sop = ScheduledOperation.create!(
+            name: "ChargePix",
+            params: { charge_id: 1, merchant_id: 1101, customer_id: 2, amount: 100, currency: "usd" },
+            after_time: 1.minute.ago,
+            status: :picked,
+          )
+
+          notify = listen_once { sop.update!(status: :pending) }
+          expect(notify).not_to be_nil
+          _channel, _pid, payload = notify
+          expect(payload).to eq(sop.id.to_s)
+        end
+
+        it "does NOT fire a NOTIFY on transitions to non-pending statuses" do
+          sop = ScheduledOperation.create!(
+            name: "ChargePix",
+            params: { charge_id: 1, merchant_id: 1101, customer_id: 2, amount: 100, currency: "usd" },
+            after_time: 1.minute.ago,
+            status: :pending,
+          )
+
+          # Use a tight timeout since we expect NOT to receive anything.
+          notify = listen_once(timeout: 0.5) { sop.update!(status: :picked) }
+          expect(notify).to be_nil
+        end
+
+        it "wakes the runner loop from NOTIFY and picks up a fresh SOP in ms, not the full poll interval" do
+          # 30-second poll means if LISTEN/NOTIFY doesn't work, this test
+          # would wait half a minute. Instead we seed a SOP and expect it
+          # finished within 5s.
+          runner = make_runner(poll_interval: 30.0, janitor_interval: 300.0)
+          thread = Thread.new { runner.start }
+
+          # Give the main loop a moment to enter its first wait_with_notify.
+          sleep 0.2
+
+          sop = seed_sop
+          deadline = Time.now + 5
+          sleep 0.02 while sop.reload.status != "finished" && Time.now < deadline
+
+          expect(sop.reload.status).to eq("finished")
+          expect(Time.now - deadline + 5).to be < 5  # finished well before deadline
+
+          runner.stop
+          thread.join(5)
+        end
+
+        it "can be opted out of via listen_for_notifications: false" do
+          runner = make_runner(
+            poll_interval: 0.1,
+            janitor_interval: 300.0,
+            listen_for_notifications: false,
+          )
+          thread = Thread.new { runner.start }
+
+          sop = seed_sop
+          # With no LISTEN but very short poll_interval, pickup is still fast via polling.
+          deadline = Time.now + 5
+          sleep 0.02 while sop.reload.status != "finished" && Time.now < deadline
+
+          expect(sop.reload.status).to eq("finished")
+
+          runner.stop
+          thread.join(5)
+        end
+      end
+
       describe "#start with #stop — graceful shutdown" do
         it "runs continuously, stops on #stop, and returns cleanly" do
           runner = make_runner(poll_interval: 0.1)

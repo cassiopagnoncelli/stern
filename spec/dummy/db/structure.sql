@@ -284,6 +284,22 @@ $$;
 
 
 --
+-- Name: stern_sop_notify(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.stern_sop_notify() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF NEW.status = 0 THEN
+    PERFORM pg_notify('stern_sop_pending', NEW.id::text);
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+--
 -- Name: ar_internal_metadata; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -635,6 +651,13 @@ CREATE INDEX index_stern_scheduled_operations_on_status ON public.stern_schedule
 
 
 --
+-- Name: stern_scheduled_operations stern_sop_notify_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER stern_sop_notify_trigger AFTER INSERT OR UPDATE OF status ON public.stern_scheduled_operations FOR EACH ROW EXECUTE FUNCTION public.stern_sop_notify();
+
+
+--
 -- PostgreSQL database dump complete
 --
 
@@ -642,6 +665,7 @@ CREATE INDEX index_stern_scheduled_operations_on_status ON public.stern_schedule
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260422160000'),
 ('20260422150000'),
 ('20260422120006'),
 ('20260422120005'),
