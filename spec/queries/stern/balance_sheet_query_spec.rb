@@ -64,10 +64,9 @@ module Stern
         expect(mb[:final_balance]).to eq(0)
       end
 
-      it "rolls prior balances into previous_balance filtered by currency" do
+      it "excludes prior balances recorded in a different currency from previous_balance" do
         old = 2.days.ago.to_datetime
-        EntryPair.add_merchant_balance(1, 1101, 100, brl, timestamp: old, operation_id: operation.id)
-        EntryPair.add_merchant_balance(2, 1101, 500, usd, timestamp: old, operation_id: operation.id)
+        EntryPair.add_merchant_balance(1, 1101, 500, usd, timestamp: old, operation_id: operation.id)
 
         rows = described_class.new(
           start_date: 1.day.ago.to_datetime,
@@ -77,8 +76,26 @@ module Stern
         ).call
         mb = rows.find { |r| r[:book_id] == ::Stern.chart.book_code(:merchant_balance) }
 
-        expect(mb[:previous_balance]).to eq(100)
-        expect(mb[:final_balance]).to eq(100)
+        expect(mb[:previous_balance]).to eq(0)
+        expect(mb[:final_balance]).to eq(0)
+      end
+
+      it "rolls prior balances into previous_balance per book, per gid" do
+        old = 2.days.ago.to_datetime
+        EntryPair.add_merchant_balance(1, 1101, 100, brl, timestamp: old, operation_id: operation.id)
+        EntryPair.add_merchant_balance(2, 1102, 50, brl, timestamp: old, operation_id: operation.id)
+
+        rows = described_class.new(
+          start_date: 1.day.ago.to_datetime,
+          end_date: 1.day.from_now.to_datetime,
+          currency: :BRL,
+          book_ids: [ :merchant_balance, :merchant_balance_0 ],
+        ).call
+        mb = rows.find { |r| r[:book_id] == ::Stern.chart.book_code(:merchant_balance) }
+        mb0 = rows.find { |r| r[:book_id] == ::Stern.chart.book_code(:merchant_balance_0) }
+
+        expect(mb[:previous_balance]).to eq(150)
+        expect(mb0[:previous_balance]).to eq(-150)
       end
     end
 

@@ -42,16 +42,16 @@ module Stern
             book_id,
             SUM(ending_balance) AS previous_balance
           FROM (
-            SELECT
-              DISTINCT ON (gid) gid,
+            SELECT DISTINCT ON (gid, book_id)
+              gid,
               book_id,
-              FIRST_VALUE(ending_balance) OVER (
-                PARTITION BY gid, book_id ORDER BY timestamp DESC
-              ) AS ending_balance
+              ending_balance
             FROM stern_entries
-            WHERE timestamp < :start_date AND currency = :currency
+            WHERE timestamp < :start_date
+              AND currency = :currency
+              AND book_id IN (:book_ids)
+            ORDER BY gid, book_id, timestamp DESC, id DESC
           ) ending_balances
-          WHERE book_id IN (:book_ids)
           GROUP BY book_id
         ),
         current_balances AS (
