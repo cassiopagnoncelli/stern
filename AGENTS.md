@@ -188,7 +188,7 @@ for a working template with a synthetic `WithdrawTest` op.
   `clear_in_progress`). Per-op errors stay inside the thread pool; the
   runner never dies on a single SOP failure.
 - Low-latency pickup is driven by a Postgres trigger
-  (`db/functions/sop_notify_v01.sql`) firing `NOTIFY stern_sop_pending`
+  (`db/functions/sop_notify_v01.sql`) firing `NOTIFY stern_scheduled_operations_pending`
   on every status → `:pending` transition, plus a dedicated LISTEN thread
   inside the Runner that wakes the main loop on each notify. The listen
   thread auto-reconnects with capped exponential backoff. Opt out with

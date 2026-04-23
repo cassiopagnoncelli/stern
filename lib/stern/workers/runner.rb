@@ -25,7 +25,7 @@ module Stern
       # Postgres channel the `stern_sop_notify_trigger` NOTIFYs on when a SOP
       # enters `pending`. Workers LISTEN on this channel to get low-latency
       # pickup without tight polling.
-      NOTIFY_CHANNEL = "stern_sop_pending"
+      NOTIFY_CHANNEL = "stern_scheduled_operations_pending"
 
       def initialize(
         concurrency: DEFAULT_CONCURRENCY,

@@ -1,4 +1,4 @@
--- Fires a Postgres NOTIFY on the `stern_sop_pending` channel whenever a
+-- Fires a Postgres NOTIFY on the `stern_scheduled_operations_pending` channel whenever a
 -- scheduled operation enters the `pending` status (freshly inserted or
 -- transitioned back from a retry). Workers LISTENing on this channel can
 -- wake from their poll loop immediately instead of waiting for the next tick.
@@ -9,7 +9,7 @@
 CREATE OR REPLACE FUNCTION stern_sop_notify() RETURNS trigger AS $$
 BEGIN
   IF NEW.status = 0 THEN
-    PERFORM pg_notify('stern_sop_pending', NEW.id::text);
+    PERFORM pg_notify('stern_scheduled_operations_pending', NEW.id::text);
   END IF;
   RETURN NEW;
 END;
