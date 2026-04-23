@@ -5,10 +5,11 @@ require_relative "base"
 module Stress
   module Scenarios
     # Benchmarks Stern::ChargePix. Each call writes a pp_charge_pix entry pair
-    # for a rotating merchant_id. Contention is controlled by --merchants:
-    # fewer merchants → more advisory-lock contention on the same tuple; more
-    # merchants → closer to fully parallel. charge_id is globally unique per
-    # (thread, iteration) so runs don't collide across restarts within a run.
+    # (and optionally pp_charge_fee_merchant_pix when --fee > 0) for a rotating
+    # merchant_id. Contention is controlled by --merchants: fewer merchants →
+    # more advisory-lock contention on the same tuple; more merchants → closer
+    # to fully parallel. charge_id is globally unique per (thread, iteration)
+    # so runs don't collide across restarts within a run.
     class ChargePix < Base
       def setup
         return unless opts[:reset]
@@ -23,6 +24,7 @@ module Stress
           merchant_id: merchant_id,
           customer_id: customer_id_for(merchant_id),
           amount: opts[:amount],
+          fee: opts[:fee].positive? ? opts[:fee] : nil,
           currency: opts[:currency],
         ).call
       end
