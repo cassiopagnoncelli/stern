@@ -7,7 +7,26 @@
 
   <%= stylesheet_link_tag "tailwind" %>
 </head>
-<body>
+<body class="bg-gray-50 min-h-screen">
+
+<nav class="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center">
+  <a href="/stern" class="font-bold text-lg">Stern</a>
+  <div class="text-sm">
+    <% if authenticated? %>
+      <span class="mr-3 text-gray-600"><%= current_passport.email %></span>
+      <%= button_to "Sign out", "/stern/auth/sign_out", method: :delete, class: "text-blue-600 underline bg-transparent border-0 p-0 cursor-pointer" %>
+    <% else %>
+      <a href="/stern/auth/idp/start" class="text-blue-600 underline">Sign in</a>
+    <% end %>
+  </div>
+</nav>
+
+<% if flash[:alert].present? %>
+  <div class="bg-red-100 border-b border-red-300 text-red-800 px-6 py-2 text-sm"><%= flash[:alert] %></div>
+<% end %>
+<% if flash[:notice].present? %>
+  <div class="bg-green-100 border-b border-green-300 text-green-800 px-6 py-2 text-sm"><%= flash[:notice] %></div>
+<% end %>
 
 <%= yield %>
 

@@ -14,3 +14,7 @@
 .byebug_history
 
 .claude
+
+.env
+.env.*
+!.env.example

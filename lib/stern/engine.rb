@@ -1,3 +1,5 @@
+require "idp/jwt/rails"
+
 module Stern
   class Engine < ::Rails::Engine
     isolate_namespace Stern

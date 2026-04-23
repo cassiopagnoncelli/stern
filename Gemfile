@@ -5,6 +5,9 @@ ruby File.read(File.expand_path(File.join(__dir__, ".ruby-version"))).chomp
 # Specify your gem's dependencies in stern.gemspec.
 gemspec
 
+# Local path override for idp-jwt during sibling-repo development.
+gem "idp-jwt", path: "../idp-jwt"
+
 group :development, :test do
   gem "pry"
   gem "awesome_print"

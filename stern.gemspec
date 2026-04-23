@@ -34,6 +34,9 @@ Gem::Specification.new do |spec|
   spec.add_dependency "prometheus-client", ">= 4.0"
   spec.add_dependency "propshaft", ">= 1.0"
   spec.add_dependency "cssbundling-rails", ">= 1.4"
+  spec.add_dependency "idp-jwt"
+  spec.add_dependency "omniauth_openid_connect", "~> 0.8"
+  spec.add_dependency "omniauth-rails_csrf_protection"
 
   # Development.
   spec.add_development_dependency "rspec-rails"
