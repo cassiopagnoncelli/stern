@@ -664,6 +664,27 @@ module Stern # rubocop:disable Metrics/ModuleLength
         policy = { max_retries: 5, backoff: :exponential, base: 0 }
         expect(service.send(:retry_backoff, 7, policy)).to eq(0)
       end
+
+      it "rejects a negative retry_count (state-corruption guard)" do
+        # retry_count comes from a non-negative integer column in normal use,
+        # but a hand-edited row could break that. With :exponential, a
+        # negative count would silently produce a fractional backoff that
+        # pushes after_time into the past — better to surface the problem.
+        policy = { max_retries: 5, backoff: :exponential, base: 30 }
+        expect { service.send(:retry_backoff, -1, policy) }
+          .to raise_error(ArgumentError, /retry_count.*non-negative/)
+      end
+
+      it "rejects a negative retry_count for :constant too" do
+        policy = { max_retries: 5, backoff: :constant, base: 30 }
+        expect { service.send(:retry_backoff, -5, policy) }
+          .to raise_error(ArgumentError, /retry_count.*non-negative/)
+      end
+
+      it "accepts retry_count = 0 (the boundary)" do
+        policy = { max_retries: 5, backoff: :exponential, base: 30 }
+        expect { service.send(:retry_backoff, 0, policy) }.not_to raise_error
+      end
     end
 
     describe "no-policy backward compat (existing ChargePix behavior)" do

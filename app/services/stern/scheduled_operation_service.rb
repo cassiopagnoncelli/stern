@@ -179,7 +179,13 @@ module Stern
     # dispatched on the policy's :backoff strategy.
     #   :exponential — base * 2^retry_count
     #   :constant    — base
+    #
+    # Negative retry_count is rejected: the column is non-negative in normal
+    # use, but a hand-edited row would silently produce a fractional/negative
+    # backoff under :exponential and push after_time into the past.
     def retry_backoff(retry_count, policy)
+      raise ArgumentError, "retry_count must be non-negative (got #{retry_count})" if retry_count < 0
+
       case policy[:backoff]
       when :constant    then policy[:base]
       when :exponential then policy[:base] * (2**retry_count)

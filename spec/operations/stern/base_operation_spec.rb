@@ -246,11 +246,8 @@ module Stern
         end
       end
 
-      describe "boundary values (current behavior — no input validation)" do
-        # These document that retry_policy currently passes numeric values
-        # through without sanity-checking them. If validation tightens, these
-        # specs become a contract change to discuss.
-        it "accepts max_retries: 0 (terminal-on-first-failure)" do
+      describe "max_retries validation" do
+        it "accepts max_retries: 0 (fail-fast — terminal on first failure)" do
           klass = Class.new(described_class) do
             inputs :x
             retry_policy max_retries: 0
@@ -266,12 +263,153 @@ module Stern
           expect(klass.resolved_retry_policy[:max_retries]).to eq(1_000_000)
         end
 
-        it "accepts a fractional base" do
+        it "rejects max_retries: -1 (negative would silently make every failure terminal)" do
+          expect {
+            Class.new(described_class) do
+              inputs :x
+              retry_policy max_retries: -1
+            end
+          }.to raise_error(ArgumentError, /max_retries.*non-negative Integer/)
+        end
+
+        it "rejects max_retries: -100" do
+          expect {
+            Class.new(described_class) do
+              inputs :x
+              retry_policy max_retries: -100
+            end
+          }.to raise_error(ArgumentError, /max_retries/)
+        end
+
+        it "rejects fractional max_retries (1.5)" do
+          expect {
+            Class.new(described_class) do
+              inputs :x
+              retry_policy max_retries: 1.5
+            end
+          }.to raise_error(ArgumentError, /max_retries.*Integer/)
+        end
+
+        it "rejects string max_retries ('5')" do
+          expect {
+            Class.new(described_class) do
+              inputs :x
+              retry_policy max_retries: "5"
+            end
+          }.to raise_error(ArgumentError, /max_retries.*Integer/)
+        end
+
+        it "rejects nil if explicitly merged in (covered by .compact, but worth pinning)" do
+          # Explicit nil is dropped by .compact and falls back to default.
+          klass = Class.new(described_class) do
+            inputs :x
+            retry_policy max_retries: nil
+          end
+          expect(klass.resolved_retry_policy[:max_retries]).to eq(described_class::DEFAULT_RETRY_POLICY[:max_retries])
+        end
+
+        it "names the offending value in the error message" do
+          expect {
+            Class.new(described_class) do
+              inputs :x
+              retry_policy max_retries: -7
+            end
+          }.to raise_error(ArgumentError, /-7/)
+        end
+      end
+
+      describe "base validation" do
+        it "accepts base: 0 (no delay — fail-fast retries)" do
+          klass = Class.new(described_class) do
+            inputs :x
+            retry_policy base: 0
+          end
+          expect(klass.resolved_retry_policy[:base]).to eq(0)
+        end
+
+        it "accepts a fractional base (sub-second backoff)" do
           klass = Class.new(described_class) do
             inputs :x
             retry_policy base: 0.5
           end
           expect(klass.resolved_retry_policy[:base]).to eq(0.5)
+        end
+
+        it "accepts a very large base" do
+          klass = Class.new(described_class) do
+            inputs :x
+            retry_policy base: 86_400
+          end
+          expect(klass.resolved_retry_policy[:base]).to eq(86_400)
+        end
+
+        it "rejects base: -1 (negative backoff would push after_time into the past)" do
+          expect {
+            Class.new(described_class) do
+              inputs :x
+              retry_policy base: -1
+            end
+          }.to raise_error(ArgumentError, /base.*non-negative Numeric/)
+        end
+
+        it "rejects base: -30.5" do
+          expect {
+            Class.new(described_class) do
+              inputs :x
+              retry_policy base: -30.5
+            end
+          }.to raise_error(ArgumentError, /base/)
+        end
+
+        it "rejects string base ('30')" do
+          expect {
+            Class.new(described_class) do
+              inputs :x
+              retry_policy base: "30"
+            end
+          }.to raise_error(ArgumentError, /base.*Numeric/)
+        end
+
+        it "rejects symbol base (:thirty)" do
+          expect {
+            Class.new(described_class) do
+              inputs :x
+              retry_policy base: :thirty
+            end
+          }.to raise_error(ArgumentError, /base.*Numeric/)
+        end
+
+        it "names the offending value in the error message" do
+          expect {
+            Class.new(described_class) do
+              inputs :x
+              retry_policy base: -42
+            end
+          }.to raise_error(ArgumentError, /-42/)
+        end
+      end
+
+      describe "validation interaction with prior policy" do
+        it "leaves the prior policy untouched when a numeric validation fails" do
+          klass = Class.new(described_class) do
+            inputs :x
+            retry_policy max_retries: 2, backoff: :constant, base: 60
+          end
+          expect { klass.retry_policy(max_retries: -1) }.to raise_error(ArgumentError)
+          expect(klass.resolved_retry_policy).to eq(
+            max_retries: 2, backoff: :constant, base: 60,
+          )
+        end
+
+        it "leaves the prior policy untouched when type validation fails" do
+          klass = Class.new(described_class) do
+            inputs :x
+            retry_policy max_retries: 2, backoff: :constant, base: 60
+          end
+          expect { klass.retry_policy(base: "boom") }.to raise_error(ArgumentError)
+          expect(klass.resolved_retry_policy).to eq(
+            max_retries: 2, backoff: :constant, base: 60,
+          )
         end
       end
     end

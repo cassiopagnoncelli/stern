@@ -43,17 +43,41 @@ module Stern
       #   :exponential — base * 2^retry_count (default)
       #   :constant    — base seconds, every retry
       #
+      # Constraints (validated at declaration time so misconfigurations
+      # surface at boot, not when an op fails in production):
+      #   max_retries — non-negative Integer (0 = fail-fast)
+      #   base        — non-negative Numeric (Integer or Float seconds)
+      #   backoff     — one of SUPPORTED_BACKOFF_STRATEGIES
+      #
       # Example:
       #   class ChargePix < BaseOperation
       #     retry_policy max_retries: 3, backoff: :constant, base: 60
       #   end
       def retry_policy(max_retries: nil, backoff: nil, base: nil)
         overrides = { max_retries: max_retries, backoff: backoff, base: base }.compact
+
+        if overrides.key?(:max_retries)
+          mr = overrides[:max_retries]
+          unless mr.is_a?(Integer) && mr >= 0
+            raise ArgumentError,
+              "max_retries must be a non-negative Integer (got #{mr.inspect})"
+          end
+        end
+
+        if overrides.key?(:base)
+          b = overrides[:base]
+          unless b.is_a?(Numeric) && b >= 0
+            raise ArgumentError,
+              "base must be a non-negative Numeric (got #{b.inspect})"
+          end
+        end
+
         if overrides[:backoff] && !SUPPORTED_BACKOFF_STRATEGIES.include?(overrides[:backoff])
           raise ArgumentError,
             "unknown backoff strategy: #{overrides[:backoff].inspect} " \
             "(supported: #{SUPPORTED_BACKOFF_STRATEGIES.inspect})"
         end
+
         @retry_policy = DEFAULT_RETRY_POLICY.merge(overrides)
       end
 
