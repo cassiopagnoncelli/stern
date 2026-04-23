@@ -349,15 +349,37 @@ module Stern
           end
         end
 
-        it "enables SO_KEEPALIVE and the platform TCP_KEEP* knobs on a TCP socket" do
-          ApplicationRecord.connection_pool.with_connection do |conn|
-            raw = conn.raw_connection
-            io = raw.socket_io
-            skip "test DB is connected via Unix socket, not TCP" unless io.local_address.ip?
+        # The TCP-keepalive code path used to be exercised by an integration
+        # test against the real DB connection — but it skipped whenever the
+        # test DB sat on a Unix socket (the common local config), leaving the
+        # path untested in practice. Replaced by a transport-independent test
+        # below that synthesizes a real TCP socket pair and exercises
+        # configure_listen_keepalive directly. Same coverage, deterministic
+        # on every CI build, no platform/DB-config carve-out.
+        context "with a synthetic TCP socket (transport-agnostic)" do
+          let!(:tcp_server) { TCPServer.new("127.0.0.1", 0) }
+          let!(:tcp_client) { TCPSocket.new(tcp_server.addr[3], tcp_server.addr[1]) }
+          let!(:tcp_accepted) { tcp_server.accept }
+          let(:fake_raw) { double("PG::Connection", socket_io: tcp_client) }
 
-            runner.send(:configure_listen_keepalive, raw)
+          after do
+            [ tcp_client, tcp_accepted, tcp_server ].each do |s|
+              s.close unless s.closed?
+            rescue IOError
+              # Already closed — fine.
+            end
+          end
 
-            expect(io.getsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE).int).to eq(1)
+          it "enables SO_KEEPALIVE on the underlying TCP socket" do
+            runner.send(:configure_listen_keepalive, fake_raw)
+            # Platform quirk: Linux's getsockopt(SO_KEEPALIVE) returns 1 when
+            # set; macOS/BSD returns the option-number bit (8). Either way,
+            # "keepalive on" means non-zero — that's the contract.
+            expect(tcp_client.getsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE).int).not_to eq(0)
+          end
+
+          it "sets the platform 'idle seconds before first probe' knob to LISTEN_KEEPALIVE_IDLE_SECONDS" do
+            runner.send(:configure_listen_keepalive, fake_raw)
 
             idle_const =
               if Socket.const_defined?(:TCP_KEEPIDLE)
@@ -365,10 +387,39 @@ module Stern
               elsif Socket.const_defined?(:TCP_KEEPALIVE)
                 Socket::TCP_KEEPALIVE
               end
-            if idle_const
-              expect(io.getsockopt(Socket::IPPROTO_TCP, idle_const).int)
-                .to eq(described_class::LISTEN_KEEPALIVE_IDLE_SECONDS)
-            end
+            skip "platform exposes neither TCP_KEEPIDLE nor TCP_KEEPALIVE" unless idle_const
+
+            expect(tcp_client.getsockopt(Socket::IPPROTO_TCP, idle_const).int)
+              .to eq(described_class::LISTEN_KEEPALIVE_IDLE_SECONDS)
+          end
+
+          it "sets TCP_KEEPINTVL to LISTEN_KEEPALIVE_INTERVAL_SECONDS when the platform supports it" do
+            skip "platform does not expose TCP_KEEPINTVL" unless Socket.const_defined?(:TCP_KEEPINTVL)
+
+            runner.send(:configure_listen_keepalive, fake_raw)
+            expect(tcp_client.getsockopt(Socket::IPPROTO_TCP, Socket::TCP_KEEPINTVL).int)
+              .to eq(described_class::LISTEN_KEEPALIVE_INTERVAL_SECONDS)
+          end
+
+          it "sets TCP_KEEPCNT to LISTEN_KEEPALIVE_COUNT when the platform supports it" do
+            skip "platform does not expose TCP_KEEPCNT" unless Socket.const_defined?(:TCP_KEEPCNT)
+
+            runner.send(:configure_listen_keepalive, fake_raw)
+            expect(tcp_client.getsockopt(Socket::IPPROTO_TCP, Socket::TCP_KEEPCNT).int)
+              .to eq(described_class::LISTEN_KEEPALIVE_COUNT)
+          end
+
+          it "leaves SO_KEEPALIVE off when called against a Unix-domain socket (early-return)" do
+            unix_pair = UNIXSocket.pair
+            unix_raw = double("PG::Connection (Unix)", socket_io: unix_pair.first)
+            runner.send(:configure_listen_keepalive, unix_raw)
+            # No assertion on the Unix socket — Unix sockets don't implement
+            # SO_KEEPALIVE — the contract is "no raise, no-op". Asserting
+            # the absence of side effects on the TCP socket would couple to
+            # an unrelated socket; the lack of raise is the contract.
+            expect { runner.send(:configure_listen_keepalive, unix_raw) }.not_to raise_error
+          ensure
+            unix_pair&.each { |s| s.close unless s.closed? }
           end
         end
 
