@@ -64,7 +64,6 @@ books:
   - pp_charge_fee_partner_pix
 
   - pp_refund
-  - pp_refund_request
   - pp_refund_merchant
   - pp_refund_merchant_internal
   - pp_refund_merchant_manual
@@ -165,3 +164,11 @@ entry_pairs:
   split_partner:
     book_sub: pp_payment
     book_add: partner_withholding
+
+  # Refunds (reverse customer-side of identified_customer / unidentified_customer)
+  refund_identified_customer:
+    book_sub: pp_charge_merchant
+    book_add: pp_charge_identified_customer
+  refund_unidentified_customer:
+    book_sub: pp_charge_merchant
+    book_add: pp_charge_unidentified_customer

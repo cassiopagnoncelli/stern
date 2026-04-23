@@ -24,6 +24,10 @@ module Stern
     def perform(operation_id)
       raise ArgumentError if invalid? || operation_id.blank?
 
+      # Operational info pairs.
+      
+
+      # Accounting info pairs.
       EntryPair.add_pp_charge_pix(charge_id, merchant_id, amount, currency, operation_id:)
       EntryPair.add_pp_charge_fee_merchant_pix(charge_id, merchant_id, fee, currency, operation_id:) if fee&.positive?
       if customer_id
