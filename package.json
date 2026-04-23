@@ -1,0 +1,14 @@
+{
+  "name": "stern",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i ./app/assets/stylesheets/stern/application.tailwind.css -o ./app/assets/builds/tailwind.css --minify",
+    "watch": "tailwindcss -i ./app/assets/stylesheets/stern/application.tailwind.css -o ./app/assets/builds/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.1",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.1"
+  }
+}

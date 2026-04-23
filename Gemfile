@@ -13,4 +13,6 @@ group :development, :test do
   gem "rubocop-rails-omakase", require: false
   gem "factory_bot_rails"
   gem "tracer"
+  gem "puma"
+  gem "foreman"
 end

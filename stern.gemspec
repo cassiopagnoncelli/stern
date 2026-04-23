@@ -32,6 +32,8 @@ Gem::Specification.new do |spec|
   spec.add_dependency "nokogiri", ">= 1.15.6"
   spec.add_dependency "xxhash", ">= 0.5"
   spec.add_dependency "prometheus-client", ">= 4.0"
+  spec.add_dependency "propshaft", ">= 1.0"
+  spec.add_dependency "cssbundling-rails", ">= 1.4"
 
   # Development.
   spec.add_development_dependency "rspec-rails"
