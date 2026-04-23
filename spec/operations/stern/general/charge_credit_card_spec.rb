@@ -1,7 +1,7 @@
 require "rails_helper"
 
 module Stern
-  RSpec.describe ChargePix, type: :model do
+  RSpec.describe ChargeCreditCard, type: :model do
     let(:merchant_id) { 1101 }
     let(:customer_id) { 2202 }
 
@@ -65,7 +65,7 @@ module Stern
       it "records an Operation row with currency in params" do
         described_class.new(**valid_inputs).call
         expect(Operation.last).to have_attributes(
-          name: "ChargePix",
+          name: "ChargeCreditCard",
           params: hash_including("currency" => ::Stern.cur("BRL")),
         )
       end
@@ -86,8 +86,8 @@ module Stern
         described_class.new(**valid_inputs(charge_id: 2, amount: 5000, currency: "USD")).call
         described_class.new(**valid_inputs(charge_id: 3, amount: 1000, currency: "BRL")).call
 
-        brl = ::Stern.balance(merchant_id, :pp_charge_pix, :BRL)
-        usd = ::Stern.balance(merchant_id, :pp_charge_pix, :USD)
+        brl = ::Stern.balance(merchant_id, :pp_charge_credit_card, :BRL)
+        usd = ::Stern.balance(merchant_id, :pp_charge_credit_card, :USD)
         expect(brl).to eq(10_900)
         expect(usd).to eq(5000)
       end
@@ -132,9 +132,9 @@ module Stern
           }.to change(EntryPair, :count).by(3)
         end
 
-        it "records the fee in the pp_charge_fee_merchant_pix book" do
+        it "records the fee in the pp_charge_fee_merchant_credit_card book" do
           described_class.new(**valid_inputs(charge_id: 11, fee: 100)).call
-          fee_balance = ::Stern.balance(merchant_id, :pp_charge_fee_merchant_pix, :BRL)
+          fee_balance = ::Stern.balance(merchant_id, :pp_charge_fee_merchant_credit_card, :BRL)
           expect(fee_balance).to eq(100)
         end
 

@@ -32,6 +32,9 @@ books:
       non_negative: true
 
   # Payment Processing: PSP, gateway
+  - identified_customer
+  - unidentified_customer
+
   - pp_payment
   - pp_charge_internal
   - pp_charge_manual
