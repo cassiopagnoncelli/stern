@@ -36,6 +36,64 @@ module Stern
       end
     end
 
+    describe ".retry_policy / .resolved_retry_policy" do
+      it "returns DEFAULT_RETRY_POLICY when no policy declared" do
+        klass = Class.new(described_class) { inputs :x }
+        expect(klass.resolved_retry_policy).to eq(described_class::DEFAULT_RETRY_POLICY)
+      end
+
+      it "merges declared overrides on top of the defaults" do
+        klass = Class.new(described_class) do
+          inputs :x
+          retry_policy max_retries: 1, backoff: :constant, base: 60
+        end
+        expect(klass.resolved_retry_policy).to eq(
+          max_retries: 1, backoff: :constant, base: 60,
+        )
+      end
+
+      it "leaves unspecified keys at their defaults" do
+        klass = Class.new(described_class) do
+          inputs :x
+          retry_policy max_retries: 2
+        end
+        expect(klass.resolved_retry_policy).to eq(
+          max_retries: 2,
+          backoff: described_class::DEFAULT_RETRY_POLICY[:backoff],
+          base: described_class::DEFAULT_RETRY_POLICY[:base],
+        )
+      end
+
+      it "isolates retry policy per subclass" do
+        a = Class.new(described_class) do
+          inputs :x
+          retry_policy max_retries: 1
+        end
+        b = Class.new(described_class) { inputs :x }
+        expect(a.resolved_retry_policy[:max_retries]).to eq(1)
+        expect(b.resolved_retry_policy[:max_retries]).to eq(described_class::DEFAULT_RETRY_POLICY[:max_retries])
+      end
+
+      it "rejects unknown backoff strategies" do
+        expect {
+          Class.new(described_class) do
+            inputs :x
+            retry_policy backoff: :linear
+          end
+        }.to raise_error(ArgumentError, /unknown backoff strategy/)
+      end
+
+      it "accepts :exponential and :constant" do
+        %i[exponential constant].each do |strategy|
+          klass = Class.new(described_class) do
+            inputs :x
+            retry_policy backoff: strategy
+          end
+          expect(klass.resolved_retry_policy[:backoff]).to eq(strategy)
+        end
+      end
+    end
+
     describe "#initialize" do
       it "assigns declared inputs from kwargs" do
         op = test_class.new(a: 1, b: 2)

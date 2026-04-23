@@ -143,7 +143,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
       end
 
       context "when retries are exhausted" do
-        before { scheduled_op.update!(retry_count: described_class::MAX_RETRIES) }
+        before { scheduled_op.update!(retry_count: ::Stern::BaseOperation::DEFAULT_RETRY_POLICY[:max_retries]) }
 
         it "marks the SOP terminally :runtime_error" do
           expect { service.clear_in_progress }.to change {
@@ -427,7 +427,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
         context "when operation raises StandardError and retries are exhausted" do
           before do
             allow(operation).to receive(:call).and_raise(StandardError, "runtime error")
-            scheduled_op.update!(retry_count: described_class::MAX_RETRIES)
+            scheduled_op.update!(retry_count: ::Stern::BaseOperation::DEFAULT_RETRY_POLICY[:max_retries])
             scheduled_op.update!(status: :in_progress)
           end
 
@@ -467,6 +467,43 @@ module Stern # rubocop:disable Metrics/ModuleLength
             expect(scheduled_op.reload.retry_count).to eq(2)
           end
         end
+
+        context "with a per-class retry policy" do
+          before { allow(operation).to receive(:call).and_raise(StandardError, "boom") }
+
+          it "respects a tighter per-class :max_retries (terminal earlier than default)" do
+            allow(::Stern::ChargePix).to receive(:resolved_retry_policy).and_return(
+              max_retries: 1, backoff: :exponential, base: 30,
+            )
+            scheduled_op.update!(retry_count: 1, status: :in_progress)
+
+            service.process_operation(operation, scheduled_op)
+            expect(scheduled_op.reload.status).to eq("runtime_error")
+          end
+
+          it "uses :constant backoff when declared" do
+            allow(::Stern::ChargePix).to receive(:resolved_retry_policy).and_return(
+              max_retries: 5, backoff: :constant, base: 90,
+            )
+            scheduled_op.update!(retry_count: 3, status: :in_progress)
+
+            service.process_operation(operation, scheduled_op)
+            # Constant backoff at retry_count 3 should be 90s, not 30 * 2^3 = 240s.
+            expect(scheduled_op.reload.after_time).to be_within(2.seconds).of(90.seconds.from_now.utc)
+          end
+        end
+      end
+    end
+
+    describe ".policy_for (private)" do
+      it "returns the op class's resolved_retry_policy when name resolves" do
+        sop = ScheduledOperation.new(name: "ChargePix")
+        expect(service.send(:policy_for, sop)).to eq(::Stern::ChargePix.resolved_retry_policy)
+      end
+
+      it "falls back to BaseOperation::DEFAULT_RETRY_POLICY when name is unknown" do
+        sop = ScheduledOperation.new(name: "NoSuchOp")
+        expect(service.send(:policy_for, sop)).to eq(::Stern::BaseOperation::DEFAULT_RETRY_POLICY)
       end
     end
 

@@ -29,6 +29,28 @@ module Stern
       new(name:, params:, after_time:, status:, status_time:)
     end
 
+    # Manually rehabilitate a terminally-failed SOP so it goes back through
+    # the picker. Refuses non-`:runtime_error` states because :argument_error
+    # means the params are bad — rescue alone won't fix it.
+    def rescue!
+      unless runtime_error?
+        raise ArgumentError, "rescue! only valid for :runtime_error SOPs (id=#{id}, status=#{status})"
+      end
+
+      now = DateTime.current.utc
+      update!(
+        status: :pending,
+        status_time: now,
+        after_time: now,
+        retry_count: 0,
+        error_message: nil,
+      )
+
+      ActiveSupport::Notifications.instrument(
+        "stern.sop.rescued", id: id, op_name: name,
+      )
+    end
+
     def pp
       # Flatten params recursively and prepare for colorized output
       flat_params = flatten_params(params) if params

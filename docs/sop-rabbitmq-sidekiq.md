@@ -16,7 +16,7 @@ engine. Stern only exposes the service API:
 | `Stern::ScheduledOperationService.enqueue_list` | reserves due SOPs with `SELECT ... FOR UPDATE SKIP LOCKED`, flips them to `:picked`, returns their ids | host app's picker job |
 | `Stern::ScheduledOperationService.process_sop(id)` | runs one SOP end-to-end; op-level errors land the SOP in `:pending`-with-backoff (retryable) or `:argument_error` / `:runtime_error` (terminal) | host app's consumer |
 | `Stern::ScheduledOperationService.clear_picked` | resets SOPs stuck in `:picked` for > 300s back to `:pending` | host app's janitor job |
-| `Stern::ScheduledOperationService.clear_in_progress` | recycles SOPs stuck in `:in_progress` for > 600s (consumer crashed mid-op); bumps `retry_count` and backs off, or terminally marks `:runtime_error` past `MAX_RETRIES` | host app's janitor job |
+| `Stern::ScheduledOperationService.clear_in_progress` | recycles SOPs stuck in `:in_progress` for > 600s (consumer crashed mid-op); bumps `retry_count` and backs off, or terminally marks `:runtime_error` past the op class's `retry_policy[:max_retries]` (default 5) | host app's janitor job |
 
 Stern has no dependency on `sidekiq`, `sidekiq-cron`, or `bunny` — those are
 host-app choices. The integration can be swapped for any equivalent stack
@@ -118,8 +118,9 @@ acked by a consumer, so safe to re-publish. `clear_in_progress` handles
 SOPs stuck in `:in_progress` past `IN_PROGRESS_TIMEOUT_IN_SECONDS` (600s) —
 a consumer started the op and then died (OOM, SIGKILL, pod eviction). The
 crash counts as a failed attempt, so `retry_count` bumps and the SOP goes
-back to `:pending` with the same exponential backoff the `StandardError`
-rescue uses; past `MAX_RETRIES` it settles in `:runtime_error`.
+back to `:pending` with the same backoff the `StandardError` rescue uses
+(see the op class's `retry_policy`); past `retry_policy[:max_retries]` it
+settles in `:runtime_error`.
 
 ```ruby
 # your_app/app/jobs/sop_janitor_job.rb
@@ -200,10 +201,12 @@ exactly that, so an OS-level kill redelivers the message.
 Business-level errors never reach the consumer's generic `rescue => e`
 branch. `process_operation` catches them internally: `ArgumentError` lands
 the SOP terminally in `:argument_error`; `StandardError` pushes it back to
-`:pending` with exponential backoff (30s, 60s, 2m, 4m, 8m) and an
-incremented `retry_count`, up to `MAX_RETRIES = 5`, after which it settles
-in `:runtime_error`. The next picker tick re-publishes; redelivery is
-idempotent via the propagated `idem_key` (see "Picker hardening" below).
+`:pending` using the op class's declared `retry_policy` (default:
+exponential backoff with base 30s — 30s, 60s, 2m, 4m, 8m — and
+`max_retries: 5`) and increments `retry_count`. Past `max_retries` it
+settles in `:runtime_error`, where it can be revived with
+`rake stern:sop:rescue[id]`. The next picker tick re-publishes; redelivery
+is idempotent via the propagated `idem_key` (see "Picker hardening" below).
 
 The consumer's `nack`-and-redeliver path therefore fires only for
 infrastructure failures — OS kill, DB connection loss, network blips

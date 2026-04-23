@@ -17,6 +17,18 @@ module Stern
   class BaseOperation
     attr_accessor :operation
 
+    # Default retry profile applied to subclasses that do not declare their
+    # own `retry_policy`. Read by `Stern::ScheduledOperationService` at every
+    # retry decision point. `:exponential` backoff yields `base * 2^retry_count`
+    # (30s, 60s, 2m, 4m, 8m for retry_count 0..4 with base=30).
+    DEFAULT_RETRY_POLICY = {
+      max_retries: 5,
+      backoff: :exponential,
+      base: 30,
+    }.freeze
+
+    SUPPORTED_BACKOFF_STRATEGIES = %i[exponential constant].freeze
+
     class << self
       def inputs(*names)
         @inputs ||= []
@@ -24,6 +36,31 @@ module Stern
 
         @inputs.concat(names)
         attr_accessor(*names)
+      end
+
+      # Declares per-class retry behavior. Unspecified keys fall back to
+      # `DEFAULT_RETRY_POLICY`. Backoff strategies:
+      #   :exponential — base * 2^retry_count (default)
+      #   :constant    — base seconds, every retry
+      #
+      # Example:
+      #   class ChargePix < BaseOperation
+      #     retry_policy max_retries: 3, backoff: :constant, base: 60
+      #   end
+      def retry_policy(max_retries: nil, backoff: nil, base: nil)
+        overrides = { max_retries: max_retries, backoff: backoff, base: base }.compact
+        if overrides[:backoff] && !SUPPORTED_BACKOFF_STRATEGIES.include?(overrides[:backoff])
+          raise ArgumentError,
+            "unknown backoff strategy: #{overrides[:backoff].inspect} " \
+            "(supported: #{SUPPORTED_BACKOFF_STRATEGIES.inspect})"
+        end
+        @retry_policy = DEFAULT_RETRY_POLICY.merge(overrides)
+      end
+
+      # Returns the effective retry policy for this class. Falls back to
+      # `DEFAULT_RETRY_POLICY` when `retry_policy` was never declared.
+      def resolved_retry_policy
+        @retry_policy || DEFAULT_RETRY_POLICY
       end
     end
 

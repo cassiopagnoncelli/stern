@@ -28,14 +28,12 @@ module Stern
     # to finish before assuming a crash.
     IN_PROGRESS_TIMEOUT_IN_SECONDS = 600
 
-    # Max number of retries after the initial attempt before a transient
-    # failure becomes the terminal `:runtime_error`. Total attempts =
-    # MAX_RETRIES + 1.
-    MAX_RETRIES = 5
-
-    # Base backoff for the first retry, in seconds. Each subsequent retry
-    # doubles it (exponential): 30s, 60s, 2m, 4m, 8m for retry_count 0..4.
-    RETRY_BACKOFF_BASE_SECONDS = 30
+    # Retry behavior is per-op-class. Each `Stern::BaseOperation` subclass
+    # declares its own `retry_policy max_retries:, backoff:, base:`; ops
+    # that don't fall back to `BaseOperation::DEFAULT_RETRY_POLICY`
+    # (max_retries: 5, exponential backoff with base 30s — 30s, 60s, 2m,
+    # 4m, 8m for retry_count 0..4). See `policy_for` and `retry_backoff`
+    # below for the read path.
 
     def list
       picked_list = ScheduledOperation.picked.ids
@@ -89,11 +87,12 @@ module Stern
       threshold = IN_PROGRESS_TIMEOUT_IN_SECONDS.seconds.ago.utc
       ScheduledOperation.in_progress.where("status_time < ?", threshold).find_each do |sop|
         now = DateTime.current.utc
-        if sop.retry_count < MAX_RETRIES
+        policy = policy_for(sop)
+        if sop.retry_count < policy[:max_retries]
           sop.update!(
             status: :pending,
             status_time: now,
-            after_time: now + retry_backoff(sop.retry_count),
+            after_time: now + retry_backoff(sop.retry_count, policy),
             retry_count: sop.retry_count + 1,
             error_message: "recovered from stuck in_progress state",
           )
@@ -142,13 +141,14 @@ module Stern
             error_message: e.message,
           )
         rescue StandardError => e
-          if scheduled_op.retry_count < MAX_RETRIES
+          policy = operation.class.resolved_retry_policy
+          if scheduled_op.retry_count < policy[:max_retries]
             payload[:outcome] = :retried
             now = DateTime.current.utc
             scheduled_op.update!(
               status: :pending,
               status_time: now,
-              after_time: now + retry_backoff(scheduled_op.retry_count),
+              after_time: now + retry_backoff(scheduled_op.retry_count, policy),
               retry_count: scheduled_op.retry_count + 1,
               error_message: e.message,
             )
@@ -164,10 +164,27 @@ module Stern
       end
     end
 
-    # Exponential backoff for the (retry_count)-th retry (0-indexed):
-    # 30s, 60s, 2m, 4m, 8m for retry_count 0..4.
-    def retry_backoff(retry_count)
-      RETRY_BACKOFF_BASE_SECONDS * (2**retry_count)
+    # Looks up the retry policy declared on the op class. Falls back to
+    # `BaseOperation::DEFAULT_RETRY_POLICY` when the op class can't be
+    # resolved (e.g. an op was deleted while SOPs of its name remain in
+    # the queue) — better to keep retrying with safe defaults than to
+    # crash the janitor.
+    def policy_for(sop)
+      Object.const_get("Stern::#{sop.name}").resolved_retry_policy
+    rescue NameError
+      BaseOperation::DEFAULT_RETRY_POLICY
+    end
+
+    # Backoff in seconds for the (retry_count)-th retry (0-indexed),
+    # dispatched on the policy's :backoff strategy.
+    #   :exponential — base * 2^retry_count
+    #   :constant    — base
+    def retry_backoff(retry_count, policy)
+      case policy[:backoff]
+      when :constant    then policy[:base]
+      when :exponential then policy[:base] * (2**retry_count)
+      else raise ArgumentError, "unknown backoff strategy: #{policy[:backoff].inspect}"
+      end
     end
 
     # Stable per-SOP idempotency key, fed to `BaseOperation#call`. Any repeat
