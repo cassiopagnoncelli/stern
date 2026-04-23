@@ -50,7 +50,7 @@ style: ## Auto-correct style issues
 	bundle exec rubocop --auto-correct
 
 benchmark: ## Benchmark a Stern operation (override BENCHMARK_OP/THREADS/ITERATIONS/WARMUP/MERCHANTS)
-	RAILS_MAX_THREADS=$(BENCHMARK_THREADS) bundle exec ruby scripts/benchmark/run.rb \
+	@RAILS_MAX_THREADS=$(BENCHMARK_THREADS) bundle exec ruby scripts/benchmark/run.rb \
 		--op=$(BENCHMARK_OP) \
 		--threads=$(BENCHMARK_THREADS) \
 		--iterations=$(BENCHMARK_ITERATIONS) \
