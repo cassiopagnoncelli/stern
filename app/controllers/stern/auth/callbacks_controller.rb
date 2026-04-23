@@ -21,13 +21,15 @@ module Stern
         redirect_to after_sign_in_path
       rescue Idp::JWT::VerificationError => e
         Rails.logger.error("Idp JWT verification failed during callback: #{e.message}")
-        redirect_to "/stern", alert: "Authentication failed."
+        @auth_failure_reason = e.message
+        render "stern/auth/callbacks/failure", status: :unauthorized
       end
 
       # GET /stern/auth/failure
       def failure
         Rails.logger.warn("OmniAuth authentication failed: #{params[:message]}")
-        redirect_to "/stern", alert: "Authentication failed."
+        @auth_failure_reason = params[:message].presence
+        render "stern/auth/callbacks/failure", status: :unauthorized
       end
 
       # DELETE /stern/auth/sign_out
@@ -40,14 +42,14 @@ module Stern
         if logout_url.present?
           redirect_to logout_url, allow_other_host: true
         else
-          redirect_to "/stern", alert: "Signed out."
+          redirect_to "/stern/auth/sign_out/completed"
         end
       end
 
       # GET /stern/auth/sign_out/completed
       def signed_out
         reset_session
-        redirect_to "/stern", notice: "Signed out."
+        render "stern/auth/callbacks/signed_out"
       end
 
       private

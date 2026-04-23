@@ -33,7 +33,7 @@ module Stern
 
       respond_to do |format|
         format.html do
-          redirect_to "/stern", alert: "You are not authorized to access this area."
+          render "stern/errors/forbidden", status: :forbidden
         end
         format.json { render json: { error: "forbidden" }, status: :forbidden }
       end

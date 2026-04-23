@@ -27,13 +27,13 @@ RSpec.describe "Stern::Admin::Dashboard", type: :request do
       expect(response.location).to end_with("/stern/auth/idp/start")
     end
 
-    it "redirects to /stern when signed-in user lacks platform_admin" do
+    it "renders 403 when signed-in user lacks platform_admin" do
       sign_in_as(build_passport(platform_admin: false))
 
       get "/stern/admin"
 
-      expect(response).to redirect_to("/stern")
-      expect(flash[:alert]).to match(/not authorized/i)
+      expect(response).to have_http_status(:forbidden)
+      expect(response.body).to include("Access denied")
     end
 
     it "renders the dashboard for a platform admin" do
