@@ -59,9 +59,14 @@ module Stern
           "listen=#{@listen_for_notifications}")
 
         until stopping?
+          # Reset BEFORE `run_once`. Any NOTIFY delivered during the pick
+          # window (while `run_once` is running) must survive into the
+          # subsequent `wait_with_notify` so we short-circuit the sleep.
+          # Resetting inside `wait_with_notify` would silently drop any
+          # signal the listen thread set between the start of this tick
+          # and the wait.
+          @wake_event.reset
           run_once
-          # Wait up to poll_interval OR until NOTIFY wakes us. Either way,
-          # the next iteration runs a full tick.
           wait_with_notify(@poll_interval)
         end
 
@@ -169,35 +174,68 @@ module Stern
       # (indicating a new pending SOP arrived). Returns early so the next
       # loop iteration picks the work up in milliseconds instead of waiting
       # for the full poll interval.
+      #
+      # Callers MUST reset @wake_event before the pick work this wait pairs
+      # with — resetting inside this method would lose signals that arrived
+      # during the pick.
       def wait_with_notify(seconds)
-        @wake_event.reset
         deadline = Time.now + seconds
         until stopping? || @wake_event.set? || Time.now >= deadline
           @wake_event.wait([ deadline - Time.now, 0.1 ].min)
         end
       end
 
+      # Backoff sequence when the listen connection dies: 1s, 2s, 4s, 8s,
+      # 16s, 30s (capped). Keeps retrying until `stop` is signalled so a
+      # transient DB blip doesn't permanently disable low-latency pickup.
+      LISTEN_RETRY_BACKOFF_CAP_SECONDS = 30
+
       # Dedicated thread holding one connection, LISTENing on NOTIFY_CHANNEL.
       # On each notify — or on timeout — it sets @wake_event so the main
-      # loop can iterate. The with_connection block keeps the connection
-      # checked out for the lifetime of the thread; UNLISTEN runs on exit.
+      # loop can iterate.
+      #
+      # Resilience: the listen body is wrapped in a retry loop with capped
+      # exponential backoff. Connection errors (PG::ConnectionBad, IOError,
+      # PgBouncer eviction, brief network blips) log at error level and
+      # reconnect; the runner continues polling during the outage. Only
+      # `stop` stops the thread for good.
       def start_listen_thread
         @listen_thread = Thread.new do
-          ::Stern::ApplicationRecord.connection_pool.with_connection do |conn|
-            raw = conn.raw_connection
-            raw.async_exec("LISTEN #{NOTIFY_CHANNEL}")
+          attempt = 0
+          until stopping?
             begin
-              until stopping?
-                # Block up to 1s. Returns nil on timeout; [channel, pid, payload] on notify.
-                notify = raw.wait_for_notify(1.0)
-                @wake_event.set if notify
-              end
-            ensure
-              raw.async_exec("UNLISTEN #{NOTIFY_CHANNEL}") rescue nil
+              listen_loop
+              attempt = 0
+            rescue StandardError => e
+              @logger.error("#{log_prefix}listen thread error (attempt #{attempt + 1}): " \
+                "#{e.class}: #{e.message}; retrying")
+              interruptible_sleep([ 2**attempt, LISTEN_RETRY_BACKOFF_CAP_SECONDS ].min)
+              attempt += 1
             end
           end
-        rescue StandardError => e
-          @logger.error(log_prefix + "listen thread error: #{e.class}: #{e.message}")
+        end
+      end
+
+      # One LISTEN session: acquire a connection, register LISTEN, loop on
+      # `wait_for_notify` until `stop` is signalled, UNLISTEN on exit.
+      # Raises on connection errors so `start_listen_thread` can reconnect.
+      def listen_loop
+        ::Stern::ApplicationRecord.connection_pool.with_connection do |conn|
+          raw = conn.raw_connection
+          raw.async_exec("LISTEN #{NOTIFY_CHANNEL}")
+          begin
+            until stopping?
+              # Block up to 1s. Returns nil on timeout; channel String on notify.
+              notify = raw.wait_for_notify(1.0)
+              @wake_event.set if notify
+            end
+          ensure
+            begin
+              raw.async_exec("UNLISTEN #{NOTIFY_CHANNEL}") if raw
+            rescue PG::Error, IOError
+              # Connection already gone; nothing to unlisten.
+            end
+          end
         end
       end
 

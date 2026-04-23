@@ -283,7 +283,15 @@ whenever a SOP enters `pending`. On notify, the runner's main loop wakes
 immediately — so freshly-scheduled work gets picked up in milliseconds
 regardless of `STERN_POLL_INTERVAL`. This lets you set `poll_interval` high
 (e.g. 30s) for cheap idle load while still reacting near-instantly to new
-arrivals. Opt out with `listen_for_notifications: false` when embedding.
+arrivals. The listen thread reconnects automatically with capped exponential
+backoff (up to 30s) if its connection drops — transient blips don't kill
+low-latency pickup.
+
+**PgBouncer note.** If the host app routes through PgBouncer in
+`pool_mode = transaction` or `statement`, LISTEN can't work — the session
+state that LISTEN registers is discarded at the next checkout. Opt out with
+`listen_for_notifications: false`; the runner falls back to polling alone
+(still correct, just less responsive). Session-mode PgBouncer is fine.
 
 ## Metrics (Prometheus)
 

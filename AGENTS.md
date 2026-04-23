@@ -187,6 +187,15 @@ for a working template with a synthetic `WithdrawTest` op.
   graceful SIGTERM shutdown, and janitor cadence (`clear_picked` +
   `clear_in_progress`). Per-op errors stay inside the thread pool; the
   runner never dies on a single SOP failure.
+- Low-latency pickup is driven by a Postgres trigger
+  (`db/functions/sop_notify_v01.sql`) firing `NOTIFY stern_sop_pending`
+  on every status → `:pending` transition, plus a dedicated LISTEN thread
+  inside the Runner that wakes the main loop on each notify. The listen
+  thread auto-reconnects with capped exponential backoff. Opt out with
+  `Runner.new(listen_for_notifications: false, ...)` for PgBouncer
+  transaction-pooled environments. The trigger depends on
+  `Stern::ScheduledOperation.statuses["pending"] == 0`; a spec in
+  `scheduled_operation_spec.rb` guards against enum drift.
 - Scheduled-operation pipeline emits Prometheus metrics via `Stern::Metrics`.
   The service uses `ActiveSupport::Notifications.instrument` for
   `stern.sop.enqueue_list`, `stern.sop.pickup_lag`, and
