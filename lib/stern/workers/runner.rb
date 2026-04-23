@@ -74,6 +74,11 @@ module Stern
         wait_for_in_flight(SHUTDOWN_TIMEOUT)
         @listen_thread&.join(5)
         @logger.info(log_prefix + "stopped")
+      ensure
+        # Restore prior TERM/INT handlers so the Runner doesn't leave a
+        # stale closure pointing at a dead instance's `@stop` / `@wake_event`
+        # in the host process. No-op when handlers weren't installed.
+        restore_signal_handlers if @install_signal_handlers
       end
 
       # Single tick of the loop — pick, process, janitor (if due), refresh gauges.
@@ -119,20 +124,30 @@ module Stern
 
         ids.each do |id|
           @in_flight.increment
-          pool.post do
-            # `with_connection` releases the AR connection back to the pool
-            # when the block exits. Without this, the worker thread would
-            # permanently hold a connection per pool slot.
-            ::Stern::ApplicationRecord.connection_pool.with_connection do
-              ::Stern::ScheduledOperationService.process_sop(id)
+          begin
+            pool.post do
+              # `with_connection` releases the AR connection back to the pool
+              # when the block exits. Without this, the worker thread would
+              # permanently hold a connection per pool slot.
+              ::Stern::ApplicationRecord.connection_pool.with_connection do
+                ::Stern::ScheduledOperationService.process_sop(id)
+              end
+            rescue StandardError => e
+              # `process_sop` has its own rescue for op-level errors; anything
+              # reaching here is a bug or infrastructure failure. Keep the runner
+              # alive and log.
+              @logger.error(log_prefix + "SOP #{id} surfaced unhandled error: #{e.class}: #{e.message}")
+            ensure
+              @in_flight.decrement
             end
           rescue StandardError => e
-            # `process_sop` has its own rescue for op-level errors; anything
-            # reaching here is a bug or infrastructure failure. Keep the runner
-            # alive and log.
-            @logger.error(log_prefix + "SOP #{id} surfaced unhandled error: #{e.class}: #{e.message}")
-          ensure
+            # `pool.post` itself raised — e.g. `Concurrent::RejectedExecutionError`
+            # because the pool has been shut down, or a custom fallback policy
+            # rejected the task. The block's `ensure` never runs, so decrement
+            # here to keep `@in_flight` balanced. Without this, `shutdown!`
+            # spins until timeout on a phantom job.
             @in_flight.decrement
+            @logger.error(log_prefix + "failed to dispatch SOP #{id}: #{e.class}: #{e.message}")
           end
         end
       end
@@ -145,6 +160,12 @@ module Stern
         ::Stern::ScheduledOperationService.clear_in_progress
         @last_janitor_at = now
       rescue StandardError => e
+        # Set `@last_janitor_at` on failure too — otherwise a chronically
+        # broken janitor retries every poll interval, flooding logs (17k
+        # error lines/day at 5s polling). The next scheduled janitor run
+        # will retry after the normal interval; the underlying problem
+        # needs operator intervention either way.
+        @last_janitor_at = now
         @logger.error(log_prefix + "janitor error: #{e.class}: #{e.message}")
       end
 
@@ -154,8 +175,38 @@ module Stern
         @logger.error(log_prefix + "metrics error: #{e.class}: #{e.message}")
       end
 
+      # Install TERM/INT handlers that signal a graceful stop. Captures the
+      # prior handler for each signal so `restore_signal_handlers` can put
+      # them back — important for embedded use where the host process
+      # installs its own handlers before spinning up a Runner.
+      #
+      # The trap body forks a short-lived thread rather than calling `stop`
+      # directly because `stop` sets a `Concurrent::Event` internally, which
+      # acquires a Mutex. Taking a Mutex inside a signal handler can
+      # deadlock on MRI if the signal preempts the same mutex acquisition
+      # on the main thread. `Thread.new` is the documented-safe escape
+      # hatch (see concurrent-ruby / stdlib Monitor patterns).
       def install_signal_handlers
-        %w[TERM INT].each { |sig| Signal.trap(sig) { stop } }
+        @previous_signal_handlers = {}
+        %w[TERM INT].each do |sig|
+          @previous_signal_handlers[sig] = Signal.trap(sig) { Thread.new { stop } }
+        end
+      end
+
+      # Restore the handlers `install_signal_handlers` replaced. Called
+      # from `start`'s ensure so the Runner doesn't leak stale closures
+      # into the host process after shutdown. Safe to call when
+      # handlers weren't installed (no-op).
+      def restore_signal_handlers
+        return unless @previous_signal_handlers
+
+        @previous_signal_handlers.each do |sig, prev|
+          # `Signal.trap` returns "DEFAULT"/"IGNORE" strings for system
+          # defaults and a Proc for Ruby-installed handlers; both round-trip
+          # cleanly back through `Signal.trap`.
+          Signal.trap(sig, prev || "DEFAULT")
+        end
+        @previous_signal_handlers = nil
       end
 
       def pool
@@ -239,11 +290,30 @@ module Stern
         end
       end
 
+      # Wait for in-flight SOPs to drain, then shut the pool down. The whole
+      # routine is bounded by a SINGLE `timeout` budget: callers that pass
+      # `SHUTDOWN_TIMEOUT` should see return within that bound, not 2×.
+      #
+      # If the pool fails to terminate gracefully within the remaining
+      # budget, force-kill it. A SOP blocked on a hung external call (e.g.
+      # HTTP with no timeout) would otherwise hold the process open past
+      # the SIGTERM grace period — under k8s that means SIGKILL eventually
+      # takes it down, losing the chance to release DB connections cleanly.
+      # `pool.kill` interrupts the worker threads; we still want to log the
+      # outcome so operators can see what happened.
       def wait_for_in_flight(timeout)
         deadline = Time.now + timeout
         sleep 0.05 while @in_flight.value.positive? && Time.now < deadline
+
         pool.shutdown
-        pool.wait_for_termination(timeout)
+        remaining = [ deadline - Time.now, 0 ].max
+        terminated = pool.wait_for_termination(remaining)
+        unless terminated
+          @logger.error(log_prefix + "pool failed to terminate within #{timeout}s; killing " \
+            "(#{@in_flight.value} SOP(s) still in-flight)")
+          pool.kill
+        end
+        terminated
       end
 
       def log_prefix

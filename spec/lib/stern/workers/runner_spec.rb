@@ -382,6 +382,82 @@ module Stern
         end
       end
 
+      # Regression guard: if `pool.post` raises (e.g. the pool was shut
+      # down between `@in_flight.increment` and the actual `post` call),
+      # the earlier implementation orphaned the counter — the posted
+      # block's `ensure` never ran, `@in_flight` stayed positive, and
+      # `shutdown!` would spin until SHUTDOWN_TIMEOUT on a phantom job.
+      # The fix: outer `begin/rescue` around `pool.post` that decrements
+      # on rejection and logs.
+      describe "BUG #1 — pool.post rejection does not orphan @in_flight" do
+        it "decrements @in_flight when pool.post raises" do
+          captured = []
+          logger = Logger.new(StringIO.new).tap do |l|
+            l.formatter = ->(_sev, _dt, _progname, msg) { captured << msg.to_s; "" }
+          end
+          runner = described_class.new(install_signal_handlers: false, logger: logger)
+          @runners << runner
+
+          # Pre-shut-down pool: `post` raises RejectedExecutionError with
+          # the default `:abort` fallback policy. This mirrors the exact
+          # shutdown race the bug covered.
+          dead_pool = Concurrent::FixedThreadPool.new(1)
+          dead_pool.shutdown
+          dead_pool.wait_for_termination(1)
+          allow(runner).to receive(:pool).and_return(dead_pool)
+
+          seed_sop
+          expect { runner.run_once }.not_to raise_error
+          expect(runner.in_flight_count).to eq(0)
+          expect(captured.join("\n")).to include("failed to dispatch SOP")
+        end
+      end
+
+      # Regression guard: the earlier `wait_for_in_flight` budgeted
+      # `timeout` for the busy-wait loop AND another full `timeout` for
+      # `pool.wait_for_termination`, so `shutdown!(timeout: T)` could take
+      # up to 2×T. Plus: a wedged SOP would hold the pool open forever
+      # since we only called `pool.shutdown` (graceful), never `pool.kill`.
+      # Fix: single deadline shared across busy-wait + termination, and
+      # `pool.kill` when graceful termination times out.
+      describe "RISK #1/#2 — SHUTDOWN_TIMEOUT honored with pool.kill fallback" do
+        it "returns within the requested timeout even when a SOP is wedged" do
+          captured = []
+          logger = Logger.new(StringIO.new).tap do |l|
+            l.formatter = ->(_sev, _dt, _progname, msg) { captured << msg.to_s; "" }
+          end
+          runner = described_class.new(install_signal_handlers: false, logger: logger)
+          @runners << runner
+
+          # Simulate a SOP that will never return within the test's patience.
+          # 10s is long enough to confidently prove the timeout was the
+          # forcing mechanism — if the old double-budget bug were still
+          # present, `shutdown!(timeout: 0.5)` would take ≥ 1s; and if
+          # `pool.kill` were missing, the process would block on this
+          # sleep for its full 10s.
+          allow(::Stern::ScheduledOperationService).to receive(:process_sop) do
+            sleep 10
+          end
+
+          seed_sop
+          runner.run_once
+          # Wait for the pool worker to actually pick it up and enter sleep.
+          deadline = Time.now + 1
+          sleep 0.02 while runner.in_flight_count.zero? && Time.now < deadline
+          expect(runner.in_flight_count).to eq(1)
+
+          started = Time.now
+          runner.shutdown!(timeout: 0.5)
+          elapsed = Time.now - started
+
+          # Budget: 0.5s timeout + ~0.2s slack for pool.kill bookkeeping.
+          # The old code would take ≥ 1s (two 0.5s budgets back-to-back);
+          # without pool.kill, it would take the full 10s sleep.
+          expect(elapsed).to be < 1.0
+          expect(captured.join("\n")).to include("pool failed to terminate")
+        end
+      end
+
       describe "#start with #stop — graceful shutdown" do
         it "runs continuously, stops on #stop, and returns cleanly" do
           runner = make_runner(poll_interval: 0.1)
