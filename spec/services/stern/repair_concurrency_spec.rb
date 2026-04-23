@@ -98,6 +98,23 @@ module Stern
     # These stress tests are the belt-and-suspenders proof. If there is a
     # subtle race the analysis missed, these catch it via S1/S2/S3.
     describe "cross-tuple rebuild safety under concurrent writes" do
+      # AR's default pool size is 5 and default checkout_timeout is 5s. These
+      # tests run 4 writer threads + 1 rebuilder, which fills the pool — a
+      # thread that momentarily yields and comes back while another thread
+      # reconnects can hit the 5s limit and get silently killed. Bump the
+      # checkout timeout so serialization doesn't manifest as a phantom
+      # pool-exhaustion error. Same pattern as the 1000-thread stress test
+      # in `spec/models/stern/balance_invariant_spec.rb`.
+      around do |example|
+        pool = ApplicationRecord.connection_pool
+        original = pool.checkout_timeout
+        pool.instance_variable_set(:@checkout_timeout, 60)
+        begin
+          example.run
+        ensure
+          pool.instance_variable_set(:@checkout_timeout, original)
+        end
+      end
       # Writes an amount to `(pp_charge_pix / pp_charge_pix_0, gid, cur)` —
       # a real two-book cascade via the shipping SQL function, so the race
       # model exercised is exactly production's.
@@ -127,13 +144,19 @@ module Stern
         # Rebuilder hammers `rebuild_gid_balance(gid, cur)` while writers
         # hammer cross-book ops on the same gid. Any race in the piecewise
         # rebuild lets an ending_balance drift or a physical sum leak.
+        #
+        # Writer count: 3 (not higher). AR's connection pool defaults to 5,
+        # and each worker thread holds a connection for the full body via
+        # `with_connection`. 3 writers + 1 rebuilder + 1 headroom for the
+        # main spec thread fits; 4 writers can starve the rebuilder at
+        # pool checkout.
         target_gid = 940_101
 
         # Seed some history so the rebuilder has something to cascade.
         4.times { write_charge_pix(gid: target_gid, amount: 100, currency:) }
 
-        stop_at = Time.now + 0.6  # short but chaotic — enough to race the lock
-        writer_count = 4
+        stop_at = Time.now + 1.0  # enough for many interleavings to race
+        writer_count = 3
         writes = Concurrent::AtomicFixnum.new(0)
         rebuilds = Concurrent::AtomicFixnum.new(0)
 
@@ -186,8 +209,10 @@ module Stern
         gids = (950_001..950_008).to_a
         gids.each { |g| write_charge_pix(gid: g, amount: 100, currency:) }
 
-        stop_at = Time.now + 0.6
-        writer_count = 4
+        stop_at = Time.now + 1.0
+        # See the note above on the sister test — pool-size constrained to
+        # avoid starving the rebuilder at AR connection checkout.
+        writer_count = 3
         writes = Concurrent::AtomicFixnum.new(0)
         rebuilds = Concurrent::AtomicFixnum.new(0)
 
