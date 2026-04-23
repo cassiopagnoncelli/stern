@@ -36,60 +36,242 @@ module Stern
       end
     end
 
-    describe ".retry_policy / .resolved_retry_policy" do
-      it "returns DEFAULT_RETRY_POLICY when no policy declared" do
+    describe "DEFAULT_RETRY_POLICY constant" do
+      it "is frozen" do
+        expect(described_class::DEFAULT_RETRY_POLICY).to be_frozen
+      end
+
+      it "has the documented shape and values" do
+        expect(described_class::DEFAULT_RETRY_POLICY).to eq(
+          max_retries: 5, backoff: :exponential, base: 30,
+        )
+      end
+    end
+
+    describe "SUPPORTED_BACKOFF_STRATEGIES constant" do
+      it "is frozen" do
+        expect(described_class::SUPPORTED_BACKOFF_STRATEGIES).to be_frozen
+      end
+
+      it "lists exactly :exponential and :constant" do
+        expect(described_class::SUPPORTED_BACKOFF_STRATEGIES).to contain_exactly(:exponential, :constant)
+      end
+    end
+
+    describe ".resolved_retry_policy (no DSL call)" do
+      it "returns DEFAULT_RETRY_POLICY by reference (no copy) when never declared" do
         klass = Class.new(described_class) { inputs :x }
-        expect(klass.resolved_retry_policy).to eq(described_class::DEFAULT_RETRY_POLICY)
+        expect(klass.resolved_retry_policy).to equal(described_class::DEFAULT_RETRY_POLICY)
       end
 
-      it "merges declared overrides on top of the defaults" do
-        klass = Class.new(described_class) do
-          inputs :x
-          retry_policy max_retries: 1, backoff: :constant, base: 60
-        end
-        expect(klass.resolved_retry_policy).to eq(
-          max_retries: 1, backoff: :constant, base: 60,
-        )
+      it "returns the same value across many calls" do
+        klass = Class.new(described_class) { inputs :x }
+        expect(klass.resolved_retry_policy).to eq(klass.resolved_retry_policy)
       end
+    end
 
-      it "leaves unspecified keys at their defaults" do
-        klass = Class.new(described_class) do
-          inputs :x
-          retry_policy max_retries: 2
-        end
-        expect(klass.resolved_retry_policy).to eq(
-          max_retries: 2,
-          backoff: described_class::DEFAULT_RETRY_POLICY[:backoff],
-          base: described_class::DEFAULT_RETRY_POLICY[:base],
-        )
-      end
-
-      it "isolates retry policy per subclass" do
-        a = Class.new(described_class) do
-          inputs :x
-          retry_policy max_retries: 1
-        end
-        b = Class.new(described_class) { inputs :x }
-        expect(a.resolved_retry_policy[:max_retries]).to eq(1)
-        expect(b.resolved_retry_policy[:max_retries]).to eq(described_class::DEFAULT_RETRY_POLICY[:max_retries])
-      end
-
-      it "rejects unknown backoff strategies" do
-        expect {
-          Class.new(described_class) do
-            inputs :x
-            retry_policy backoff: :linear
-          end
-        }.to raise_error(ArgumentError, /unknown backoff strategy/)
-      end
-
-      it "accepts :exponential and :constant" do
-        %i[exponential constant].each do |strategy|
+    describe ".retry_policy" do
+      describe "merge behavior" do
+        it "merges all three declared overrides on top of the defaults" do
           klass = Class.new(described_class) do
             inputs :x
-            retry_policy backoff: strategy
+            retry_policy max_retries: 1, backoff: :constant, base: 60
           end
-          expect(klass.resolved_retry_policy[:backoff]).to eq(strategy)
+          expect(klass.resolved_retry_policy).to eq(
+            max_retries: 1, backoff: :constant, base: 60,
+          )
+        end
+
+        it "leaves unspecified keys at their defaults" do
+          klass = Class.new(described_class) do
+            inputs :x
+            retry_policy max_retries: 2
+          end
+          expect(klass.resolved_retry_policy).to eq(
+            max_retries: 2,
+            backoff: described_class::DEFAULT_RETRY_POLICY[:backoff],
+            base: described_class::DEFAULT_RETRY_POLICY[:base],
+          )
+        end
+
+        it "treats explicit nil as 'use the default' (compact drops it)" do
+          klass = Class.new(described_class) do
+            inputs :x
+            retry_policy max_retries: 7, base: nil
+          end
+          expect(klass.resolved_retry_policy[:base]).to eq(described_class::DEFAULT_RETRY_POLICY[:base])
+        end
+
+        it "is callable with no kwargs (resets to a defaults-equivalent hash)" do
+          klass = Class.new(described_class) do
+            inputs :x
+            retry_policy
+          end
+          expect(klass.resolved_retry_policy).to eq(described_class::DEFAULT_RETRY_POLICY)
+        end
+
+        it "does not mutate DEFAULT_RETRY_POLICY when overrides are applied" do
+          before_snapshot = described_class::DEFAULT_RETRY_POLICY.dup
+          Class.new(described_class) do
+            inputs :x
+            retry_policy max_retries: 99, backoff: :constant, base: 999
+          end
+          expect(described_class::DEFAULT_RETRY_POLICY).to eq(before_snapshot)
+        end
+      end
+
+      describe "re-declaration" do
+        it "lets the most recent retry_policy call win" do
+          klass = Class.new(described_class) do
+            inputs :x
+            retry_policy max_retries: 1
+            retry_policy max_retries: 9
+          end
+          expect(klass.resolved_retry_policy[:max_retries]).to eq(9)
+        end
+
+        it "treats each retry_policy call as a fresh merge against DEFAULT_RETRY_POLICY (does NOT accumulate)" do
+          # First call sets backoff: :constant; second call only changes
+          # max_retries — backoff should snap back to the default :exponential.
+          klass = Class.new(described_class) do
+            inputs :x
+            retry_policy backoff: :constant, base: 90
+            retry_policy max_retries: 2
+          end
+          expect(klass.resolved_retry_policy).to eq(
+            max_retries: 2,
+            backoff: :exponential,
+            base: described_class::DEFAULT_RETRY_POLICY[:base],
+          )
+        end
+      end
+
+      describe "subclass isolation" do
+        it "isolates the policy per subclass when each declares its own" do
+          a = Class.new(described_class) do
+            inputs :x
+            retry_policy max_retries: 1
+          end
+          b = Class.new(described_class) do
+            inputs :x
+            retry_policy max_retries: 9
+          end
+          expect(a.resolved_retry_policy[:max_retries]).to eq(1)
+          expect(b.resolved_retry_policy[:max_retries]).to eq(9)
+        end
+
+        it "leaves siblings without a policy at the defaults" do
+          a = Class.new(described_class) do
+            inputs :x
+            retry_policy max_retries: 1
+          end
+          b = Class.new(described_class) { inputs :x }
+          expect(b.resolved_retry_policy).to eq(described_class::DEFAULT_RETRY_POLICY)
+          expect(a.resolved_retry_policy[:max_retries]).to eq(1)
+        end
+
+        # Documents intentional design: retry_policy uses a class instance
+        # variable (matching the `inputs` DSL pattern) and is therefore NOT
+        # inherited by subclasses-of-subclasses. If a deeper subclass needs
+        # the parent's policy it must re-declare it. Switch to
+        # `class_attribute` to change this.
+        it "does NOT inherit the policy from a parent BaseOperation subclass" do
+          parent = Class.new(described_class) do
+            inputs :x
+            retry_policy max_retries: 1, backoff: :constant, base: 60
+          end
+          child = Class.new(parent)
+          expect(child.resolved_retry_policy).to eq(described_class::DEFAULT_RETRY_POLICY)
+        end
+      end
+
+      describe "validation" do
+        it "rejects backoff: :linear with a clear message" do
+          expect {
+            Class.new(described_class) do
+              inputs :x
+              retry_policy backoff: :linear
+            end
+          }.to raise_error(ArgumentError, /unknown backoff strategy.*:linear/)
+        end
+
+        it "rejects an unknown backoff regardless of other valid kwargs" do
+          expect {
+            Class.new(described_class) do
+              inputs :x
+              retry_policy max_retries: 1, backoff: :bogus, base: 30
+            end
+          }.to raise_error(ArgumentError, /unknown backoff strategy/)
+        end
+
+        it "rejects backoff strings ('exponential' instead of :exponential)" do
+          expect {
+            Class.new(described_class) do
+              inputs :x
+              retry_policy backoff: "exponential"
+            end
+          }.to raise_error(ArgumentError, /unknown backoff strategy/)
+        end
+
+        it "lists the supported strategies in the error message" do
+          expect {
+            Class.new(described_class) do
+              inputs :x
+              retry_policy backoff: :linear
+            end
+          }.to raise_error(ArgumentError, /exponential.*constant|constant.*exponential/)
+        end
+
+        it "leaves the prior policy untouched when a bad re-declaration raises" do
+          klass = Class.new(described_class) do
+            inputs :x
+            retry_policy max_retries: 2, backoff: :constant, base: 60
+          end
+          expect {
+            klass.retry_policy(backoff: :linear)
+          }.to raise_error(ArgumentError)
+          expect(klass.resolved_retry_policy).to eq(
+            max_retries: 2, backoff: :constant, base: 60,
+          )
+        end
+
+        it "accepts both supported strategies symmetrically" do
+          %i[exponential constant].each do |strategy|
+            klass = Class.new(described_class) do
+              inputs :x
+              retry_policy backoff: strategy
+            end
+            expect(klass.resolved_retry_policy[:backoff]).to eq(strategy)
+          end
+        end
+      end
+
+      describe "boundary values (current behavior — no input validation)" do
+        # These document that retry_policy currently passes numeric values
+        # through without sanity-checking them. If validation tightens, these
+        # specs become a contract change to discuss.
+        it "accepts max_retries: 0 (terminal-on-first-failure)" do
+          klass = Class.new(described_class) do
+            inputs :x
+            retry_policy max_retries: 0
+          end
+          expect(klass.resolved_retry_policy[:max_retries]).to eq(0)
+        end
+
+        it "accepts a very large max_retries" do
+          klass = Class.new(described_class) do
+            inputs :x
+            retry_policy max_retries: 1_000_000
+          end
+          expect(klass.resolved_retry_policy[:max_retries]).to eq(1_000_000)
+        end
+
+        it "accepts a fractional base" do
+          klass = Class.new(described_class) do
+            inputs :x
+            retry_policy base: 0.5
+          end
+          expect(klass.resolved_retry_policy[:base]).to eq(0.5)
         end
       end
     end
