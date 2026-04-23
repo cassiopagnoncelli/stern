@@ -10,6 +10,8 @@ books:
   - merchant_adjusted
   - merchant_withholding
   - merchant_locked
+  - merchant_credits:
+      non_negative: true
 
   # Partner
   - partner_balance:
@@ -17,6 +19,8 @@ books:
   - partner_adjusted
   - partner_withholding
   - partner_locked
+  - partner_credits:
+      non_negative: true
 
   # Customer
   - customer_balance:
@@ -24,6 +28,8 @@ books:
   - customer_adjusted
   - customer_withholding
   - customer_locked
+  - customer_credits:
+      non_negative: true
 
   # Payment Processing: PSP, gateway
   - pp_payment
