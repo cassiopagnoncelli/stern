@@ -16,14 +16,14 @@ namespace :stern do
 
   namespace :sop do
     desc "Reset a single :runtime_error SOP back to :pending. Usage: rake stern:sop:rescue[123]"
-    task :rescue, [:id] => :environment do |_, args|
+    task :rescue, [ :id ] => :environment do |_, args|
       sop = Stern::ScheduledOperation.find(args.fetch(:id))
       sop.rescue!
       Rails.logger.info("[stern:sop:rescue] rescued id=#{sop.id} name=#{sop.name}")
     end
 
     desc "Reset every :runtime_error SOP for a given op name. Usage: rake stern:sop:rescue_all[ChargePix]"
-    task :rescue_all, [:name] => :environment do |_, args|
+    task :rescue_all, [ :name ] => :environment do |_, args|
       name = args.fetch(:name, nil)
       raise ArgumentError, "name required" if name.blank?
 

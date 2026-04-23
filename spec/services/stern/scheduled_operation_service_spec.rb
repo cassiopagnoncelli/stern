@@ -645,7 +645,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
 
       it ":exponential matches the documented schedule (30s, 60s, 2m, 4m, 8m)" do
         policy = { max_retries: 5, backoff: :exponential, base: 30 }
-        expected = [30, 60, 120, 240, 480]
+        expected = [ 30, 60, 120, 240, 480 ]
         actual = (0..4).map { |rc| service.send(:retry_backoff, rc, policy) }
         expect(actual).to eq(expected)
       end

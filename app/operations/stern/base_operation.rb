@@ -24,7 +24,7 @@ module Stern
     DEFAULT_RETRY_POLICY = {
       max_retries: 5,
       backoff: :exponential,
-      base: 30,
+      base: 30
     }.freeze
 
     SUPPORTED_BACKOFF_STRATEGIES = %i[exponential constant].freeze

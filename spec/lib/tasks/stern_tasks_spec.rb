@@ -3,7 +3,7 @@ require "rake"
 
 RSpec.describe "stern rake tasks", type: :task do
   before(:all) do
-    Rake.application.rake_require("tasks/stern_tasks", [Stern::Engine.root.join("lib").to_s])
+    Rake.application.rake_require("tasks/stern_tasks", [ Stern::Engine.root.join("lib").to_s ])
     Rake::Task.define_task(:environment)
   end
 
