@@ -291,7 +291,7 @@ CREATE FUNCTION public.stern_sop_notify() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-  IF NEW.status = 0 THEN
+  IF NEW.status = 0 AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
     PERFORM pg_notify('stern_scheduled_operations_pending', NEW.id::text);
   END IF;
   RETURN NEW;
@@ -665,6 +665,7 @@ CREATE TRIGGER stern_sop_notify_trigger AFTER INSERT OR UPDATE OF status ON publ
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260422170000'),
 ('20260422160000'),
 ('20260422150000'),
 ('20260422120006'),

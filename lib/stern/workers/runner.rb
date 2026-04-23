@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "concurrent"
+require "socket"
 
 module Stern
   module Workers
@@ -241,6 +242,20 @@ module Stern
       # transient DB blip doesn't permanently disable low-latency pickup.
       LISTEN_RETRY_BACKOFF_CAP_SECONDS = 30
 
+      # TCP keepalive params for the LISTEN socket. The listen connection is
+      # idle by design (no traffic between NOTIFYs), so a NAT / load balancer /
+      # firewall can silently drop the half-open connection without either end
+      # noticing. The OS default keepalive idle is ~2h on Linux/macOS, which
+      # would leave the runner deaf to NOTIFYs for that long before the next
+      # `wait_for_notify` call surfaces the dead socket. With these values the
+      # OS detects a dead listen connection within ~60s (30s idle + 3 × 10s
+      # probes); the existing reconnect loop in `start_listen_thread` then
+      # re-establishes it. Polling at @poll_interval is the safety net during
+      # the gap.
+      LISTEN_KEEPALIVE_IDLE_SECONDS = 30
+      LISTEN_KEEPALIVE_INTERVAL_SECONDS = 10
+      LISTEN_KEEPALIVE_COUNT = 3
+
       # Dedicated thread holding one connection, LISTENing on NOTIFY_CHANNEL.
       # On each notify — or on timeout — it sets @wake_event so the main
       # loop can iterate.
@@ -274,6 +289,7 @@ module Stern
         ::Stern::ApplicationRecord.connection_pool.with_connection do |conn|
           raw = conn.raw_connection
           raw.async_exec("LISTEN #{NOTIFY_CHANNEL}")
+          configure_listen_keepalive(raw)
           begin
             until stopping?
               # Block up to 1s. Returns nil on timeout; channel String on notify.
@@ -288,6 +304,40 @@ module Stern
             end
           end
         end
+      end
+
+      # Enable TCP keepalive on the LISTEN connection's socket so a half-open
+      # connection (NAT/firewall silently dropped) is detected by the OS in
+      # ~60s instead of the OS default ~2h. See LISTEN_KEEPALIVE_* constants
+      # for rationale. No-op for Unix-domain sockets (local-only, not subject
+      # to NAT). pg's `socket_io` returns a `BasicSocket.for_fd(...)` so
+      # `setsockopt` works directly. Failures are logged at warn — they should
+      # not take down the listen thread.
+      def configure_listen_keepalive(raw)
+        io = raw.socket_io
+        return unless io && io.local_address.ip?
+
+        io.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
+
+        # Linux uses TCP_KEEPIDLE; macOS/BSD use TCP_KEEPALIVE for the same
+        # "seconds idle before first probe" knob.
+        idle_opt =
+          if Socket.const_defined?(:TCP_KEEPIDLE)
+            Socket::TCP_KEEPIDLE
+          elsif Socket.const_defined?(:TCP_KEEPALIVE)
+            Socket::TCP_KEEPALIVE
+          end
+        io.setsockopt(Socket::IPPROTO_TCP, idle_opt, LISTEN_KEEPALIVE_IDLE_SECONDS) if idle_opt
+
+        if Socket.const_defined?(:TCP_KEEPINTVL)
+          io.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_KEEPINTVL, LISTEN_KEEPALIVE_INTERVAL_SECONDS)
+        end
+        if Socket.const_defined?(:TCP_KEEPCNT)
+          io.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_KEEPCNT, LISTEN_KEEPALIVE_COUNT)
+        end
+      rescue StandardError => e
+        @logger.warn(log_prefix + "could not set TCP keepalive on listen socket: " \
+          "#{e.class}: #{e.message}")
       end
 
       # Wait for in-flight SOPs to drain, then shut the pool down. The whole

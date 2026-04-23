@@ -41,12 +41,37 @@ module Stern
       ApplicationRecord.sanitize_sql_array([ sql, { book_id:, gid:, currency: } ])
     end
 
+    # Rebuild every `(book, gid, currency)` cascade for the given `(gid, currency)`.
+    #
+    # Piecewise safety model: each per-book rebuild is an independent
+    # transaction guarded by the same `(book, gid, currency)` advisory lock
+    # that `BaseOperation#acquire_advisory_locks` and `create_entry_v04`
+    # take. Between books, ops can commit cross-book cascades; those
+    # cascades are produced correctly by `create_entry_v04` under its own
+    # lock, so no matter how operations interleave with this method, each
+    # book's final `ending_balance` sequence is a correct running sum of
+    # its `amount`s. The rebuild is NOT atomic across books — and does not
+    # need to be.
+    #
+    # Only iterates books with entries for this `(gid, currency)`. The
+    # general chart has hundreds of books; iterating every book_code
+    # regardless would do ~N pointless lock-acquire+UPDATE cycles per
+    # call, starving any contention the caller actually cares about.
+    # A book that appears AFTER this pluck — because a concurrent op
+    # inserts into a previously empty book — does not need a rebuild;
+    # the op's own cascade was produced under the advisory lock by
+    # `create_entry_v04` and is already consistent.
     def self.rebuild_gid_balance(gid, currency)
-      ::Stern.chart.book_codes.each do |book_id|
+      Entry.where(gid:, currency:).distinct.pluck(:book_id).each do |book_id|
         rebuild_book_gid_balance(book_id, gid, currency)
       end
     end
 
+    # Rebuild every cascade in the ledger. Piecewise: inherits the safety
+    # model described on `rebuild_gid_balance`. Iterates `(gid, currency)`
+    # pairs that currently have entries; pairs that appear between the
+    # initial pluck and the end of iteration don't need rebuilding (their
+    # cascades were produced correctly under lock).
     def self.rebuild_balances(confirm: false)
       raise ArgumentError, "You must confirm the operation" unless confirm
 

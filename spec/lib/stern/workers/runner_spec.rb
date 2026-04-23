@@ -306,6 +306,88 @@ module Stern
         end
       end
 
+      describe "listen-socket TCP keepalive" do
+        # The LISTEN connection sits idle between NOTIFYs. Without TCP
+        # keepalives, a half-open connection (NAT/firewall silently dropped)
+        # would only be detected on the next write — potentially hours later
+        # given libpq's defaults. configure_listen_keepalive sets SO_KEEPALIVE
+        # plus the platform-specific TCP_KEEP* knobs so the OS detects death
+        # within ~60s.
+
+        let(:runner) { make_runner }
+
+        it "is a no-op for Unix-domain sockets and does not raise" do
+          ApplicationRecord.connection_pool.with_connection do |conn|
+            raw = conn.raw_connection
+            io = raw.socket_io
+            skip "test DB is connected via TCP, not Unix socket" if io.local_address.ip?
+
+            expect { runner.send(:configure_listen_keepalive, raw) }.not_to raise_error
+          end
+        end
+
+        it "enables SO_KEEPALIVE and the platform TCP_KEEP* knobs on a TCP socket" do
+          ApplicationRecord.connection_pool.with_connection do |conn|
+            raw = conn.raw_connection
+            io = raw.socket_io
+            skip "test DB is connected via Unix socket, not TCP" unless io.local_address.ip?
+
+            runner.send(:configure_listen_keepalive, raw)
+
+            expect(io.getsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE).int).to eq(1)
+
+            idle_const =
+              if Socket.const_defined?(:TCP_KEEPIDLE)
+                Socket::TCP_KEEPIDLE
+              elsif Socket.const_defined?(:TCP_KEEPALIVE)
+                Socket::TCP_KEEPALIVE
+              end
+            if idle_const
+              expect(io.getsockopt(Socket::IPPROTO_TCP, idle_const).int)
+                .to eq(described_class::LISTEN_KEEPALIVE_IDLE_SECONDS)
+            end
+          end
+        end
+
+        it "logs a warning and does not raise when setsockopt fails" do
+          warnings = []
+          logger = Logger.new(StringIO.new).tap do |l|
+            l.formatter = ->(sev, _dt, _progname, msg) { warnings << [ sev, msg.to_s ]; "" }
+          end
+          warned_runner = described_class.new(install_signal_handlers: false, logger: logger)
+          @runners << warned_runner
+
+          fake_io = instance_double(BasicSocket)
+          fake_addr = instance_double(Addrinfo, ip?: true)
+          allow(fake_io).to receive(:local_address).and_return(fake_addr)
+          allow(fake_io).to receive(:setsockopt).and_raise(Errno::ENOPROTOOPT)
+
+          fake_raw = double("PG::Connection", socket_io: fake_io)
+
+          expect { warned_runner.send(:configure_listen_keepalive, fake_raw) }.not_to raise_error
+          expect(warnings.map { |s, m| [ s, m ] }.any? { |s, m| s == "WARN" && m.include?("TCP keepalive") })
+            .to be(true)
+        end
+
+        it "is invoked by listen_loop after LISTEN is registered" do
+          # Hook the runner's keepalive method and confirm the listen thread
+          # calls it. We do not need to wait for a notify — only that the
+          # listen thread reaches the post-LISTEN configuration step.
+          called = Concurrent::Event.new
+          allow(runner).to receive(:configure_listen_keepalive).and_wrap_original do |orig, raw|
+            result = orig.call(raw)
+            called.set
+            result
+          end
+
+          thread = Thread.new { runner.start }
+          expect(called.wait(5)).to be(true)
+
+          runner.stop
+          thread.join(5)
+        end
+      end
+
       describe "listen-thread resilience" do
         it "reconnects after a transient error and keeps delivering notifications" do
           runner = make_runner(poll_interval: 60.0, janitor_interval: 300.0)
@@ -379,6 +461,61 @@ module Stern
           collected << payloads.pop until payloads.empty?
           expect(collected.size).to eq(3)
           expect(collected.map(&:to_i).sort).to eq(sops.map(&:id).sort)
+        end
+
+        # v02 trigger guard: an UPDATE that leaves the row already-pending
+        # (e.g. `update_all(status: :pending)` over a mix where some rows
+        # were already pending) must NOT emit a notify for the unchanged
+        # rows. Only true transitions into :pending wake listeners. This
+        # prevents the runner from being repeatedly woken for work it
+        # already knows about.
+        it "does NOT fire NOTIFY for rows whose status was already :pending" do
+          already_pending = ScheduledOperation.create!(
+            name: "ChargePix",
+            params: { charge_id: SecureRandom.random_number(1 << 30), merchant_id: 1,
+                     customer_id: 2, amount: 100, currency: "usd" },
+            after_time: 1.minute.ago, status: :pending,
+          )
+          transitioning = 2.times.map do
+            ScheduledOperation.create!(
+              name: "ChargePix",
+              params: { charge_id: SecureRandom.random_number(1 << 30), merchant_id: 1,
+                       customer_id: 2, amount: 100, currency: "usd" },
+              after_time: 1.minute.ago, status: :picked,
+            )
+          end
+
+          payloads = Queue.new
+          listener_ready = Concurrent::Event.new
+          thread = Thread.new do
+            ::Stern::ApplicationRecord.connection_pool.with_connection do |conn|
+              raw = conn.raw_connection
+              raw.async_exec("LISTEN #{described_class::NOTIFY_CHANNEL}")
+              listener_ready.set
+              begin
+                # Drain notifies for ~1.5s. We expect 2 (the picked → pending
+                # transitions) and explicitly want to assert no third notify
+                # arrives for the already-pending row.
+                deadline = Time.now + 1.5
+                while Time.now < deadline
+                  remaining = [ deadline - Time.now, 0.05 ].max
+                  raw.wait_for_notify(remaining) { |_c, _p, payload| payloads << payload }
+                end
+              ensure
+                raw.async_exec("UNLISTEN #{described_class::NOTIFY_CHANNEL}") rescue nil
+              end
+            end
+          end
+          listener_ready.wait(2.0)
+
+          ids = [ already_pending.id, *transitioning.map(&:id) ]
+          ScheduledOperation.where(id: ids).update_all(status: :pending)
+          thread.join(3)
+
+          collected = []
+          collected << payloads.pop until payloads.empty?
+          expect(collected.map(&:to_i).sort).to eq(transitioning.map(&:id).sort)
+          expect(collected.map(&:to_i)).not_to include(already_pending.id)
         end
       end
 

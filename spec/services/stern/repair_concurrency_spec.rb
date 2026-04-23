@@ -81,5 +81,154 @@ module Stern
         expect(repair_finished_at - repair_started).to be >= 0.19
       end
     end
+
+    # Cross-tuple rebuild race model — the piece deferred in the original
+    # per-tuple locking plan (plans/brilliant-let-s-start-with-robust-hare.md,
+    # "Repair service — its rebuild-vs-write race is a pre-existing issue").
+    #
+    # `rebuild_gid_balance` and `rebuild_balances` are piecewise: each
+    # `(book, gid, currency)` is rebuilt inside its own transaction with its
+    # own advisory lock. Between rebuilds, cross-book ops can commit.
+    # Analysis says this is safe — each per-tuple rebuild produces a correct
+    # cascade for its tuple, and writes between rebuilds go through
+    # `create_entry_v04` which holds the same advisory lock and cascades
+    # correctly. The final state is globally consistent even though the
+    # rebuild is not atomic across tuples.
+    #
+    # These stress tests are the belt-and-suspenders proof. If there is a
+    # subtle race the analysis missed, these catch it via S1/S2/S3.
+    describe "cross-tuple rebuild safety under concurrent writes" do
+      # Writes an amount to `(pp_charge_pix / pp_charge_pix_0, gid, cur)` —
+      # a real two-book cascade via the shipping SQL function, so the race
+      # model exercised is exactly production's.
+      def write_charge_pix(gid:, amount:, currency:)
+        op = Operation.create!(name: "rebuild_concurrency_writer", params: {})
+        EntryPair.add_pp_charge_pix(
+          SecureRandom.random_number(1 << 30), gid, amount, currency, operation_id: op.id,
+        )
+      end
+
+      # S1+S2 check across every (book, gid, currency) in the DB.
+      def assert_ledger_consistent!
+        aggregate_failures "ledger invariants" do
+          expect(Doctor.amount_consistent?).to be(true), "S2: sum(amount) != 0"
+
+          # S1: ending_balance == running_sum(amount) per entry, across every tuple.
+          Entry.distinct.pluck(:book_id, :gid, :currency).each do |bid, g, cur|
+            consistent = Doctor.ending_balance_consistent?(book_id: bid, gid: g, currency: cur)
+            expect(consistent).to be(true),
+              "S1 violated for (book_id=#{bid}, gid=#{g}, currency=#{cur})"
+          end
+        end
+      end
+
+      it "rebuild_gid_balance interleaved with cross-book ops keeps all invariants" do
+        # Single gid, many writes across (pp_charge_pix, pp_charge_pix_0).
+        # Rebuilder hammers `rebuild_gid_balance(gid, cur)` while writers
+        # hammer cross-book ops on the same gid. Any race in the piecewise
+        # rebuild lets an ending_balance drift or a physical sum leak.
+        target_gid = 940_101
+
+        # Seed some history so the rebuilder has something to cascade.
+        4.times { write_charge_pix(gid: target_gid, amount: 100, currency:) }
+
+        stop_at = Time.now + 0.6  # short but chaotic — enough to race the lock
+        writer_count = 4
+        writes = Concurrent::AtomicFixnum.new(0)
+        rebuilds = Concurrent::AtomicFixnum.new(0)
+
+        writers = writer_count.times.map do
+          Thread.new do
+            ApplicationRecord.connection_pool.with_connection do
+              while Time.now < stop_at
+                write_charge_pix(gid: target_gid, amount: 10, currency:)
+                writes.increment
+              end
+            ensure
+              ApplicationRecord.connection_pool.release_connection
+            end
+          end
+        end
+
+        rebuild_errors = Queue.new
+        rebuilder = Thread.new do
+          ApplicationRecord.connection_pool.with_connection do
+            while Time.now < stop_at
+              Repair.rebuild_gid_balance(target_gid, currency)
+              rebuilds.increment
+            end
+          rescue StandardError => e
+            rebuild_errors << "#{e.class}: #{e.message}"
+          ensure
+            ApplicationRecord.connection_pool.release_connection
+          end
+        end
+
+        (writers + [ rebuilder ]).each(&:join)
+
+        # Surface any silently-swallowed exception so failures are diagnosable.
+        errs = []
+        errs << rebuild_errors.pop until rebuild_errors.empty?
+        expect(errs).to be_empty, "rebuilder raised: #{errs.inspect}"
+
+        # Meaningful load actually happened.
+        expect(writes.value).to be > 0
+        expect(rebuilds.value).to be > 0
+
+        assert_ledger_consistent!
+      end
+
+      it "rebuild_balances interleaved with writes across many gids keeps all invariants" do
+        # Scale up to the full-ledger rebuild. Many gids, each hit by
+        # several writers, with `rebuild_balances` running repeatedly in
+        # parallel. If cross-gid iteration order or the per-pair sub-txn
+        # structure hid a race, this test catches it.
+        gids = (950_001..950_008).to_a
+        gids.each { |g| write_charge_pix(gid: g, amount: 100, currency:) }
+
+        stop_at = Time.now + 0.6
+        writer_count = 4
+        writes = Concurrent::AtomicFixnum.new(0)
+        rebuilds = Concurrent::AtomicFixnum.new(0)
+
+        writers = writer_count.times.map do
+          Thread.new do
+            ApplicationRecord.connection_pool.with_connection do
+              while Time.now < stop_at
+                write_charge_pix(gid: gids.sample, amount: 10, currency:)
+                writes.increment
+              end
+            ensure
+              ApplicationRecord.connection_pool.release_connection
+            end
+          end
+        end
+
+        rebuild_errors = Queue.new
+        rebuilder = Thread.new do
+          ApplicationRecord.connection_pool.with_connection do
+            while Time.now < stop_at
+              Repair.rebuild_balances(confirm: true)
+              rebuilds.increment
+            end
+          rescue StandardError => e
+            rebuild_errors << "#{e.class}: #{e.message}"
+          ensure
+            ApplicationRecord.connection_pool.release_connection
+          end
+        end
+
+        (writers + [ rebuilder ]).each(&:join)
+
+        errs = []
+        errs << rebuild_errors.pop until rebuild_errors.empty?
+        expect(errs).to be_empty, "rebuilder raised: #{errs.inspect}"
+
+        expect(writes.value).to be > 0
+        expect(rebuilds.value).to be > 0
+
+        assert_ledger_consistent!
+      end
+    end
   end
 end
