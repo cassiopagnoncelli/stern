@@ -2,7 +2,7 @@
 
 require_relative "base"
 
-module Stress
+module Benchmark
   module Scenarios
     # Benchmarks Stern::ChargePix. Each call writes a pp_charge_pix entry pair
     # (and optionally pp_charge_fee_merchant_pix when --fee > 0) for a rotating

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Stress
+module Benchmark
   # Per-thread latency + error collector. Results are accumulated thread-locally
   # (no cross-thread locking on the hot path) and merged at the end.
   class Metrics

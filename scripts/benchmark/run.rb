@@ -4,7 +4,7 @@
 # Benchmark Stern operations under concurrent load.
 #
 # Usage:
-#   bundle exec ruby scripts/stress/run.rb --op=charge_pix [options]
+#   bundle exec ruby scripts/benchmark/run.rb --op=charge_pix [options]
 #
 # Options:
 #   --op=NAME            scenario name (required; e.g. charge_pix)
@@ -28,7 +28,7 @@ require "optparse"
 ENV["RAILS_ENV"] ||= "development"
 
 if ENV["RAILS_ENV"] == "production"
-  abort "refusing to run stress benchmark in RAILS_ENV=production"
+  abort "refusing to run benchmark in RAILS_ENV=production"
 end
 
 ROOT = File.expand_path("../..", __dir__)
@@ -44,13 +44,13 @@ end
 
 def scenario_class(name)
   const_name = name.to_s.split("_").map(&:capitalize).join
-  Stress::Scenarios.const_get(const_name)
+  Benchmark::Scenarios.const_get(const_name)
 rescue NameError
   nil
 end
 
 def available_scenarios
-  Stress::Scenarios.constants
+  Benchmark::Scenarios.constants
     .reject { |c| c == :Base }
     .map { |c| c.to_s.gsub(/([a-z])([A-Z])/, '\1_\2').downcase }
     .sort
@@ -112,4 +112,4 @@ if opts[:threads] > pool_size
 end
 
 scenario = klass.new(opts)
-Stress::Runner.new(scenario, opts).run
+Benchmark::Runner.new(scenario, opts).run

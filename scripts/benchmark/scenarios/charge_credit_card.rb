@@ -2,7 +2,7 @@
 
 require_relative "base"
 
-module Stress
+module Benchmark
   module Scenarios
     # Benchmarks Stern::ChargeCreditCard. Each call writes a pp_charge_credit_card
     # entry pair (and optionally pp_charge_fee_merchant_credit_card when --fee > 0)

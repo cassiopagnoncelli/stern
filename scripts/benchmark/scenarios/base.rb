@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Stress
+module Benchmark
   module Scenarios
     class Base
       attr_reader :opts

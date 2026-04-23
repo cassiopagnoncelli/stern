@@ -2,7 +2,7 @@
 
 require_relative "metrics"
 
-module Stress
+module Benchmark
   # Drives a scenario across a thread pool for a fixed number of iterations.
   # Splits iterations evenly across threads, hands each its own Metrics bucket,
   # and checks out an AR connection per thread so ops don't contend on one.
@@ -77,7 +77,7 @@ module Stress
 
     def banner
       puts "=" * 72
-      puts "stern stress benchmark — #{scenario.class.name.split("::").last}"
+      puts "stern benchmark — #{scenario.class.name.split("::").last}"
       puts "  threads=#{opts[:threads]} iterations=#{opts[:iterations]} " \
            "warmup=#{opts[:warmup]} merchants=#{opts[:merchants]} " \
            "currency=#{opts[:currency]}"
