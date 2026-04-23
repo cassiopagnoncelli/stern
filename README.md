@@ -135,13 +135,13 @@ params raises.
 ### Query a balance
 
 ```ruby
-Stern.balance(1101, :merchant_balance)
+Stern.balance(1101, :merchant_balance, :BRL)
 # => 9900 (cents, at current time)
 
-Stern.balance(1101, :merchant_balance, 1.day.ago)
+Stern.balance(1101, :merchant_balance, :BRL, 1.day.ago)
 # => 0
 
-Stern.outstanding_balance(:merchant_balance)
+Stern.outstanding_balance(:merchant_balance, :BRL)
 # => sum of balances across every gid in the book
 ```
 
@@ -151,6 +151,7 @@ Lower-level query objects are available for more complex reports:
 Stern::BalanceSheetQuery.new(
   start_date: 7.days.ago,
   end_date:   Time.current,
+  currency:   :BRL,
   book_ids:   [:merchant_balance, :customer_balance],
 ).call
 ```
