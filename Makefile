@@ -1,4 +1,4 @@
-.PHONY: all release build check clean docs tests test lint style stats stress stress-list help
+.PHONY: all release build check clean dev docs tests test lint style stats stress stress-list help
 .DEFAULT_GOAL := help
 
 STRESS_OP         ?= charge_pix
@@ -32,6 +32,9 @@ check: build ## Verify build can run
 
 clean: ## Remove generated log files
 	@rm -f logs/*.log
+
+dev: ## Run the Rails server locally (web + css watcher)
+	bin/dev
 
 docs: ## Generate documentation (currently no-op)
 
