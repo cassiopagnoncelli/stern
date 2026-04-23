@@ -106,16 +106,16 @@ module Stern
           }.to change(EntryPair, :count).by(2)
         end
 
-        it "records the amount in the identified_customer book keyed by customer_id" do
+        it "records the amount in the pp_charge_identified_customer book keyed by customer_id" do
           described_class.new(**valid_inputs(charge_id: 20, customer_id: 5001)).call
-          balance = ::Stern.balance(5001, :identified_customer, :BRL)
-          expect(balance).to eq(9900)
+          balance = ::Stern.balance(5001, :pp_charge_identified_customer, :BRL)
+          expect(balance).to eq(-9900)
         end
 
-        it "records the amount in the unidentified_customer book keyed by merchant_id when customer_id is nil" do
+        it "records the amount in the pp_charge_unidentified_customer book keyed by merchant_id when customer_id is nil" do
           described_class.new(**valid_inputs(charge_id: 21, customer_id: nil)).call
-          balance = ::Stern.balance(merchant_id, :unidentified_customer, :BRL)
-          expect(balance).to eq(9900)
+          balance = ::Stern.balance(merchant_id, :pp_charge_unidentified_customer, :BRL)
+          expect(balance).to eq(-9900)
         end
 
         it "rejects a non-positive customer_id" do

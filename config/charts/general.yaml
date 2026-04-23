@@ -150,6 +150,14 @@ books:
 # Entry pairs.
 #
 entry_pairs:
+  # Charges
+  identified_customer:
+    book_sub: pp_charge_identified_customer
+    book_add: pp_charge_merchant
+  unidentified_customer:
+    book_sub: pp_charge_unidentified_customer
+    book_add: pp_charge_merchant
+
   # Splits
   split_merchant:
     book_sub: pp_payment
