@@ -243,9 +243,10 @@ Stern::Doctor.ending_balances_inconsistencies(book_id:, gid:) # => [entry_id, ..
 Repairs (destructive, never in production unless you're certain):
 
 ```ruby
-Stern::Repair.rebuild_book_gid_balance(book_id, gid)
-Stern::Repair.rebuild_balances(confirm: true)
-Stern::Repair.clear   # wipes the ledger; non-production only
+Stern::Repair.rebuild_book_gid_balance(book_id, gid, currency)
+Stern::Repair.rebuild_gid_balance(gid, currency)   # every book for this gid
+Stern::Repair.rebuild_balances(confirm: true)       # every tuple in the ledger
+Stern::Repair.clear                                 # wipes the ledger; non-production only
 ```
 
 ## Running the scheduled-operation worker
@@ -275,7 +276,12 @@ Stern::Workers::Runner.new(
 
 `Runner#start` blocks until the process receives SIGTERM/SIGINT or
 `Runner#stop` is called. In-flight SOPs are allowed to finish within
-`SHUTDOWN_TIMEOUT` (30s).
+`SHUTDOWN_TIMEOUT` (30s, hard bound — not 2×). If the pool fails to
+terminate gracefully within that budget (e.g. a SOP blocked on a hung
+external call with no timeout), the runner force-kills it so the
+process can exit before k8s SIGKILL takes over. TERM/INT handlers the
+runner installs are restored on exit, so embedded hosts aren't left
+with stale closures pointing at a dead instance.
 
 **Low-latency pickup via Postgres LISTEN/NOTIFY.** The runner also listens
 on a dedicated connection for `NOTIFY`s fired by `stern_sop_notify_trigger`
@@ -285,7 +291,9 @@ regardless of `STERN_POLL_INTERVAL`. This lets you set `poll_interval` high
 (e.g. 30s) for cheap idle load while still reacting near-instantly to new
 arrivals. The listen thread reconnects automatically with capped exponential
 backoff (up to 30s) if its connection drops — transient blips don't kill
-low-latency pickup.
+low-latency pickup. The listen socket also has TCP keepalive enabled
+(~60s dead-connection detection) so silent NAT/firewall drops are caught
+without waiting for the OS default ~2-hour idle timeout.
 
 **PgBouncer note.** If the host app routes through PgBouncer in
 `pool_mode = transaction` or `statement`, LISTEN can't work — the session

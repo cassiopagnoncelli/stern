@@ -174,26 +174,42 @@ for a working template with a synthetic `WithdrawTest` op.
   Three layers in place:
   1. `BaseOperation#acquire_advisory_locks` — the normal op path (via
      `target_tuples`).
-  2. `create_entry` / `destroy_entry` v03 PL/pgSQL — defense-in-depth for
-     direct `Entry.create!` / `Entry#destroy!` callers.
+  2. `create_entry` / `destroy_entry` v04 PL/pgSQL — defense-in-depth for
+     direct `Entry.create!` / `Entry#destroy!` callers, and the enforcer for
+     the chart-level `non_negative: true` flag (raises
+     `Stern::BalanceNonNegativeViolation`, a subclass of
+     `Stern::InsufficientFunds`).
   3. `Stern::Repair.rebuild_book_gid_balance` — rebuilds never race against
-     in-flight ops.
-  All three use the same key (`hashtextextended('stern:book:gid:currency')`),
-  so the lock is reentrant across layers within a single transaction.
+     in-flight ops. The higher-level helpers (`rebuild_gid_balance`,
+     `rebuild_balances`) are piecewise across tuples rather than
+     atomic: each per-tuple rebuild is a separate transaction with its
+     own advisory lock. Between rebuilds, in-flight ops can commit; they
+     produce correct cascades via layer (2), so the global ledger stays
+     consistent without requiring rebuild-level atomicity. Proven under
+     stress in `spec/services/stern/repair_concurrency_spec.rb`.
+  All three use the same key (`hashtextextended(format('stern:%s:%s:%s',
+  book_id, gid, currency))`), so the lock is reentrant across layers
+  within a single transaction.
 - Scheduled-operation loop is run via `Stern::Workers::Runner` — host apps
   start it with `bundle exec rake stern:worker:start`, configurable via
   `STERN_WORKER_CONCURRENCY` / `STERN_POLL_INTERVAL` / `STERN_JANITOR_INTERVAL`
   env vars. The runner owns the poll-pick-process loop, thread pool,
   graceful SIGTERM shutdown, and janitor cadence (`clear_picked` +
   `clear_in_progress`). Per-op errors stay inside the thread pool; the
-  runner never dies on a single SOP failure.
+  runner never dies on a single SOP failure. Shutdown is bounded by a
+  single `SHUTDOWN_TIMEOUT` budget (not 2×), with `pool.kill` as fallback
+  when a SOP is wedged past the grace period. Signal handlers installed
+  by the runner are restored on exit, so embedded host processes aren't
+  left with stale closures after shutdown.
 - Low-latency pickup is driven by a Postgres trigger
-  (`db/functions/sop_notify_v01.sql`) firing `NOTIFY stern_scheduled_operations_pending`
-  on every status → `:pending` transition, plus a dedicated LISTEN thread
+  (`db/functions/sop_notify_v02.sql`) firing `NOTIFY stern_scheduled_operations_pending`
+  on every status → `:pending` *transition* (INSERT, or UPDATE where
+  `OLD.status IS DISTINCT FROM NEW.status`), plus a dedicated LISTEN thread
   inside the Runner that wakes the main loop on each notify. The listen
-  thread auto-reconnects with capped exponential backoff. Opt out with
-  `Runner.new(listen_for_notifications: false, ...)` for PgBouncer
-  transaction-pooled environments. The trigger depends on
+  thread auto-reconnects with capped exponential backoff and configures TCP
+  keepalive (~60s dead-connection detection) to survive NAT/firewall
+  half-open drops. Opt out with `Runner.new(listen_for_notifications: false, ...)`
+  for PgBouncer transaction-pooled environments. The trigger depends on
   `Stern::ScheduledOperation.statuses["pending"] == 0`; a spec in
   `scheduled_operation_spec.rb` guards against enum drift.
 - Scheduled-operation pipeline emits Prometheus metrics via `Stern::Metrics`.

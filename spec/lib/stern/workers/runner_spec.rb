@@ -129,6 +129,29 @@ module Stern
           expect(ScheduledOperationService).to have_received(:clear_picked).once
           expect(ScheduledOperationService).to have_received(:clear_in_progress).once
         end
+
+        # Regression guard: `maybe_run_janitor` used to leave `@last_janitor_at`
+        # nil on the rescue path, so a chronically-broken janitor retried on
+        # every single poll tick — logs fill, real problems get buried. The
+        # fix: set `@last_janitor_at = now` in the rescue branch too, so the
+        # next attempt respects the normal interval.
+        it "respects the janitor interval even when clear_picked keeps raising" do
+          runner = make_runner(concurrency: 1, janitor_interval: 60.0)
+          allow(ScheduledOperationService).to receive(:clear_picked)
+            .and_raise(StandardError, "db down")
+          allow(ScheduledOperationService).to receive(:clear_in_progress)
+
+          # First tick: janitor is due (last_janitor_at is nil) — try and fail.
+          # Second and third ticks: well within janitor_interval of the first
+          # attempt; must NOT retry.
+          3.times { runner.run_once }
+
+          expect(ScheduledOperationService).to have_received(:clear_picked).once
+          # clear_in_progress is called AFTER clear_picked in the janitor body,
+          # so a raise on clear_picked prevents it from running. That's
+          # intentional — fail-fast on the first subsystem error.
+          expect(ScheduledOperationService).not_to have_received(:clear_in_progress)
+        end
       end
 
       describe "error isolation" do
@@ -592,6 +615,100 @@ module Stern
           # without pool.kill, it would take the full 10s sleep.
           expect(elapsed).to be < 1.0
           expect(captured.join("\n")).to include("pool failed to terminate")
+        end
+      end
+
+      # Documented behavior guard: if `pool.post` raises mid-way through
+      # iterating picked ids, earlier SOPs are dispatched and later ones
+      # remain `:picked` until the janitor recycles them via
+      # `clear_picked`. That's an acceptable shape — the runner doesn't
+      # lose work, it just takes longer to reach it — but we want a test
+      # so the behavior doesn't silently change.
+      describe "partial dispatch when pool.post raises mid-iteration" do
+        it "dispatches earlier SOPs, leaves later SOPs :picked, and keeps in_flight balanced" do
+          # Seed three SOPs so we have predictable iteration.
+          seeded_sops = 3.times.map { seed_sop }
+
+          captured = []
+          logger = Logger.new(StringIO.new).tap do |l|
+            l.formatter = ->(_sev, _dt, _progname, msg) { captured << msg.to_s; "" }
+          end
+          runner = described_class.new(install_signal_handlers: false, logger: logger, concurrency: 3)
+          @runners << runner
+
+          # Wrap `pool.post` so the 2nd call raises. The 1st and 3rd still
+          # dispatch normally, so the test proves that `process_batch` does
+          # NOT abort iteration on one rejection — earlier and later ids in
+          # the same batch are treated independently. Using `and_wrap_original`
+          # on the real pool means shutdown/wait_for_termination/kill called
+          # from the `after` hook's `shutdown!` still work unmocked.
+          real_pool = runner.send(:pool)
+          posts = Concurrent::AtomicFixnum.new(0)
+          allow(real_pool).to receive(:post).and_wrap_original do |original, *args, &block|
+            n = posts.increment
+            raise Concurrent::RejectedExecutionError, "simulated mid-iteration rejection" if n == 2
+
+            original.call(*args, &block)
+          end
+
+          runner.run_once
+          # Let the two successful dispatches drain.
+          deadline = Time.now + 5
+          sleep 0.02 while runner.in_flight_count.positive? && Time.now < deadline
+
+          expect(runner.in_flight_count).to eq(0)
+
+          statuses = seeded_sops.map { |s| s.reload.status }
+          # Exactly one SOP stays :picked (the one whose dispatch raised);
+          # the other two reach :finished (or at least leave :picked).
+          expect(statuses.count("picked")).to eq(1)
+          expect(statuses.count("finished")).to eq(2)
+
+          expect(captured.join("\n")).to include("failed to dispatch SOP")
+        end
+      end
+
+      # Embedded-use guard: `start` now captures the prior TERM/INT handlers
+      # and restores them in its ensure block, so a Runner inside a host
+      # process doesn't leak a closure pointing at a dead instance's
+      # `@stop` / `@wake_event` once it exits. If the restoration regresses,
+      # a subsequent SIGTERM to the host goes to the dead runner's closure
+      # and is effectively ignored.
+      describe "signal handler restoration" do
+        it "restores prior TERM/INT handlers when start returns" do
+          marker = Object.new
+          prior_term = ->(_sig) { marker }
+          prior_int  = ->(_sig) { marker }
+
+          # Install sentinels so we can verify Signal.trap returns them to us
+          # when the Runner tears down.
+          old_term = Signal.trap("TERM", prior_term)
+          old_int  = Signal.trap("INT",  prior_int)
+
+          begin
+            runner = described_class.new(logger: null_logger, install_signal_handlers: true)
+            thread = Thread.new { runner.start }
+            # Give `start` enough time to install handlers and enter the loop.
+            deadline = Time.now + 2
+            sleep 0.02 until Time.now >= deadline || thread.status == "sleep"
+
+            runner.stop
+            thread.join(5)
+            expect(thread.alive?).to be(false)
+
+            # After shutdown, Signal.trap should return OUR prior handler, not
+            # the Runner's closure. Trap with "DEFAULT" just to inspect the
+            # current handler.
+            current_term = Signal.trap("TERM", "DEFAULT")
+            current_int  = Signal.trap("INT",  "DEFAULT")
+            expect(current_term).to eq(prior_term)
+            expect(current_int).to eq(prior_int)
+          ensure
+            # Restore whatever was in place before this test started, so we
+            # leave no residue for later tests.
+            Signal.trap("TERM", old_term || "DEFAULT")
+            Signal.trap("INT",  old_int  || "DEFAULT")
+          end
         end
       end
 

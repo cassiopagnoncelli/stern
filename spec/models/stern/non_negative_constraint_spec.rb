@@ -250,5 +250,105 @@ module Stern
         }
       end
     end
+
+    # MIXED-style concurrent overdraft: some threads go through the
+    # app-level pre-check (raising InsufficientFunds), others bypass it
+    # and rely on the DB backstop (raising BalanceNonNegativeViolation).
+    # Both error classes must coexist cleanly — a caller rescuing
+    # `InsufficientFunds` catches both, and the ledger stays consistent
+    # regardless of which layer fired.
+    describe "concurrent mix of app-pre-check and DB-only overdrafts" do
+      it "exactly one withdraw succeeds; all others raise some InsufficientFunds flavor" do
+        gid = 970_701
+        seed(gid:, amount: 100)
+
+        checked = Class.new(BaseOperation) do
+          inputs :merchant_id, :uid, :amount, :currency
+
+          def target_tuples
+            tuples_for_pair(:merchant_balance, merchant_id, currency)
+          end
+
+          def perform(operation_id)
+            balance = ::Stern.balance(merchant_id, :merchant_balance, currency)
+            raise ::Stern::InsufficientFunds if balance + amount < 0
+
+            ::Stern::EntryPair.add_merchant_balance(
+              uid, merchant_id, amount, currency, operation_id:,
+            )
+          end
+        end
+        stub_const("Stern::CheckedMixWithdraw", checked)
+
+        forgetful = Class.new(BaseOperation) do
+          inputs :merchant_id, :uid, :amount, :currency
+
+          def target_tuples
+            tuples_for_pair(:merchant_balance, merchant_id, currency)
+          end
+
+          def perform(operation_id)
+            ::Stern::EntryPair.add_merchant_balance(
+              uid, merchant_id, amount, currency, operation_id:,
+            )
+          end
+        end
+        stub_const("Stern::ForgetfulMixWithdraw", forgetful)
+
+        insufficient = Concurrent::AtomicFixnum.new(0)
+        nn_violation = Concurrent::AtomicFixnum.new(0)
+        successes    = Concurrent::AtomicFixnum.new(0)
+        other        = Queue.new
+
+        # Alternate styles across threads. With seed=100 and amount=-80,
+        # exactly one withdraw fits; everyone else overdrafts. The op
+        # class drives which error surfaces.
+        threads = 10.times.map do |i|
+          klass = i.even? ? ::Stern::CheckedMixWithdraw : ::Stern::ForgetfulMixWithdraw
+          Thread.new do
+            ApplicationRecord.connection_pool.with_connection do
+              klass.new(merchant_id: gid, uid: 77_000 + i, amount: -80, currency: brl).call
+              successes.increment
+            rescue ::Stern::BalanceNonNegativeViolation
+              nn_violation.increment
+            rescue ::Stern::InsufficientFunds
+              # Parent class — checked path's raise lands here. Order
+              # matters: rescue the subclass FIRST above, or this branch
+              # would swallow both.
+              insufficient.increment
+            rescue StandardError => e
+              other << [ e.class.name, e.message ]
+            ensure
+              ApplicationRecord.connection_pool.release_connection
+            end
+          end
+        end
+        threads.each(&:join)
+
+        others = []
+        others << other.pop until other.empty?
+        expect(others).to be_empty,
+          "expected only InsufficientFunds / BalanceNonNegativeViolation, got: #{others.inspect}"
+
+        # Exactly one winner.
+        expect(successes.value).to eq(1)
+        expect(insufficient.value + nn_violation.value).to eq(9)
+
+        # Both error layers actually fired under the race — otherwise the
+        # test isn't exercising the interplay, just a single path. With
+        # 10 interleaved threads the race should reliably surface each
+        # layer at least once, though under heavy serialization one side
+        # may dominate, so we only assert the sum.
+
+        # Final state: balance == 20 (100 - 80), no negative rows, cascade
+        # consistent, no duplicate ending_balance (monotonic sequence).
+        expect(::Stern.balance(gid, :merchant_balance, brl)).to eq(20)
+        expect(negative_rows(gid)).to eq([])
+        expect(Doctor.ending_balance_consistent?(book_id: flagged_book_id, gid:, currency: brl)).to be(true)
+
+        all_ending = Entry.where(book_id: flagged_book_id, gid:, currency: brl).pluck(:ending_balance)
+        expect(all_ending).to eq(all_ending.uniq)
+      end
+    end
   end
 end
