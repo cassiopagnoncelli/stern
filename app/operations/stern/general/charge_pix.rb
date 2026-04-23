@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 module Stern
-  # Chargeback balance of customer's account.
   class ChargePix < BaseOperation
     include ActiveModel::Validations
 
