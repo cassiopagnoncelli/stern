@@ -94,6 +94,32 @@ module Stern
           described_class.new(**valid_inputs(charge_id: 7, currency: "USD")).call
         }.to change(EntryPair, :count).by(1)
       end
+
+      context "with a fee" do
+        it "writes an additional fee entry pair when fee is positive" do
+          expect {
+            described_class.new(**valid_inputs(fee: 100)).call
+          }.to change(EntryPair, :count).by(2)
+        end
+
+        it "records the fee in the pp_charge_fee_merchant_pix book" do
+          described_class.new(**valid_inputs(charge_id: 11, fee: 100)).call
+          fee_balance = ::Stern.balance(merchant_id, :pp_charge_fee_merchant_pix, :BRL)
+          expect(fee_balance).to eq(100)
+        end
+
+        it "does not write a fee entry pair when fee is zero" do
+          expect {
+            described_class.new(**valid_inputs(fee: 0)).call
+          }.to change(EntryPair, :count).by(1)
+        end
+
+        it "does not write a fee entry pair when fee is nil" do
+          expect {
+            described_class.new(**valid_inputs).call
+          }.to change(EntryPair, :count).by(1)
+        end
+      end
     end
   end
 end
