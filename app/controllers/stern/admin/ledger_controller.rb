@@ -19,6 +19,7 @@ module Stern
         per_page_param = params[:per_page].to_i
         @per_page = PER_PAGE_OPTIONS.include?(per_page_param) ? per_page_param : 5
         @books = chart_books
+        @book_groups = grouped_chart_books
 
         if @book_id.present?
           @entries = ::Stern::EntriesQuery.new(
@@ -49,8 +50,9 @@ module Stern
       def balance_sheet
         load_common_params
         @books = chart_books
+        @book_groups = grouped_chart_books
         @book_ids = Array(params[:book_ids]).reject(&:blank?).map(&:to_i).select(&:positive?)
-        query_book_ids = @book_ids.presence || ::Stern.chart.book_codes
+        query_book_ids = @book_ids.presence || @books.values
         @balance_sheet = ::Stern::BalanceSheetQuery.new(
           start_date: @start_date,
           end_date: @end_date,
@@ -66,9 +68,13 @@ module Stern
         @end_date = parse_dt(params[:end_date]) || (DateTime.current + 1.minute)
         @start_date_filter_value = @start_date.strftime("%Y-%m-%dT%H:%M")
         @end_date_filter_value = @end_date.strftime("%Y-%m-%dT%H:%M")
-        dp = params[:decimal_places].to_i
-        @decimal_places = DECIMAL_PLACES_OPTIONS.include?(dp) ? dp : 2
-        @currencies = ::Stern.currencies.names
+        @decimal_places = if params[:decimal_places].present?
+          dp = params[:decimal_places].to_i
+          DECIMAL_PLACES_OPTIONS.include?(dp) ? dp : 2
+        else
+          2
+        end
+        @currency_groups = grouped_currencies
         @currency = resolve_currency(params[:currency])
       end
 
@@ -78,8 +84,48 @@ module Stern
         names.include?("USD") ? "USD" : names.first
       end
 
+      def grouped_currencies
+        groups = { "Fiat" => [], "Stablecoins" => [], "Crypto" => [], "Other" => [] }
+        ::Stern.currencies.each do |name, code|
+          group = case code
+                  when 800..899   then "Fiat"
+                  when 1000..1999 then "Stablecoins"
+                  when 2000..2999 then "Crypto"
+                  else "Other"
+                  end
+          groups[group] << name
+        end
+        groups.reject { |_, v| v.empty? }
+      end
+
       def chart_books
-        ::Stern.chart.books.each_with_object({}) { |(name, book), h| h[name] = book.code }
+        ::Stern.chart.books.each_with_object({}) do |(name, book), h|
+          next if name.to_s.end_with?("_0")
+          h[name] = book.code
+        end
+      end
+
+      def grouped_chart_books
+        chart_books.group_by { |name, _| book_group_for(name.to_s) }
+      end
+
+      def book_group_for(name)
+        head, second = name.split("_", 3)
+        case head
+        when "merchant"    then "Merchant"
+        when "partner"     then "Partner"
+        when "customer"    then "Customer"
+        when "wdw"         then "Withdrawals"
+        when "payment"     then "Payment"
+        when "pp"
+          case second
+          when "charge"     then "Charge"
+          when "refund"     then "Refund"
+          when "chargeback" then "Chargeback"
+          else "Payment Processing"
+          end
+        else head.to_s.titleize.presence || "Other"
+        end
       end
 
       def entry_count_scope

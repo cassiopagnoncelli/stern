@@ -37,9 +37,10 @@
         start_date: @start_date_filter_value,
         end_date: @end_date_filter_value,
         books: @books,
+        book_groups: @book_groups,
         selected_book_ids: @book_ids,
         currency: @currency,
-        currencies: @currencies
+        currency_groups: @currency_groups
       },
       body_content: render("stern/admin/ledger/balance_sheet_table", balance_sheet: @balance_sheet, decimal_places: @decimal_places),
       empty_state_text: "No data found for the selected books and date range." %>

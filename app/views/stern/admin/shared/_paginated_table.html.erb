@@ -18,8 +18,8 @@
   filters_hidden_fields = local_assigns.fetch(:filters_hidden_fields, {})
 
   body_content = local_assigns[:body_content]
-  body_wrapper_class = local_assigns.fetch(:body_wrapper_class, "overflow-x-auto")
-  container_class = local_assigns.fetch(:container_class, "mt-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden")
+  body_wrapper_class = local_assigns.fetch(:body_wrapper_class, "overflow-x-auto rounded-b-xl")
+  container_class = local_assigns.fetch(:container_class, "mt-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm")
   empty_state_text = local_assigns.fetch(:empty_state_text, "No records found.")
   empty_state_content = local_assigns[:empty_state_content]
 
@@ -54,7 +54,7 @@
     <% if header_content.present? %>
       <%= header_content %>
     <% else %>
-      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 rounded-t-xl">
         <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100"><%= title %></h2>

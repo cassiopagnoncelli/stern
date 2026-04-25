@@ -5,16 +5,16 @@
   <%= form.select :decimal_places,
       options_for_select((0..10).map { |value| [ value.to_s, value ] }, decimal_places),
       {},
-      class: field_classes,
+      class: "select-menu",
       onchange: "this.form.submit()" %>
 </div>
 
 <div class="w-full sm:w-auto">
   <%= form.label :currency, "Currency", class: "sr-only" %>
   <%= form.select :currency,
-      options_for_select(currencies.map { |name| [ name, name ] }, currency),
+      grouped_options_for_select(currency_groups.transform_values { |names| names.map { |n| [ n, n ] } }, currency),
       {},
-      class: field_classes,
+      class: "select-menu",
       onchange: "this.form.submit()" %>
 </div>
 
@@ -32,7 +32,7 @@
       class: field_classes %>
 </div>
 
-<div class="w-full sm:min-w-[22rem] sm:flex-1">
+<div class="w-full sm:w-auto">
   <%= form.label :book_ids, "Books to include", class: "sr-only" %>
   <% selected_codes = selected_book_ids.map(&:to_i) %>
   <% selected_labels = books.filter_map { |name, code| selected_codes.include?(code.to_i) ? name.to_s.titleize : nil } %>
@@ -56,7 +56,7 @@
       </span>
     </button>
 
-    <div data-bs-multi-select-menu data-bs-keep-open class="hidden absolute right-0 z-50 mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg overflow-hidden">
+    <div data-bs-multi-select-menu data-bs-keep-open class="hidden absolute right-0 z-50 mt-1 min-w-full sm:w-[28rem] rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg overflow-hidden">
       <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-3 py-2">
         <span class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Books to include</span>
         <div class="flex items-center gap-2">
@@ -66,23 +66,26 @@
       </div>
 
       <div class="max-h-64 overflow-y-auto py-1">
-        <% books.each do |name, code| %>
-          <% checked = selected_codes.include?(code.to_i) %>
-          <label class="flex cursor-pointer items-start gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700" data-bs-keep-open>
-            <%= check_box_tag "book_ids[]",
-                code,
-                checked,
-                data: {
-                  bs_keep_open: true,
-                  bs_multi_select_checkbox: true,
-                  bs_label: name.to_s.titleize
-                },
-                class: "mt-0.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-800" %>
-            <span class="min-w-0">
-              <span class="block truncate text-sm text-gray-900 dark:text-gray-100"><%= name.to_s.titleize %></span>
-              <span class="block text-xs text-gray-500 dark:text-gray-400">ID: <%= code %></span>
-            </span>
-          </label>
+        <% book_groups.each do |group_name, pairs| %>
+          <div class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/40 sticky top-0"><%= group_name %></div>
+          <% pairs.each do |name, code| %>
+            <% checked = selected_codes.include?(code.to_i) %>
+            <label class="flex cursor-pointer items-start gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700" data-bs-keep-open>
+              <%= check_box_tag "book_ids[]",
+                  code,
+                  checked,
+                  data: {
+                    bs_keep_open: true,
+                    bs_multi_select_checkbox: true,
+                    bs_label: name.to_s.titleize
+                  },
+                  class: "mt-0.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-800" %>
+              <span class="min-w-0">
+                <span class="block truncate text-sm text-gray-900 dark:text-gray-100"><%= name.to_s.titleize %></span>
+                <span class="block text-xs text-gray-500 dark:text-gray-400">ID: <%= code %></span>
+              </span>
+            </label>
+          <% end %>
         <% end %>
       </div>
     </div>

@@ -5,16 +5,16 @@
   <%= form.select :decimal_places,
       options_for_select((0..10).map { |value| [ value.to_s, value ] }, decimal_places),
       {},
-      class: field_classes,
+      class: "select-menu",
       onchange: "this.form.submit()" %>
 </div>
 
 <div class="w-full sm:w-auto">
   <%= form.label :currency, "Currency", class: "sr-only" %>
   <%= form.select :currency,
-      options_for_select(currencies.map { |name| [ name, name ] }, currency),
+      grouped_options_for_select(currency_groups.transform_values { |names| names.map { |n| [ n, n ] } }, currency),
       {},
-      class: field_classes,
+      class: "select-menu",
       onchange: "this.form.submit()" %>
 </div>
 
@@ -28,12 +28,100 @@
 
 <div class="w-full sm:w-auto">
   <%= form.label :book_id, "Book ID", class: "sr-only" %>
-  <%= form.select :book_id,
-      options_for_select([ [ "All books", "" ] ] + books.map { |name, code| [ "#{name} (#{code})", code ] }, book_id&.to_i),
-      {},
-      class: field_classes,
-      onchange: "this.form.submit()" %>
+  <% selected_book_label = if book_id.present?
+       found = books.find { |_, code| code.to_i == book_id.to_i }
+       found ? found.first.to_s.titleize : "All books"
+     else
+       "All books"
+     end %>
+  <div class="relative" data-bs-single-select>
+    <%= form.hidden_field :book_id, value: book_id, data: { bs_single_select_value: true } %>
+    <button
+      type="button"
+      data-bs-single-select-toggle
+      class="select-menu text-left bg-white dark:bg-gray-900">
+      <span data-bs-single-select-label><%= selected_book_label %></span>
+    </button>
+
+    <div data-bs-single-select-menu class="hidden absolute right-0 z-50 mt-1 min-w-full sm:w-[28rem] rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg overflow-hidden">
+      <div class="max-h-80 overflow-y-auto py-1">
+        <button
+          type="button"
+          data-bs-single-select-option
+          data-bs-value=""
+          data-bs-label="All books"
+          class="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700">
+          All books
+        </button>
+        <% book_groups.each do |group_name, pairs| %>
+          <div class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/40 sticky top-0"><%= group_name %></div>
+          <% pairs.each do |name, code| %>
+            <% titleized = name.to_s.titleize %>
+            <button
+              type="button"
+              data-bs-single-select-option
+              data-bs-value="<%= code %>"
+              data-bs-label="<%= titleized %>"
+              class="flex w-full cursor-pointer items-start gap-2 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700">
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-sm text-gray-900 dark:text-gray-100"><%= titleized %></span>
+                <span class="block text-xs text-gray-500 dark:text-gray-400">ID: <%= code %></span>
+              </span>
+            </button>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+  (function () {
+    if (window.__sternSingleSelectInit) return;
+    window.__sternSingleSelectInit = true;
+
+    function init(root) {
+      var toggle = root.querySelector("[data-bs-single-select-toggle]");
+      var menu = root.querySelector("[data-bs-single-select-menu]");
+      var hidden = root.querySelector("[data-bs-single-select-value]");
+      var label = root.querySelector("[data-bs-single-select-label]");
+      if (!toggle || !menu || !hidden) return;
+
+      toggle.addEventListener("click", function (event) {
+        event.stopPropagation();
+        menu.classList.toggle("hidden");
+      });
+
+      root.querySelectorAll("[data-bs-single-select-option]").forEach(function (opt) {
+        opt.addEventListener("click", function (event) {
+          event.preventDefault();
+          hidden.value = opt.getAttribute("data-bs-value") || "";
+          if (label) label.textContent = opt.getAttribute("data-bs-label") || "";
+          menu.classList.add("hidden");
+          var form = hidden.form;
+          if (form) form.requestSubmit ? form.requestSubmit() : form.submit();
+        });
+      });
+    }
+
+    document.addEventListener("click", function (event) {
+      document.querySelectorAll("[data-bs-single-select]").forEach(function (root) {
+        if (!root.contains(event.target)) {
+          var menu = root.querySelector("[data-bs-single-select-menu]");
+          if (menu) menu.classList.add("hidden");
+        }
+      });
+    }, true);
+
+    document.addEventListener("DOMContentLoaded", function () {
+      document.querySelectorAll("[data-bs-single-select]").forEach(init);
+    });
+
+    if (document.readyState !== "loading") {
+      document.querySelectorAll("[data-bs-single-select]").forEach(init);
+    }
+  })();
+</script>
 
 <div class="w-full sm:w-auto">
   <%= form.label :start_date, "Start date", class: "sr-only" %>
