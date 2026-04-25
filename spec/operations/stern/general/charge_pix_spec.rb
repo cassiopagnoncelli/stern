@@ -35,14 +35,43 @@ module Stern
         expect(op).not_to be_valid
       end
 
+      it "rejects a non-positive charge_id" do
+        expect(described_class.new(**valid_inputs(charge_id: 0))).not_to be_valid
+        expect(described_class.new(**valid_inputs(charge_id: -1))).not_to be_valid
+      end
+
+      it "rejects a non-integer charge_id" do
+        expect(described_class.new(**valid_inputs(charge_id: 1.5))).not_to be_valid
+      end
+
       it "requires a payment_id" do
         op = described_class.new(**valid_inputs(payment_id: nil))
         expect(op).not_to be_valid
         expect(op.errors[:payment_id]).to be_present
       end
 
+      it "rejects a non-positive payment_id" do
+        expect(described_class.new(**valid_inputs(payment_id: 0))).not_to be_valid
+        expect(described_class.new(**valid_inputs(payment_id: -1))).not_to be_valid
+      end
+
+      it "rejects a non-integer payment_id" do
+        expect(described_class.new(**valid_inputs(payment_id: 1.5))).not_to be_valid
+      end
+
       it "requires an amount" do
         op = described_class.new(**valid_inputs(amount: nil))
+        expect(op).not_to be_valid
+      end
+
+      it "rejects a zero amount" do
+        op = described_class.new(**valid_inputs(amount: 0))
+        expect(op).not_to be_valid
+        expect(op.errors[:amount]).to be_present
+      end
+
+      it "rejects a non-integer amount" do
+        op = described_class.new(**valid_inputs(amount: 99.5))
         expect(op).not_to be_valid
       end
     end
