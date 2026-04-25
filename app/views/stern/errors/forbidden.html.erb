@@ -1,21 +1,21 @@
 <div class="max-w-xl mx-auto p-12 text-center">
-  <div class="text-6xl mb-4">403</div>
-  <h1 class="text-2xl font-bold mb-2">Access denied</h1>
-  <p class="text-gray-600 mb-6">
+  <div class="text-6xl mb-4 text-gray-900 dark:text-gray-100">403</div>
+  <h1 class="text-2xl font-bold mb-2 text-gray-900 dark:text-gray-100">Access denied</h1>
+  <p class="text-gray-600 dark:text-gray-400 mb-6">
     <% if current_passport %>
       You're signed in as <span class="font-semibold"><%= current_passport.email %></span>,
-      but this area requires <code class="px-1 bg-gray-100 rounded">platform_admin</code> access.
+      but this area requires <code class="px-1 bg-gray-100 dark:bg-gray-800 rounded">platform_admin</code> access.
     <% else %>
-      This area requires <code class="px-1 bg-gray-100 rounded">platform_admin</code> access.
+      This area requires <code class="px-1 bg-gray-100 dark:bg-gray-800 rounded">platform_admin</code> access.
     <% end %>
   </p>
   <div class="flex justify-center gap-3">
-    <a href="/stern" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Home</a>
+    <a href="/stern" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded hover:bg-gray-300 dark:hover:bg-gray-600">Home</a>
     <% if authenticated? %>
       <%= button_to "Sign out", "/stern/auth/sign_out", method: :delete,
-            class: "px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" %>
+            class: "px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-400" %>
     <% else %>
-      <a href="/stern/auth/idp/start" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Sign in</a>
+      <a href="/stern/auth/idp/start" class="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-400">Sign in</a>
     <% end %>
   </div>
 </div>
