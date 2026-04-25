@@ -30,13 +30,33 @@ books:
   - customer_locked
   - customer_credits:
       non_negative: true
+  
+  # Withdrawals
+  - wdw
+  - wdw_request
+  - wdw_merchant
+  - wdw_merchant_request
+  - wdw_partner
+  - wdw_partner_request
+  - wdw_customer
+  - wdw_customer_request
 
   # Payment Processing: PSP, gateway
+  - payment
+  - payment_internal
+  - payment_manual
+  - payment_bank_transfer
+  - payment_credit_card
+  - payment_debit_card
+  - payment_wallet
+  - payment_pix
+
+  # Payment Processing: Accounting
   - pp_charge_identified_customer
   - pp_charge_unidentified_customer
   - pp_charge_merchant
 
-  - pp_payment
+  - pp_charge
   - pp_charge_internal
   - pp_charge_manual
   - pp_charge_bank_transfer
@@ -135,27 +155,40 @@ books:
   - pp_chargeback_fee_partner_wallet
   - pp_chargeback_fee_partner_pix
 
-  # Withdrawals
-  - wdw
-  - wdw_request
-  - wdw_merchant
-  - wdw_merchant_request
-  - wdw_partner
-  - wdw_partner_request
-  - wdw_customer
-  - wdw_customer_request
-
 #
 # Entry pairs.
 #
 entry_pairs:
   # Charges
-  identified_customer:
+  charge_identified_customer:
     book_sub: pp_charge_identified_customer
     book_add: pp_charge_merchant
-  unidentified_customer:
+  charge_unidentified_customer:
     book_sub: pp_charge_unidentified_customer
     book_add: pp_charge_merchant
+  
+  # Payments
+  pay_internal:
+    book_sub: payment_internal
+    book_add: payment
+  pay_manual:
+    book_sub: payment_manual
+    book_add: payment
+  pay_bank_transfer:
+    book_sub: payment_bank_transfer
+    book_add: payment
+  pay_credit_card:
+    book_sub: payment_credit_card
+    book_add: payment
+  pay_debit_card:
+    book_sub: payment_debit_card
+    book_add: payment
+  pay_wallet:
+    book_sub: payment_wallet
+    book_add: payment
+  pay_pix:
+    book_sub: payment_pix
+    book_add: payment
 
   # Splits
   split_merchant:

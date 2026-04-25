@@ -2,13 +2,13 @@ require "rails_helper"
 
 module Stern
   RSpec.describe ChargePix, type: :model do
-    let(:merchant_id) { 1101 }
+    let(:payment_id) { 7001 }
     let(:customer_id) { 2202 }
 
     def valid_inputs(**overrides)
       {
         charge_id: 9001,
-        merchant_id:,
+        payment_id:,
         customer_id:,
         amount: 9900,
         currency: "BRL"
@@ -33,6 +33,12 @@ module Stern
       it "requires a charge_id" do
         op = described_class.new(**valid_inputs(charge_id: nil))
         expect(op).not_to be_valid
+      end
+
+      it "requires a payment_id" do
+        op = described_class.new(**valid_inputs(payment_id: nil))
+        expect(op).not_to be_valid
+        expect(op.errors[:payment_id]).to be_present
       end
 
       it "requires an amount" do
@@ -70,8 +76,8 @@ module Stern
         )
       end
 
-      it "writes two entry pairs (charge + unidentified customer) when no customer_id" do
-        expect { described_class.new(**valid_inputs).call }.to change(EntryPair, :count).by(2)
+      it "writes four entry pairs (pay_pix + pp_charge_pix + pp_charge + customer pair)" do
+        expect { described_class.new(**valid_inputs).call }.to change(EntryPair, :count).by(4)
       end
 
       it "writes the double entry stamped with currency" do
@@ -81,29 +87,29 @@ module Stern
         expect(entries.pluck(:currency).uniq).to eq([ ::Stern.cur("BRL") ])
       end
 
-      it "keeps BRL and USD balances fully independent for the same merchant" do
+      it "keeps BRL and USD balances fully independent for the same payment" do
         described_class.new(**valid_inputs(charge_id: 1, amount: 9900, currency: "BRL")).call
         described_class.new(**valid_inputs(charge_id: 2, amount: 5000, currency: "USD")).call
         described_class.new(**valid_inputs(charge_id: 3, amount: 1000, currency: "BRL")).call
 
-        brl = ::Stern.balance(merchant_id, :pp_charge_pix, :BRL)
-        usd = ::Stern.balance(merchant_id, :pp_charge_pix, :USD)
-        expect(brl).to eq(10_900)
-        expect(usd).to eq(5000)
+        brl = ::Stern.balance(payment_id, :payment_pix, :BRL)
+        usd = ::Stern.balance(payment_id, :payment_pix, :USD)
+        expect(brl).to eq(-10_900)
+        expect(usd).to eq(-5000)
       end
 
       it "allows the same charge_id to exist in two currencies" do
         described_class.new(**valid_inputs(charge_id: 7, currency: "BRL")).call
         expect {
           described_class.new(**valid_inputs(charge_id: 7, currency: "USD")).call
-        }.to change(EntryPair, :count).by(2)
+        }.to change(EntryPair, :count).by(4)
       end
 
       context "with customer_id" do
-        it "writes to identified_customer instead of unidentified_customer" do
+        it "writes to charge_identified_customer instead of charge_unidentified_customer" do
           expect {
             described_class.new(**valid_inputs(customer_id: 5001)).call
-          }.to change(EntryPair, :count).by(2)
+          }.to change(EntryPair, :count).by(4)
         end
 
         it "records the amount in the pp_charge_identified_customer book keyed by customer_id" do
@@ -112,42 +118,10 @@ module Stern
           expect(balance).to eq(-9900)
         end
 
-        it "records the amount in the pp_charge_unidentified_customer book keyed by merchant_id when customer_id is nil" do
-          described_class.new(**valid_inputs(charge_id: 21, customer_id: nil)).call
-          balance = ::Stern.balance(merchant_id, :pp_charge_unidentified_customer, :BRL)
-          expect(balance).to eq(-9900)
-        end
-
         it "rejects a non-positive customer_id" do
           op = described_class.new(**valid_inputs(customer_id: 0))
           expect(op).not_to be_valid
           expect(op.errors[:customer_id]).to be_present
-        end
-      end
-
-      context "with a fee" do
-        it "writes an additional fee entry pair when fee is positive" do
-          expect {
-            described_class.new(**valid_inputs(fee: 100)).call
-          }.to change(EntryPair, :count).by(3)
-        end
-
-        it "records the fee in the pp_charge_fee_merchant_pix book" do
-          described_class.new(**valid_inputs(charge_id: 11, fee: 100)).call
-          fee_balance = ::Stern.balance(merchant_id, :pp_charge_fee_merchant_pix, :BRL)
-          expect(fee_balance).to eq(100)
-        end
-
-        it "does not write a fee entry pair when fee is zero" do
-          expect {
-            described_class.new(**valid_inputs(fee: 0)).call
-          }.to change(EntryPair, :count).by(2)
-        end
-
-        it "does not write a fee entry pair when fee is nil" do
-          expect {
-            described_class.new(**valid_inputs).call
-          }.to change(EntryPair, :count).by(2)
         end
       end
     end
