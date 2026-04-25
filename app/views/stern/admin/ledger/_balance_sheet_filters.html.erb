@@ -1,0 +1,168 @@
+<% field_classes = "w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" %>
+
+<div class="w-full sm:w-auto">
+  <%= form.label :decimal_places, "Decimal places", class: "sr-only" %>
+  <%= form.select :decimal_places,
+      options_for_select((0..10).map { |value| [ value.to_s, value ] }, decimal_places),
+      {},
+      class: field_classes,
+      onchange: "this.form.submit()" %>
+</div>
+
+<div class="w-full sm:w-auto">
+  <%= form.label :currency, "Currency", class: "sr-only" %>
+  <%= form.select :currency,
+      options_for_select(currencies.map { |name| [ name, name ] }, currency),
+      {},
+      class: field_classes,
+      onchange: "this.form.submit()" %>
+</div>
+
+<div class="w-full sm:w-auto">
+  <%= form.label :start_date, "Start date", class: "sr-only" %>
+  <%= form.datetime_local_field :start_date,
+      value: start_date,
+      class: field_classes %>
+</div>
+
+<div class="w-full sm:w-auto">
+  <%= form.label :end_date, "End date", class: "sr-only" %>
+  <%= form.datetime_local_field :end_date,
+      value: end_date,
+      class: field_classes %>
+</div>
+
+<div class="w-full sm:min-w-[22rem] sm:flex-1">
+  <%= form.label :book_ids, "Books to include", class: "sr-only" %>
+  <% selected_codes = selected_book_ids.map(&:to_i) %>
+  <% selected_labels = books.filter_map { |name, code| selected_codes.include?(code.to_i) ? name.to_s.titleize : nil } %>
+  <% summary_text = if selected_labels.empty?
+      "All books"
+    elsif selected_labels.size <= 2
+      selected_labels.join(", ")
+    else
+      "#{selected_labels.first(2).join(', ')} +#{selected_labels.size - 2}"
+    end %>
+  <div class="relative" data-bs-multi-select data-bs-empty-label="All books">
+    <button
+      type="button"
+      data-bs-multi-select-toggle
+      class="relative w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm pl-3 pr-8 py-2 text-left cursor-default focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 sm:text-sm">
+      <span class="block truncate text-gray-900 dark:text-gray-100" data-bs-multi-select-label><%= summary_text %></span>
+      <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-gray-500 dark:text-gray-400">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7"/>
+        </svg>
+      </span>
+    </button>
+
+    <div data-bs-multi-select-menu data-bs-keep-open class="hidden absolute right-0 z-50 mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg overflow-hidden">
+      <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-3 py-2">
+        <span class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Books to include</span>
+        <div class="flex items-center gap-2">
+          <button type="button" data-bs-multi-select-action="select-all" data-bs-keep-open class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 cursor-pointer">All</button>
+          <button type="button" data-bs-multi-select-action="clear" data-bs-keep-open class="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer">Clear</button>
+        </div>
+      </div>
+
+      <div class="max-h-64 overflow-y-auto py-1">
+        <% books.each do |name, code| %>
+          <% checked = selected_codes.include?(code.to_i) %>
+          <label class="flex cursor-pointer items-start gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700" data-bs-keep-open>
+            <%= check_box_tag "book_ids[]",
+                code,
+                checked,
+                data: {
+                  bs_keep_open: true,
+                  bs_multi_select_checkbox: true,
+                  bs_label: name.to_s.titleize
+                },
+                class: "mt-0.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-800" %>
+            <span class="min-w-0">
+              <span class="block truncate text-sm text-gray-900 dark:text-gray-100"><%= name.to_s.titleize %></span>
+              <span class="block text-xs text-gray-500 dark:text-gray-400">ID: <%= code %></span>
+            </span>
+          </label>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button type="submit" class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-indigo-400">
+  Apply
+</button>
+
+<script>
+  (function () {
+    if (window.__sternMultiSelectInit) return;
+    window.__sternMultiSelectInit = true;
+
+    function syncLabel(root) {
+      var labelEl = root.querySelector("[data-bs-multi-select-label]");
+      if (!labelEl) return;
+      var emptyLabel = root.getAttribute("data-bs-empty-label") || "Select options";
+      var checkboxes = root.querySelectorAll("[data-bs-multi-select-checkbox]");
+      var selected = [];
+      checkboxes.forEach(function (cb) { if (cb.checked) selected.push(cb.dataset.bsLabel || ""); });
+      if (selected.length === 0) { labelEl.textContent = emptyLabel; return; }
+      if (selected.length <= 2) { labelEl.textContent = selected.join(", "); return; }
+      labelEl.textContent = selected.slice(0, 2).join(", ") + " +" + (selected.length - 2);
+    }
+
+    function init(root) {
+      var menu = root.querySelector("[data-bs-multi-select-menu]");
+      var toggle = root.querySelector("[data-bs-multi-select-toggle]");
+      if (!menu || !toggle) return;
+
+      toggle.addEventListener("click", function (event) {
+        event.stopPropagation();
+        menu.classList.toggle("hidden");
+      });
+
+      root.querySelectorAll("[data-bs-multi-select-checkbox]").forEach(function (cb) {
+        cb.addEventListener("change", function () { syncLabel(root); });
+      });
+
+      root.querySelectorAll('[data-bs-multi-select-action="select-all"]').forEach(function (btn) {
+        btn.addEventListener("click", function (event) {
+          event.preventDefault();
+          root.querySelectorAll("[data-bs-multi-select-checkbox]").forEach(function (cb) { cb.checked = true; });
+          syncLabel(root);
+        });
+      });
+
+      root.querySelectorAll('[data-bs-multi-select-action="clear"]').forEach(function (btn) {
+        btn.addEventListener("click", function (event) {
+          event.preventDefault();
+          root.querySelectorAll("[data-bs-multi-select-checkbox]").forEach(function (cb) { cb.checked = false; });
+          syncLabel(root);
+        });
+      });
+
+      menu.addEventListener("click", function (event) {
+        if (event.target.closest("[data-bs-keep-open]")) return;
+        menu.classList.add("hidden");
+      });
+
+      syncLabel(root);
+    }
+
+    document.addEventListener("click", function (event) {
+      document.querySelectorAll("[data-bs-multi-select]").forEach(function (root) {
+        if (!root.contains(event.target)) {
+          var menu = root.querySelector("[data-bs-multi-select-menu]");
+          if (menu) menu.classList.add("hidden");
+        }
+      });
+    }, true);
+
+    document.addEventListener("DOMContentLoaded", function () {
+      document.querySelectorAll("[data-bs-multi-select]").forEach(init);
+    });
+
+    if (document.readyState !== "loading") {
+      document.querySelectorAll("[data-bs-multi-select]").forEach(init);
+    }
+  })();
+</script>

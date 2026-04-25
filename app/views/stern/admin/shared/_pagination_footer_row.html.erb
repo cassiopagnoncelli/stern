@@ -1,0 +1,96 @@
+<% params_to_preserve ||= {} %>
+<% path_args = Array(local_assigns.fetch(:path_args, [])) %>
+<% per_page_options = Array(local_assigns[:per_page_options].presence || [ 5, 25, 100, 500 ]) %>
+<% wrapped = local_assigns.fetch(:wrapped, true) %>
+<% show_per_page = local_assigns.fetch(:show_per_page, true) %>
+<% pagination_link_data = local_assigns.fetch(:pagination_link_data, nil) %>
+<% selected_per_page = per_page_options.include?(per_page.to_i) ? per_page.to_i : (per_page_options.first || 5) %>
+<% summary_available = start_record.present? && end_record.present? && total_count.present? && record_name.present? %>
+<% form_url = path_helper.respond_to?(:call) ? path_helper.call({}) : send(path_helper, *path_args) %>
+<% page_url = lambda do |target_page|
+     merged_params = params_to_preserve.merge(page: target_page, per_page: selected_per_page)
+     path_helper.respond_to?(:call) ? path_helper.call(merged_params) : send(path_helper, *path_args, merged_params)
+   end %>
+<% field_classes = "rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" %>
+
+<% if wrapped %>
+  <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+<% end %>
+  <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div class="flex flex-wrap items-center gap-3">
+      <p class="text-sm text-gray-600 dark:text-gray-300">
+        <% if summary_available %>
+          Showing <%= start_record %> to <%= end_record %> of <%= number_with_delimiter(total_count) %> <%= record_name.pluralize(total_count) %>
+        <% else %>
+          Page <%= page %> of <%= total_pages %>
+        <% end %>
+      </p>
+      <% if show_per_page %>
+        <%= form_with url: form_url, method: :get, local: true, class: "flex items-center gap-2" do |form| %>
+          <% params_to_preserve.each do |key, value| %>
+            <%= form.hidden_field key, value: value if value.present? %>
+          <% end %>
+          <label for="per_page_footer" class="text-sm font-medium text-gray-600 dark:text-gray-300">Per page</label>
+          <%= form.select :per_page,
+              options_for_select(per_page_options.map { |option| [ option, option ] }, selected_per_page),
+              {},
+              id: "per_page_footer",
+              onchange: "this.form.submit()",
+              class: "#{field_classes} w-auto pr-8" %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <nav class="flex w-full flex-wrap items-center justify-center gap-2 md:w-auto md:flex-nowrap md:justify-end" aria-label="Pagination">
+      <% if page > 1 %>
+        <%= link_to "First",
+            page_url.call(1),
+            class: "inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700",
+            data: pagination_link_data %>
+        <%= link_to "Back",
+            page_url.call(page - 1),
+            class: "inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700",
+            data: pagination_link_data %>
+      <% else %>
+        <span class="inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed">First</span>
+        <span class="inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed">Back</span>
+      <% end %>
+
+      <% previous_number = page - 1 %>
+      <% next_number = page + 1 %>
+      <div class="inline-flex items-center gap-1">
+        <% if previous_number >= 1 %>
+          <%= link_to previous_number,
+              page_url.call(previous_number),
+              class: "inline-flex min-w-9 justify-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700",
+              data: pagination_link_data %>
+        <% end %>
+        <span class="inline-flex min-w-9 justify-center rounded-md border border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/50 px-2.5 py-1.5 text-sm font-semibold text-indigo-700 dark:text-indigo-300">
+          <%= page %>
+        </span>
+        <% if next_number <= total_pages %>
+          <%= link_to next_number,
+              page_url.call(next_number),
+              class: "inline-flex min-w-9 justify-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700",
+              data: pagination_link_data %>
+        <% end %>
+      </div>
+
+      <% if page < total_pages %>
+        <%= link_to "Next",
+            page_url.call(page + 1),
+            class: "inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700",
+            data: pagination_link_data %>
+        <%= link_to "Last",
+            page_url.call(total_pages),
+            class: "inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700",
+            data: pagination_link_data %>
+      <% else %>
+        <span class="inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed">Next</span>
+        <span class="inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed">Last</span>
+      <% end %>
+    </nav>
+  </div>
+<% if wrapped %>
+  </div>
+<% end %>

@@ -1,0 +1,73 @@
+<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+  <thead class="bg-gray-50 dark:bg-gray-700">
+    <tr>
+      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Account</th>
+      <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Previous Balance</th>
+      <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Debits</th>
+      <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Credits</th>
+      <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Net Change</th>
+      <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Final Balance</th>
+    </tr>
+  </thead>
+  <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+    <% balance_sheet.each do |account| %>
+      <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium text-gray-900 dark:text-gray-100">
+          <%= account[:book_name] %>
+          <div class="text-xs text-gray-500 dark:text-gray-400">ID: <%= account[:book_id] %></div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 dark:text-gray-100">
+          <%= format_currency_value(account[:previous_balance] || 0, decimal_places) %>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-right">
+          <div class="text-sm font-medium <%= (account[:debits] || 0) != 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400' %>">
+            <%= format_currency_value((account[:debits] || 0).abs, decimal_places) %>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-right">
+          <div class="text-sm font-medium <%= (account[:credits] || 0) != 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400' %>">
+            <%= format_currency_value(account[:credits] || 0, decimal_places) %>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-right">
+          <div class="text-sm font-medium text-purple-600 dark:text-purple-400">
+            <%= (account[:net] || 0) >= 0 ? "+" : "" %><%= format_currency_value(account[:net] || 0, decimal_places) %>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-right">
+          <div class="text-sm font-bold text-gray-900 dark:text-gray-100">
+            <%= format_currency_value(account[:final_balance] || 0, decimal_places) %>
+          </div>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+  <tfoot class="bg-gray-50 dark:bg-gray-700">
+    <tr>
+      <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-bold text-gray-900 dark:text-gray-100">
+        TOTALS
+      </td>
+      <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-gray-900 dark:text-gray-100">
+        <%= format_currency_value(balance_sheet.sum { |account| account[:previous_balance] || 0 }, decimal_places) %>
+      </td>
+      <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-red-600 dark:text-red-400">
+        <%= format_currency_value(balance_sheet.sum { |account| (account[:debits] || 0).abs }, decimal_places) %>
+      </td>
+      <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-green-600 dark:text-green-400">
+        <%= format_currency_value(balance_sheet.sum { |account| account[:credits] || 0 }, decimal_places) %>
+      </td>
+      <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold">
+        <% total_net = balance_sheet.sum { |account| account[:net] || 0 } %>
+        <div class="text-purple-600 dark:text-purple-400">
+          <%= total_net >= 0 ? "+" : "" %><%= format_currency_value(total_net, decimal_places) %>
+        </div>
+      </td>
+      <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold">
+        <% total_final = balance_sheet.sum { |account| account[:final_balance] || 0 } %>
+        <div class="text-gray-900 dark:text-gray-100">
+          <%= format_currency_value(total_final, decimal_places) %>
+        </div>
+      </td>
+    </tr>
+  </tfoot>
+</table>

@@ -1,0 +1,130 @@
+<%
+  pagination = local_assigns.fetch(:pagination, true)
+  has_records = local_assigns.fetch(:has_records, false)
+
+  subtitle = local_assigns[:subtitle]
+  show_header = local_assigns.fetch(:show_header, true)
+  header_content = local_assigns[:header_content]
+  params_to_preserve = local_assigns.fetch(:params_to_preserve, {})
+
+  filters_partial = local_assigns[:filters_partial]
+  filters_locals = local_assigns.fetch(:filters_locals, {})
+  filters_url = local_assigns[:filters_url]
+  filters_content = local_assigns[:filters_content]
+  filters_form_method = local_assigns.fetch(:filters_form_method, :get)
+  filters_form_id = local_assigns[:filters_form_id]
+  filters_form_class = local_assigns.fetch(:filters_form_class, "flex flex-wrap items-center gap-2 justify-end md:flex-nowrap")
+  filters_form_data = local_assigns.fetch(:filters_form_data, {})
+  filters_hidden_fields = local_assigns.fetch(:filters_hidden_fields, {})
+
+  body_content = local_assigns[:body_content]
+  body_wrapper_class = local_assigns.fetch(:body_wrapper_class, "overflow-x-auto")
+  container_class = local_assigns.fetch(:container_class, "mt-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden")
+  empty_state_text = local_assigns.fetch(:empty_state_text, "No records found.")
+  empty_state_content = local_assigns[:empty_state_content]
+
+  totals_content = local_assigns[:totals_content]
+  totals_title = local_assigns.fetch(:totals_title, "Totals")
+
+  footer_content = local_assigns[:footer_content]
+
+  if body_content.blank? && block_given?
+    body_content = capture { yield }
+  end
+
+  show_pagination_footer = pagination &&
+    has_records &&
+    local_assigns[:page].present? &&
+    local_assigns[:total_pages].present? &&
+    local_assigns[:start_record].present? &&
+    local_assigns[:end_record].present? &&
+    local_assigns[:total_count].present? &&
+    local_assigns[:record_name].present? &&
+    local_assigns[:per_page].present? &&
+    local_assigns[:path_helper].present?
+
+  pagination_show_per_page = local_assigns.fetch(:pagination_show_per_page, true)
+  pagination_per_page_options = local_assigns[:pagination_per_page_options].presence || [ 5, 25, 100, 500 ]
+  pagination_link_data = local_assigns[:pagination_link_data]
+  pagination_path_args = local_assigns.fetch(:pagination_path_args, [])
+%>
+
+<div class="<%= container_class %>">
+  <% if show_header %>
+    <% if header_content.present? %>
+      <%= header_content %>
+    <% else %>
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100"><%= title %></h2>
+            <% if subtitle.present? %>
+              <p class="mt-1 text-sm text-gray-600 dark:text-gray-400"><%= subtitle %></p>
+            <% end %>
+          </div>
+
+          <% if filters_url.present? %>
+            <div class="flex flex-wrap items-center gap-2 justify-end md:flex-nowrap">
+              <%= form_with url: filters_url, method: filters_form_method, local: true, class: filters_form_class, id: filters_form_id, data: filters_form_data do |form| %>
+                <% filters_hidden_fields.each do |key, value| %>
+                  <%= form.hidden_field key, value: value %>
+                <% end %>
+
+                <%= render filters_partial, { form: form }.merge(filters_locals) if filters_partial.present? %>
+              <% end %>
+            </div>
+          <% elsif filters_content.present? %>
+            <div class="flex flex-wrap items-center gap-2 justify-end md:flex-nowrap">
+              <%= filters_content %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+
+  <% if has_records %>
+    <div class="<%= body_wrapper_class %>">
+      <%= body_content %>
+    </div>
+  <% else %>
+    <div class="p-6 text-sm text-gray-500 dark:text-gray-400">
+      <%= empty_state_content.presence || empty_state_text %>
+    </div>
+  <% end %>
+
+  <% if totals_content.present? %>
+    <div class="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 px-6 py-4">
+      <p class="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"><%= totals_title %></p>
+      <div class="mt-2 text-sm text-gray-700 dark:text-gray-300">
+        <%= totals_content %>
+      </div>
+    </div>
+  <% end %>
+
+  <% if footer_content.present? %>
+    <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+      <%= footer_content %>
+    </div>
+  <% end %>
+</div>
+
+<% if show_pagination_footer %>
+  <div class="mt-3">
+    <%= render "stern/admin/shared/pagination_footer_row",
+        start_record: start_record,
+        end_record: end_record,
+        total_count: total_count,
+        record_name: record_name,
+        per_page: per_page,
+        page: page,
+        total_pages: total_pages,
+        path_helper: path_helper,
+        path_args: pagination_path_args,
+        params_to_preserve: params_to_preserve,
+        show_per_page: pagination_show_per_page,
+        wrapped: false,
+        per_page_options: pagination_per_page_options,
+        pagination_link_data: pagination_link_data %>
+  </div>
+<% end %>

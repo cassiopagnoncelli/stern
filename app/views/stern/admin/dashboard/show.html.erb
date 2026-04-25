@@ -1,5 +1,6 @@
-<div class="max-w-3xl mx-auto p-8">
-  <h1 class="text-3xl font-bold mb-4">Stern Admin</h1>
+<div class="max-w-3xl mx-auto p-8 space-y-6">
+  <h1 class="text-3xl font-bold">Stern Admin</h1>
+
   <div class="bg-white shadow rounded p-6 space-y-2">
     <p><span class="font-semibold">Signed in as:</span> <%= current_passport.email %></p>
     <p><span class="font-semibold">User UUID:</span> <%= current_passport.user_uuid %></p>
@@ -12,5 +13,13 @@
         <span class="inline-block px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-800">platform_admin</span>
       <% end %>
     </p>
+  </div>
+
+  <div class="bg-white shadow rounded p-6">
+    <h2 class="text-lg font-semibold mb-3">Ledger</h2>
+    <ul class="space-y-1">
+      <li><%= link_to "Entries", admin_ledger_entries_path, class: "text-blue-600 hover:underline" %></li>
+      <li><%= link_to "Balance Sheet", admin_ledger_balance_sheet_path, class: "text-blue-600 hover:underline" %></li>
+    </ul>
   </div>
 </div>

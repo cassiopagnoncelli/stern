@@ -1,0 +1,67 @@
+<% content_for :title, "Ledger - Entries" %>
+
+<div class="max-w-7xl mx-auto p-6">
+  <div class="mb-8">
+    <div class="sm:flex sm:items-center sm:justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Ledger</h1>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">View and analyze ledger entries with detailed filtering options.</p>
+      </div>
+    </div>
+
+    <div class="mt-6">
+      <nav class="flex space-x-8" aria-label="Tabs">
+        <%= link_to admin_ledger_entries_path,
+            class: "border-indigo-500 text-indigo-600 dark:text-indigo-400 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm" do %>
+          Entries
+        <% end %>
+        <%= link_to admin_ledger_balance_sheet_path,
+            class: "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm" do %>
+          Balance Sheet
+        <% end %>
+      </nav>
+    </div>
+  </div>
+
+  <%= render "stern/admin/shared/paginated_table",
+      title: "Ledger Entries",
+      subtitle: "Browse ledger lines by group, book, and time range.",
+      has_records: @entries.any?,
+      pagination: true,
+      start_record: @start_record,
+      end_record: @end_record,
+      total_count: @total_entries,
+      page: @page,
+      total_pages: @total_pages,
+      record_name: "entry",
+      per_page: @per_page,
+      path_helper: :admin_ledger_entries_path,
+      params_to_preserve: {
+        gid: @gid,
+        book_id: @book_id,
+        currency: @currency,
+        start_date: @start_date_filter_value,
+        end_date: @end_date_filter_value,
+        decimal_places: @decimal_places
+      },
+      filters_url: admin_ledger_entries_path,
+      filters_form_id: "ledger-entries-filters-form",
+      filters_form_class: "flex w-full flex-wrap items-end gap-2 justify-end",
+      filters_hidden_fields: {
+        page: 1,
+        per_page: @per_page
+      },
+      filters_partial: "stern/admin/ledger/entries_filters",
+      filters_locals: {
+        gid: @gid,
+        book_id: @book_id,
+        books: @books,
+        currency: @currency,
+        currencies: @currencies,
+        start_date: @start_date_filter_value,
+        end_date: @end_date_filter_value,
+        decimal_places: @decimal_places
+      },
+      body_content: render("stern/admin/ledger/entries_table", entries: @entries, decimal_places: @decimal_places),
+      empty_state_text: @book_id.blank? ? "Please select a book ID to view ledger entries." : "No entries match your current filters for the selected time period." %>
+</div>

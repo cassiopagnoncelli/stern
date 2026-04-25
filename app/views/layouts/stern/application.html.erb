@@ -10,7 +10,14 @@
 <body class="bg-gray-50 min-h-screen">
 
 <nav class="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center">
-  <a href="/stern" class="font-bold text-lg">Stern</a>
+  <div class="flex items-center gap-6">
+    <a href="/stern" class="font-bold text-lg">Stern</a>
+    <% if authenticated? && (current_passport.platform_admin? || current_passport.platform_admin_root?) %>
+      <a href="<%= admin_root_path %>" class="text-sm text-gray-700 hover:text-gray-900">Dashboard</a>
+      <a href="<%= admin_ledger_entries_path %>" class="text-sm text-gray-700 hover:text-gray-900">Ledger Entries</a>
+      <a href="<%= admin_ledger_balance_sheet_path %>" class="text-sm text-gray-700 hover:text-gray-900">Balance Sheet</a>
+    <% end %>
+  </div>
   <div class="text-sm">
     <% if authenticated? %>
       <span class="mr-3 text-gray-600"><%= current_passport.email %></span>
