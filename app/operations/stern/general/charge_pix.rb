@@ -6,17 +6,19 @@ module Stern
 
     inputs :charge_id, :payment_id, :customer_id, :amount, :currency, :fee
 
-    validates :charge_id, presence: true, numericality: { other_than: 0 }
-    validates :payment_id, presence: true, numericality: { other_than: 0 }
+    validates :charge_id, presence: true, numericality: { greater_than: 0, only_integer: true }
+    validates :payment_id, presence: true, numericality: { greater_than: 0, only_integer: true }
     validates :customer_id, numericality: { greater_than: 0, only_integer: true, allow_nil: true }
-    validates :amount, presence: true
+    validates :amount, presence: true, numericality: { other_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
-      tuples = tuples_for_pair(:pay_pix, charge_id, currency)
-      tuples = tuples_for_pair(:pp_charge_pix, customer_id, currency)
-      tuples += customer_id ? tuples_for_pair(:identified_customer, customer_id, currency)
-                            : tuples_for_pair(:unidentified_customer, customer_id, currency)
+      tuples = tuples_for_pair(:pay_pix, payment_id, currency)
+      tuples += tuples_for_pair(:pay_pix, charge_id, currency)
+      tuples += tuples_for_pair(:pp_charge_pix, charge_id, currency)
+      tuples += tuples_for_pair(:pp_charge, charge_id, currency)
+      tuples += customer_id ? tuples_for_pair(:charge_identified_customer, customer_id, currency)
+                            : tuples_for_pair(:charge_unidentified_customer, 1, currency)
       tuples
     end
 

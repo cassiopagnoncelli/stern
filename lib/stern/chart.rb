@@ -114,6 +114,12 @@ module Stern
     end
 
     def build_entry_pairs(book_names, explicit_pairs)
+      shadowed = explicit_pairs.keys.map(&:to_s) & book_names
+      unless shadowed.empty?
+        raise EntryPairHashCollision,
+              "explicit entry pair name(s) shadow book name(s): #{shadowed.inspect}"
+      end
+
       implicit = book_names.to_h do |name|
         [ name.to_sym, EntryPair.new(
           name: name,

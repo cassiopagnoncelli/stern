@@ -13,7 +13,6 @@
 #   --warmup=N           warmup ops (not measured; default: 200)
 #   --merchants=N        distinct merchant gids to rotate through (default: 16)
 #   --amount=N           per-op amount in cents (default: 1000)
-#   --fee=N              per-op PIX fee in cents (default: 10; use 0 to omit fee entry pair)
 #   --currency=CODE      currency code (default: BRL)
 #   --seed=N             randomness seed for merchant id base (default: 1)
 #   --no-reset           skip Stern::Repair.clear before the run
@@ -62,7 +61,6 @@ opts = {
   warmup: 200,
   merchants: 16,
   amount: 1000,
-  fee: 10,
   currency: "BRL",
   seed: 1,
   reset: true,
@@ -76,7 +74,6 @@ parser = OptionParser.new do |o|
   o.on("--warmup=N",      Integer) { |v| opts[:warmup] = v }
   o.on("--merchants=N",   Integer) { |v| opts[:merchants] = v }
   o.on("--amount=N",      Integer) { |v| opts[:amount] = v }
-  o.on("--fee=N",         Integer) { |v| opts[:fee] = v }
   o.on("--currency=CODE") { |v| opts[:currency] = v }
   o.on("--seed=N",        Integer) { |v| opts[:seed] = v }
   o.on("--no-reset")      { opts[:reset] = false }

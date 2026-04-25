@@ -124,6 +124,14 @@ module Stern
         expect { described_class.new(defs) }.to raise_error(BooksHashCollision)
       end
 
+      it "raises when an explicit entry pair name shadows a book name" do
+        bad = defs.merge(
+          entry_pairs: { foo: { book_sub: "foo", book_add: "bar" } }
+        )
+        expect { described_class.new(bad) }
+          .to raise_error(EntryPairHashCollision, /shadow book name/)
+      end
+
       it "fetches operations from the chart" do
         expect(chart.operations_module).to eq("general")
       end

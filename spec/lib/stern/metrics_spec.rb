@@ -144,7 +144,7 @@ module Stern
       it "records enqueue + terminal events when processing a real SOP" do
         sop = ScheduledOperation.create!(
           name: "ChargePix",
-          params: { charge_id: 1, merchant_id: 1101, customer_id: 2, amount: 100, currency: "usd" },
+          params: { charge_id: 1, payment_id: 1101, customer_id: 2, amount: 100, currency: "usd" },
           after_time: 1.minute.ago,
           status: :pending,
         )

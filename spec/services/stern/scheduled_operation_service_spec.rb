@@ -6,7 +6,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
 
     let(:scheduled_op) { ScheduledOperation.build(name:, params:, after_time:) }
     let(:name) { "ChargePix" }
-    let(:params) { { charge_id: 1, merchant_id: 1101, customer_id: 2, amount: 9900, currency: "usd" } }
+    let(:params) { { charge_id: 1, payment_id: 1101, customer_id: 2, amount: 9900, currency: "usd" } }
     let(:after_time) { described_class::QUEUE_ITEM_TIMEOUT_IN_SECONDS.seconds.ago.utc }
 
     describe ".list" do
@@ -275,7 +275,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
           service.process_sop(scheduled_op.id)
           expect(::Stern::ChargePix).to have_received(:new).with(
             charge_id: 1,
-            merchant_id: 1101,
+            payment_id: 1101,
             customer_id: 2,
             amount: 9900,
             currency: "usd"
@@ -579,7 +579,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
             # touches Object.const_get. Prove it by passing a stub op whose
             # class isn't even registered as Stern::*.
             stub_klass = Class.new(::Stern::BaseOperation) do
-              inputs :charge_id, :merchant_id, :customer_id, :amount, :currency
+              inputs :charge_id, :payment_id, :customer_id, :amount, :currency
               retry_policy max_retries: 0
             end
             stub_const("Stern::EphemeralOp", stub_klass)
