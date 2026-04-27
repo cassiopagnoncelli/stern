@@ -78,23 +78,27 @@ module Stern
         @currency = resolve_currency(params[:currency])
       end
 
+      MOST_USED_CURRENCIES = %w[BRL USD USDT].freeze
+
       def resolve_currency(name)
         names = ::Stern.currencies.names
         return name.to_s if name.present? && names.include?(name.to_s)
-        names.include?("USD") ? "USD" : names.first
+        names.include?("BRL") ? "BRL" : names.first
       end
 
       def grouped_currencies
-        groups = { "Fiat" => [], "Stablecoins" => [], "Crypto" => [], "Other" => [] }
+        groups = { "Most used" => [], "Units" => [], "Fiat" => [], "Stablecoins" => [], "Crypto" => [] }
         ::Stern.currencies.each do |name, code|
           group = case code
                   when 800..899   then "Fiat"
                   when 1000..1999 then "Stablecoins"
                   when 2000..2999 then "Crypto"
-                  else "Other"
+                  else "Units"
                   end
           groups[group] << name
         end
+        available = ::Stern.currencies.names
+        groups["Most used"] = MOST_USED_CURRENCIES.select { |n| available.include?(n) }
         groups.reject { |_, v| v.empty? }
       end
 
