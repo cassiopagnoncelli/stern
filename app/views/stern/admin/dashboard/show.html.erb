@@ -15,12 +15,4 @@
     </p>
     <p><span class="font-semibold">Database:</span> <%= ::Stern::ApplicationRecord.connection_db_config.database %></p>
   </div>
-
-  <div class="bg-white dark:bg-gray-800 shadow rounded p-6 text-gray-900 dark:text-gray-100">
-    <h2 class="text-lg font-semibold mb-3">Ledger</h2>
-    <ul class="space-y-1">
-      <li><%= link_to "Entries", admin_ledger_entries_path, class: "text-blue-600 dark:text-blue-400 hover:underline" %></li>
-      <li><%= link_to "Balance Sheet", admin_ledger_balance_sheet_path, class: "text-blue-600 dark:text-blue-400 hover:underline" %></li>
-    </ul>
-  </div>
 </div>
