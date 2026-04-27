@@ -215,7 +215,7 @@ Queue an operation for later:
 Stern::ScheduledOperation.build(
   name: "ChargePix",
   params: { charge_id: 1, merchant_id: 1101, customer_id: 2, amount: 9900, currency: "usd" },
-  after_time: 1.hour.from_now,
+  after_time: 1.hour.from_now,  # or a fixed Time, e.g. Time.utc(2026, 5, 1, 9, 0)
 ).save!
 ```
 
