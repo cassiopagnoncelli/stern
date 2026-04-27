@@ -13,7 +13,7 @@
         <span class="inline-block px-2 py-0.5 text-xs rounded bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200">platform_admin</span>
       <% end %>
     </p>
-    <p><span class="font-semibold">Database:</span> <%= ActiveRecord::Base.connection_db_config.database %></p>
+    <p><span class="font-semibold">Database:</span> <%= ::Stern::ApplicationRecord.connection_db_config.database %></p>
   </div>
 
   <div class="bg-white dark:bg-gray-800 shadow rounded p-6 text-gray-900 dark:text-gray-100">
