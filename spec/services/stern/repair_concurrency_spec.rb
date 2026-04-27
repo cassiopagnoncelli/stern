@@ -91,7 +91,7 @@ module Stern
     # own advisory lock. Between rebuilds, cross-book ops can commit.
     # Analysis says this is safe — each per-tuple rebuild produces a correct
     # cascade for its tuple, and writes between rebuilds go through
-    # `create_entry_v04` which holds the same advisory lock and cascades
+    # `create_entry` which holds the same advisory lock and cascades
     # correctly. The final state is globally consistent even though the
     # rebuild is not atomic across tuples.
     #

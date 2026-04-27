@@ -45,9 +45,9 @@ module Stern
     #
     # Piecewise safety model: each per-book rebuild is an independent
     # transaction guarded by the same `(book, gid, currency)` advisory lock
-    # that `BaseOperation#acquire_advisory_locks` and `create_entry_v04`
+    # that `BaseOperation#acquire_advisory_locks` and `create_entry`
     # take. Between books, ops can commit cross-book cascades; those
-    # cascades are produced correctly by `create_entry_v04` under its own
+    # cascades are produced correctly by `create_entry` under its own
     # lock, so no matter how operations interleave with this method, each
     # book's final `ending_balance` sequence is a correct running sum of
     # its `amount`s. The rebuild is NOT atomic across books — and does not
@@ -60,7 +60,7 @@ module Stern
     # A book that appears AFTER this pluck — because a concurrent op
     # inserts into a previously empty book — does not need a rebuild;
     # the op's own cascade was produced under the advisory lock by
-    # `create_entry_v04` and is already consistent.
+    # `create_entry` and is already consistent.
     def self.rebuild_gid_balance(gid, currency)
       Entry.where(gid:, currency:).distinct.pluck(:book_id).each do |book_id|
         rebuild_book_gid_balance(book_id, gid, currency)
