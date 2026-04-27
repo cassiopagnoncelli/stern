@@ -22,6 +22,11 @@
 
 <nav class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 flex justify-between items-center">
   <div class="flex items-center gap-6">
+    <a href="/" aria-label="Back" title="Back" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </a>
     <a href="/stern" class="font-bold text-lg text-gray-900 dark:text-gray-100">Stern</a>
     <% if authenticated? && (current_passport.platform_admin? || current_passport.platform_admin_root?) %>
       <a href="<%= admin_root_path %>" class="text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">Dashboard</a>
