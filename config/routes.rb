@@ -1,6 +1,4 @@
 Stern::Engine.routes.draw do
-  root to: "home#index"
-
   scope "auth", module: "auth", as: :auth do
     get    "idp/callback",       to: "callbacks#create",  as: :idp_callback
     post   "idp/callback",       to: "callbacks#create"
@@ -16,4 +14,6 @@ Stern::Engine.routes.draw do
     get "ledger/entries",       to: "ledger#entries",       as: :ledger_entries
     get "ledger/balance_sheet", to: "ledger#balance_sheet", as: :ledger_balance_sheet
   end
+
+  root to: "admin/dashboard#show"
 end
