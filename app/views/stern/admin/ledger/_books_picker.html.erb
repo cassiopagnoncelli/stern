@@ -1,0 +1,238 @@
+<%
+  picker_id ||= "books-picker"
+  mode = (local_assigns[:mode] || :multi).to_sym
+  trigger_classes = "w-full sm:w-auto rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:focus:border-indigo-400 dark:focus:ring-indigo-400 inline-flex items-center gap-2 cursor-pointer"
+
+  if mode == :multi
+    selected_codes = Array(selected_book_ids).map(&:to_i)
+    selected_labels = books.filter_map { |name, code| selected_codes.include?(code.to_i) ? name.to_s.titleize : nil }
+    summary_text = if selected_labels.empty?
+      "All books"
+    elsif selected_labels.size <= 2
+      selected_labels.join(", ")
+    else
+      "#{selected_labels.first(2).join(', ')} +#{selected_labels.size - 2}"
+    end
+    title = "Books to include"
+  else
+    selected_code = book_id.presence
+    found = selected_code.present? ? books.find { |_, code| code.to_i == selected_code.to_i } : nil
+    summary_text = found ? found.first.to_s.titleize : "All books"
+    title = "Book"
+  end
+%>
+
+<div class="w-full sm:w-auto" data-bs-books-picker data-bs-picker-id="<%= picker_id %>" data-bs-mode="<%= mode %>">
+  <button type="button" data-bs-books-toggle class="<%= trigger_classes %>">
+    <svg class="h-4 w-4 text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/>
+    </svg>
+    <span data-bs-books-label class="truncate"><%= summary_text %></span>
+    <svg class="h-4 w-4 text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7"/>
+    </svg>
+  </button>
+
+  <% if mode == :single %>
+    <input type="hidden" name="book_id" value="<%= book_id %>" data-bs-books-single-value />
+  <% end %>
+
+  <div data-bs-books-modal class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div data-bs-books-dialog class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-200 dark:border-gray-700 flex flex-col max-h-[80vh]">
+      <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-3">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100"><%= title %></h3>
+        <button type="button" data-bs-books-close class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer" aria-label="Close">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <% if mode == :multi %>
+        <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-2">
+          <span class="text-xs text-gray-500 dark:text-gray-400" data-bs-books-count></span>
+          <div class="flex items-center gap-3">
+            <button type="button" data-bs-books-action="select-all" class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 cursor-pointer">All</button>
+            <button type="button" data-bs-books-action="clear" class="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer">Clear</button>
+          </div>
+        </div>
+      <% end %>
+
+      <div class="flex-1 overflow-y-auto">
+        <% if mode == :single %>
+          <button
+            type="button"
+            data-bs-books-option
+            data-bs-value=""
+            data-bs-label="All books"
+            class="flex w-full cursor-pointer items-center gap-2 px-5 py-2 text-left text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700">
+            All books
+          </button>
+        <% end %>
+
+        <% book_groups.each do |group_name, pairs| %>
+          <div class="px-5 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/40 sticky top-0"><%= group_name %></div>
+          <% pairs.each do |name, code| %>
+            <% titleized = name.to_s.titleize %>
+            <% if mode == :multi %>
+              <% checked = selected_codes.include?(code.to_i) %>
+              <label class="flex cursor-pointer items-start gap-2 px-5 py-2 hover:bg-gray-50 dark:hover:bg-gray-700">
+                <%= check_box_tag "book_ids[]",
+                    code,
+                    checked,
+                    data: {
+                      bs_books_checkbox: true,
+                      bs_label: titleized
+                    },
+                    class: "mt-0.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-800" %>
+                <span class="min-w-0">
+                  <span class="block truncate text-sm text-gray-900 dark:text-gray-100"><%= titleized %></span>
+                  <span class="block text-xs text-gray-500 dark:text-gray-400">ID: <%= code %></span>
+                </span>
+              </label>
+            <% else %>
+              <button
+                type="button"
+                data-bs-books-option
+                data-bs-value="<%= code %>"
+                data-bs-label="<%= titleized %>"
+                class="flex w-full cursor-pointer items-start gap-2 px-5 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700">
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate text-sm text-gray-900 dark:text-gray-100"><%= titleized %></span>
+                  <span class="block text-xs text-gray-500 dark:text-gray-400">ID: <%= code %></span>
+                </span>
+              </button>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 border-t border-gray-200 dark:border-gray-700 px-5 py-3">
+        <button type="button" data-bs-books-cancel class="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+          Cancel
+        </button>
+        <% if mode == :multi %>
+          <button type="submit" class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 cursor-pointer">
+            Apply
+          </button>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    if (window.__sternBooksPickerInit) return;
+    window.__sternBooksPickerInit = true;
+
+    function summarizeMulti(root) {
+      var label = root.querySelector("[data-bs-books-label]");
+      var count = root.querySelector("[data-bs-books-count]");
+      var checkboxes = root.querySelectorAll("[data-bs-books-checkbox]");
+      var selected = [];
+      checkboxes.forEach(function (cb) { if (cb.checked) selected.push(cb.dataset.bsLabel || ""); });
+      var total = checkboxes.length;
+      if (count) count.textContent = selected.length + " of " + total + " selected";
+      if (!label) return;
+      if (selected.length === 0) { label.textContent = "All books"; return; }
+      if (selected.length <= 2) { label.textContent = selected.join(", "); return; }
+      label.textContent = selected.slice(0, 2).join(", ") + " +" + (selected.length - 2);
+    }
+
+    function snapshotMulti(root) {
+      var snap = [];
+      root.querySelectorAll("[data-bs-books-checkbox]").forEach(function (cb) { snap.push(cb.checked); });
+      return snap;
+    }
+
+    function restoreMulti(root, snap) {
+      root.querySelectorAll("[data-bs-books-checkbox]").forEach(function (cb, i) { cb.checked = !!snap[i]; });
+    }
+
+    function init(root) {
+      var mode = root.getAttribute("data-bs-mode") || "multi";
+      var toggle = root.querySelector("[data-bs-books-toggle]");
+      var modal = root.querySelector("[data-bs-books-modal]");
+      var dialog = root.querySelector("[data-bs-books-dialog]");
+      if (!toggle || !modal || !dialog) return;
+
+      var snap = null;
+
+      function open() {
+        if (mode === "multi") snap = snapshotMulti(root);
+        modal.classList.remove("hidden");
+      }
+      function close() { modal.classList.add("hidden"); }
+      function cancel() {
+        if (mode === "multi" && snap) { restoreMulti(root, snap); summarizeMulti(root); }
+        close();
+      }
+
+      toggle.addEventListener("click", function (e) { e.preventDefault(); open(); });
+
+      modal.addEventListener("click", function (e) {
+        if (!dialog.contains(e.target)) cancel();
+      });
+
+      root.querySelectorAll("[data-bs-books-close]").forEach(function (btn) {
+        btn.addEventListener("click", function (e) { e.preventDefault(); cancel(); });
+      });
+      root.querySelectorAll("[data-bs-books-cancel]").forEach(function (btn) {
+        btn.addEventListener("click", function (e) { e.preventDefault(); cancel(); });
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && !modal.classList.contains("hidden")) cancel();
+      });
+
+      if (mode === "multi") {
+        root.querySelectorAll("[data-bs-books-checkbox]").forEach(function (cb) {
+          cb.addEventListener("change", function () { summarizeMulti(root); });
+        });
+        root.querySelectorAll('[data-bs-books-action="select-all"]').forEach(function (btn) {
+          btn.addEventListener("click", function (e) {
+            e.preventDefault();
+            root.querySelectorAll("[data-bs-books-checkbox]").forEach(function (cb) { cb.checked = true; });
+            summarizeMulti(root);
+          });
+        });
+        root.querySelectorAll('[data-bs-books-action="clear"]').forEach(function (btn) {
+          btn.addEventListener("click", function (e) {
+            e.preventDefault();
+            root.querySelectorAll("[data-bs-books-checkbox]").forEach(function (cb) { cb.checked = false; });
+            summarizeMulti(root);
+          });
+        });
+        summarizeMulti(root);
+      } else {
+        var hidden = root.querySelector("[data-bs-books-single-value]");
+        var label = root.querySelector("[data-bs-books-label]");
+        root.querySelectorAll("[data-bs-books-option]").forEach(function (opt) {
+          opt.addEventListener("click", function (e) {
+            e.preventDefault();
+            if (hidden) hidden.value = opt.getAttribute("data-bs-value") || "";
+            if (label) label.textContent = opt.getAttribute("data-bs-label") || "";
+            close();
+            var form = hidden && hidden.form;
+            if (form) {
+              if (typeof form.requestSubmit === "function") form.requestSubmit();
+              else form.submit();
+            }
+          });
+        });
+      }
+    }
+
+    function initAll() {
+      document.querySelectorAll("[data-bs-books-picker]").forEach(function (root) {
+        if (root.__sternBooksPickerInited) return;
+        root.__sternBooksPickerInited = true;
+        init(root);
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", initAll);
+    if (document.readyState !== "loading") initAll();
+  })();
+</script>
