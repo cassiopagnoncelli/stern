@@ -123,19 +123,10 @@
   })();
 </script>
 
-<div class="w-full sm:w-auto">
-  <%= form.label :start_date, "Start date", class: "sr-only" %>
-  <%= form.datetime_local_field :start_date,
-      value: start_date,
-      class: field_classes %>
-</div>
-
-<div class="w-full sm:w-auto">
-  <%= form.label :end_date, "End date", class: "sr-only" %>
-  <%= form.datetime_local_field :end_date,
-      value: end_date,
-      class: field_classes %>
-</div>
+<%= render "stern/admin/ledger/date_range_picker",
+    picker_id: "entries-date-range",
+    start_date: start_date,
+    end_date: end_date %>
 
 <button type="submit" class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-indigo-400">
   Apply

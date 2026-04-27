@@ -18,19 +18,10 @@
       onchange: "this.form.submit()" %>
 </div>
 
-<div class="w-full sm:w-auto">
-  <%= form.label :start_date, "Start date", class: "sr-only" %>
-  <%= form.datetime_local_field :start_date,
-      value: start_date,
-      class: field_classes %>
-</div>
-
-<div class="w-full sm:w-auto">
-  <%= form.label :end_date, "End date", class: "sr-only" %>
-  <%= form.datetime_local_field :end_date,
-      value: end_date,
-      class: field_classes %>
-</div>
+<%= render "stern/admin/ledger/date_range_picker",
+    picker_id: "balance-sheet-date-range",
+    start_date: start_date,
+    end_date: end_date %>
 
 <div class="w-full sm:w-auto">
   <%= form.label :book_ids, "Books to include", class: "sr-only" %>
