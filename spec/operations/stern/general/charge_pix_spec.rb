@@ -153,6 +153,20 @@ module Stern
           expect(op.errors[:customer_id]).to be_present
         end
       end
+
+      context "without customer_id" do
+        it "still writes four entry pairs" do
+          expect {
+            described_class.new(**valid_inputs(customer_id: nil)).call
+          }.to change(EntryPair, :count).by(4)
+        end
+
+        it "records the amount in pp_charge_unidentified_customer keyed by 1" do
+          described_class.new(**valid_inputs(charge_id: 30, customer_id: nil)).call
+          balance = ::Stern.balance(1, :pp_charge_unidentified_customer, :BRL)
+          expect(balance).to eq(-9900)
+        end
+      end
     end
   end
 end
