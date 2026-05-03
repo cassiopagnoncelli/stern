@@ -14,21 +14,21 @@ module Stern
     self.use_transactional_tests = false
 
     let(:currency) { ::Stern.cur("BRL") }
-    let(:book_id) { ::Stern.chart.book_code(:merchant_balance) }
+    let(:book_id) { ::Stern.chart.book_code(:merchant_available) }
 
     let(:withdraw_op_class) do
       Class.new(BaseOperation) do
         inputs :merchant_id, :amount, :currency
 
         def target_tuples
-          tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
+          tuples_for_pair(:merchant_available, merchant_id, merchant_id, currency)
         end
 
         def perform(operation_id)
-          balance = ::Stern.balance(merchant_id, :merchant_balance, currency)
+          balance = ::Stern.balance(merchant_id, :merchant_available, currency)
           raise ::Stern::InsufficientFunds if balance < amount
 
-          ::Stern::EntryPair.add_merchant_balance(
+          ::Stern::EntryPair.add_merchant_available(
             SecureRandom.random_number(1 << 30), merchant_id, -amount, currency, operation_id:,
           )
         end
@@ -50,14 +50,14 @@ module Stern
 
     def seed(gid:, amount:)
       op = Operation.create!(name: "matrix_seed", params: {})
-      EntryPair.add_merchant_balance(
+      EntryPair.add_merchant_available(
         SecureRandom.random_number(1 << 30), gid, amount, currency, operation_id: op.id,
       )
     end
 
     def direct_deposit(gid:, amount:)
       op = Operation.create!(name: "matrix_direct", params: {})
-      EntryPair.add_merchant_balance(
+      EntryPair.add_merchant_available(
         SecureRandom.random_number(1 << 30), gid, amount, currency, operation_id: op.id,
       )
     end
@@ -244,18 +244,18 @@ module Stern
           inputs :gid_a, :gid_b, :currency
           def target_tuples
             [
-              [ :merchant_balance, gid_a, currency ],
-              [ :merchant_balance_0, gid_a, currency ],
-              [ :merchant_balance, gid_b, currency ],
-              [ :merchant_balance_0, gid_b, currency ]
+              [ :merchant_available, gid_a, currency ],
+              [ :merchant_available_0, gid_a, currency ],
+              [ :merchant_available, gid_b, currency ],
+              [ :merchant_available_0, gid_b, currency ]
             ]
           end
 
           def perform(operation_id)
-            ::Stern::EntryPair.add_merchant_balance(
+            ::Stern::EntryPair.add_merchant_available(
               SecureRandom.random_number(1 << 30), gid_a, -10, currency, operation_id:,
             )
-            ::Stern::EntryPair.add_merchant_balance(
+            ::Stern::EntryPair.add_merchant_available(
               SecureRandom.random_number(1 << 30), gid_b, 10, currency, operation_id:,
             )
           end
@@ -337,7 +337,7 @@ module Stern
         raising_op = Class.new(BaseOperation) do
           inputs :merchant_id, :currency
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
+            tuples_for_pair(:merchant_available, merchant_id, merchant_id, currency)
           end
 
           def perform(_operation_id)

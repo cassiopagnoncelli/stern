@@ -11,7 +11,7 @@ module Stern
 
     let(:gid) { 901_001 }
     let(:currency) { ::Stern.cur("BRL") }
-    let(:book_id) { ::Stern.chart.book_code(:merchant_balance) }
+    let(:book_id) { ::Stern.chart.book_code(:merchant_available) }
 
     before { Repair.clear }
     after { Repair.clear }
@@ -25,7 +25,7 @@ module Stern
 
     def seed_one_entry
       op = Operation.create!(name: "repair_concurrency_seed", params: {})
-      EntryPair.add_merchant_balance(
+      EntryPair.add_merchant_available(
         SecureRandom.random_number(1 << 30), gid, 100, currency, operation_id: op.id,
       )
     end
@@ -115,12 +115,12 @@ module Stern
           pool.instance_variable_set(:@checkout_timeout, original)
         end
       end
-      # Writes an amount to `(pp_charge_pix / pp_charge_pix_0, gid, cur)` —
+      # Writes an amount to `(charge_pix / charge_pix_0, gid, cur)` —
       # a real two-book cascade via the shipping SQL function, so the race
       # model exercised is exactly production's.
       def write_charge_pix(gid:, amount:, currency:)
         op = Operation.create!(name: "rebuild_concurrency_writer", params: {})
-        EntryPair.add_pp_charge_pix(
+        EntryPair.add_charge_pix(
           SecureRandom.random_number(1 << 30), gid, amount, currency, operation_id: op.id,
         )
       end
@@ -140,7 +140,7 @@ module Stern
       end
 
       it "rebuild_gid_balance interleaved with cross-book ops keeps all invariants" do
-        # Single gid, many writes across (pp_charge_pix, pp_charge_pix_0).
+        # Single gid, many writes across (charge_pix, charge_pix_0).
         # Rebuilder hammers `rebuild_gid_balance(gid, cur)` while writers
         # hammer cross-book ops on the same gid. Any race in the piecewise
         # rebuild lets an ending_balance drift or a physical sum leak.

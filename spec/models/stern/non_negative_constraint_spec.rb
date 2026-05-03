@@ -11,7 +11,7 @@ module Stern
     self.use_transactional_tests = false
 
     let(:brl) { ::Stern.cur("BRL") }
-    let(:flagged_book_id) { ::Stern.chart.book_code(:merchant_balance) }
+    let(:flagged_book_id) { ::Stern.chart.book_code(:merchant_credit) }
 
     before { Repair.clear }
     after { Repair.clear }
@@ -21,7 +21,7 @@ module Stern
     end
 
     def seed(gid:, amount:)
-      EntryPair.add_merchant_balance(
+      EntryPair.add_merchant_credit(
         SecureRandom.random_number(1 << 30), gid, amount, brl, operation_id: new_op.id,
       )
     end
@@ -32,12 +32,12 @@ module Stern
     end
 
     describe "seeded flag state" do
-      it "marks merchant_balance as non_negative in stern_books" do
+      it "marks merchant_credit as non_negative in stern_books" do
         expect(Book.find(flagged_book_id).non_negative).to be(true)
       end
 
-      it "leaves counterpart merchant_balance_0 permissive" do
-        expect(Book.find(::Stern.chart.book_code(:merchant_balance_0)).non_negative).to be(false)
+      it "leaves counterpart merchant_credit_0 permissive" do
+        expect(Book.find(::Stern.chart.book_code(:merchant_credit_0)).non_negative).to be(false)
       end
 
       it "leaves merchant_adjusted permissive" do
@@ -51,7 +51,7 @@ module Stern
         before_count = Entry.where(book_id: flagged_book_id, gid:).count
 
         expect {
-          EntryPair.add_merchant_balance(
+          EntryPair.add_merchant_credit(
             SecureRandom.random_number(1 << 30), gid, -100, brl, operation_id: new_op.id,
           )
         }.to raise_error(::Stern::BalanceNonNegativeViolation)
@@ -63,7 +63,7 @@ module Stern
       it "raises InsufficientFunds for callers rescuing the parent class" do
         gid = 970_102
         expect {
-          EntryPair.add_merchant_balance(
+          EntryPair.add_merchant_credit(
             SecureRandom.random_number(1 << 30), gid, -5, brl, operation_id: new_op.id,
           )
         }.to raise_error(::Stern::InsufficientFunds)
@@ -72,12 +72,12 @@ module Stern
       it "allows the counterpart _0 book to go negative (double-entry needs it)" do
         gid = 970_103
         expect {
-          EntryPair.add_merchant_balance(
+          EntryPair.add_merchant_credit(
             SecureRandom.random_number(1 << 30), gid, 50, brl, operation_id: new_op.id,
           )
         }.not_to raise_error
 
-        zero_book_id = ::Stern.chart.book_code(:merchant_balance_0)
+        zero_book_id = ::Stern.chart.book_code(:merchant_credit_0)
         expect(Entry.where(book_id: zero_book_id, gid:, currency: brl).sum(:amount)).to eq(-50)
       end
     end
@@ -91,11 +91,11 @@ module Stern
           inputs :merchant_id, :uid, :amount, :currency
 
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
+            tuples_for_pair(:merchant_credit, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
-            ::Stern::EntryPair.add_merchant_balance(
+            ::Stern::EntryPair.add_merchant_credit(
               uid, merchant_id, amount, currency, operation_id:,
             )
           end
@@ -106,7 +106,7 @@ module Stern
           ForgetfulWithdraw.new(merchant_id: gid, uid: 7001, amount: -100, currency: brl).call
         }.to raise_error(::Stern::BalanceNonNegativeViolation)
 
-        expect(::Stern.balance(gid, :merchant_balance, brl)).to eq(50)
+        expect(::Stern.balance(gid, :merchant_credit, brl)).to eq(50)
         expect(negative_rows(gid)).to eq([])
       end
     end
@@ -120,11 +120,11 @@ module Stern
           inputs :merchant_id, :uid, :amount, :currency
 
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
+            tuples_for_pair(:merchant_credit, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
-            ::Stern::EntryPair.add_merchant_balance(
+            ::Stern::EntryPair.add_merchant_credit(
               uid, merchant_id, amount, currency, operation_id:,
             )
           end
@@ -151,7 +151,7 @@ module Stern
 
         expect(results.count(:ok)).to eq(10)
         expect(results.count(:rejected)).to eq(10)
-        expect(::Stern.balance(gid, :merchant_balance, brl)).to eq(0)
+        expect(::Stern.balance(gid, :merchant_credit, brl)).to eq(0)
         expect(negative_rows(gid)).to eq([])
       end
     end
@@ -162,7 +162,7 @@ module Stern
         seed(gid:, amount: 100)
 
         expect {
-          EntryPair.add_merchant_balance(
+          EntryPair.add_merchant_credit(
             SecureRandom.random_number(1 << 30), gid, -500, brl,
             timestamp: 1.hour.ago, operation_id: new_op.id,
           )
@@ -174,26 +174,26 @@ module Stern
       it "raises when a later cascaded row would become negative" do
         gid = 970_402
 
-        EntryPair.add_merchant_balance(
+        EntryPair.add_merchant_credit(
           SecureRandom.random_number(1 << 30), gid, 100, brl,
           timestamp: 3.hours.ago, operation_id: new_op.id,
         )
-        EntryPair.add_merchant_balance(
+        EntryPair.add_merchant_credit(
           SecureRandom.random_number(1 << 30), gid, -80, brl,
           timestamp: 1.hour.ago, operation_id: new_op.id,
         )
 
-        expect(::Stern.balance(gid, :merchant_balance, brl)).to eq(20)
+        expect(::Stern.balance(gid, :merchant_credit, brl)).to eq(20)
 
         expect {
-          EntryPair.add_merchant_balance(
+          EntryPair.add_merchant_credit(
             SecureRandom.random_number(1 << 30), gid, -50, brl,
             timestamp: 2.hours.ago, operation_id: new_op.id,
           )
         }.to raise_error(::Stern::BalanceNonNegativeViolation)
 
         expect(negative_rows(gid)).to eq([])
-        expect(::Stern.balance(gid, :merchant_balance, brl)).to eq(20)
+        expect(::Stern.balance(gid, :merchant_credit, brl)).to eq(20)
       end
     end
 
@@ -201,11 +201,11 @@ module Stern
       it "raises when destroying a row would drive subsequent rows negative" do
         gid = 970_501
 
-        EntryPair.add_merchant_balance(
+        EntryPair.add_merchant_credit(
           SecureRandom.random_number(1 << 30), gid, 100, brl,
           timestamp: 2.hours.ago, operation_id: new_op.id,
         )
-        EntryPair.add_merchant_balance(
+        EntryPair.add_merchant_credit(
           SecureRandom.random_number(1 << 30), gid, -80, brl,
           timestamp: 1.hour.ago, operation_id: new_op.id,
         )
@@ -228,14 +228,14 @@ module Stern
           inputs :merchant_id, :uid, :amount, :currency
 
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
+            tuples_for_pair(:merchant_credit, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
-            balance = ::Stern.balance(merchant_id, :merchant_balance, currency)
+            balance = ::Stern.balance(merchant_id, :merchant_credit, currency)
             raise ::Stern::InsufficientFunds if balance + amount < 0
 
-            ::Stern::EntryPair.add_merchant_balance(
+            ::Stern::EntryPair.add_merchant_credit(
               uid, merchant_id, amount, currency, operation_id:,
             )
           end
@@ -266,14 +266,14 @@ module Stern
           inputs :merchant_id, :uid, :amount, :currency
 
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
+            tuples_for_pair(:merchant_credit, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
-            balance = ::Stern.balance(merchant_id, :merchant_balance, currency)
+            balance = ::Stern.balance(merchant_id, :merchant_credit, currency)
             raise ::Stern::InsufficientFunds if balance + amount < 0
 
-            ::Stern::EntryPair.add_merchant_balance(
+            ::Stern::EntryPair.add_merchant_credit(
               uid, merchant_id, amount, currency, operation_id:,
             )
           end
@@ -284,11 +284,11 @@ module Stern
           inputs :merchant_id, :uid, :amount, :currency
 
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
+            tuples_for_pair(:merchant_credit, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
-            ::Stern::EntryPair.add_merchant_balance(
+            ::Stern::EntryPair.add_merchant_credit(
               uid, merchant_id, amount, currency, operation_id:,
             )
           end
@@ -342,7 +342,7 @@ module Stern
 
         # Final state: balance == 20 (100 - 80), no negative rows, cascade
         # consistent, no duplicate ending_balance (monotonic sequence).
-        expect(::Stern.balance(gid, :merchant_balance, brl)).to eq(20)
+        expect(::Stern.balance(gid, :merchant_credit, brl)).to eq(20)
         expect(negative_rows(gid)).to eq([])
         expect(Doctor.ending_balance_consistent?(book_id: flagged_book_id, gid:, currency: brl)).to be(true)
 

@@ -3,14 +3,14 @@ require "rails_helper"
 module Stern
   RSpec.describe Repair, type: :model do
     let(:gid) { 1101 }
-    let(:book_id) { ::Stern.chart.book_code(:merchant_balance) }
+    let(:book_id) { ::Stern.chart.book_code(:merchant_available) }
     let(:currency) { ::Stern.cur("BRL") }
     let(:entries) { Entry.where(book_id:, gid:, currency:).order(:timestamp) }
     let(:operation) { create(:operation) }
 
     def seed_entries(count: 3, amount: 100)
       count.times do |i|
-        EntryPair.add_merchant_balance(i + 1, gid, amount, currency, operation_id: operation.id)
+        EntryPair.add_merchant_available(i + 1, gid, amount, currency, operation_id: operation.id)
       end
     end
 

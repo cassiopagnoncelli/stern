@@ -12,7 +12,7 @@ module Stern
     before { Repair.clear }
 
     def seed(uid, amount, currency, account = gid)
-      EntryPair.add_merchant_balance(uid, account, amount, currency, operation_id: operation.id)
+      EntryPair.add_merchant_available(uid, account, amount, currency, operation_id: operation.id)
     end
 
     describe "#call" do
@@ -22,11 +22,11 @@ module Stern
         seed(3, 999, usd)
 
         brl_rows = described_class.new(
-          book_id: :merchant_balance, currency: :BRL,
+          book_id: :merchant_available, currency: :BRL,
           start_date:, end_date:, gid:,
         ).call
         usd_rows = described_class.new(
-          book_id: :merchant_balance, currency: :USD,
+          book_id: :merchant_available, currency: :USD,
           start_date:, end_date:, gid:,
         ).call
 
@@ -38,7 +38,7 @@ module Stern
         seed(1, 100, brl)
 
         rows = described_class.new(
-          book_id: :merchant_balance, currency: :EUR,
+          book_id: :merchant_available, currency: :EUR,
           start_date:, end_date:, gid:,
         ).call
         expect(rows).to eq([])
@@ -49,7 +49,7 @@ module Stern
         seed(2, 50, brl, 1102)
 
         rows = described_class.new(
-          book_id: :merchant_balance, currency: :BRL,
+          book_id: :merchant_available, currency: :BRL,
           start_date:, end_date:, gid: 1101,
         ).call
         expect(rows.map { |r| r[:gid] }).to eq([ 1101 ])
@@ -60,7 +60,7 @@ module Stern
         seed(2, 50, brl, 1102)
 
         rows = described_class.new(
-          book_id: :merchant_balance, currency: :BRL,
+          book_id: :merchant_available, currency: :BRL,
           start_date:, end_date:,
         ).call
         expect(rows.map { |r| r[:gid] }).to match_array([ 1101, 1102 ])
@@ -70,11 +70,11 @@ module Stern
         seed(1, 100, brl)
 
         rows = described_class.new(
-          book_id: :merchant_balance, currency: :BRL,
+          book_id: :merchant_available, currency: :BRL,
           start_date:, end_date:, gid:,
           code_format: %i[titleize drop_first_word],
         ).call
-        expect(rows.first[:code]).to eq("Balance")
+        expect(rows.first[:code]).to eq("Available")
       end
     end
 
@@ -86,7 +86,7 @@ module Stern
 
       it "returns pages in ascending order for negative pages" do
         rows = described_class.new(
-          book_id: :merchant_balance, currency: :BRL,
+          book_id: :merchant_available, currency: :BRL,
           start_date:, end_date:, gid:, page: -1, per_page: 3,
         ).call
         expect(rows.size).to eq(3)
@@ -95,7 +95,7 @@ module Stern
 
       it "returns ascending order for positive pages" do
         rows = described_class.new(
-          book_id: :merchant_balance, currency: :BRL,
+          book_id: :merchant_available, currency: :BRL,
           start_date:, end_date:, gid:, page: 1, per_page: 3,
         ).call
         expect(rows.size).to eq(3)
@@ -107,7 +107,7 @@ module Stern
       it "raises on page == 0" do
         expect {
           described_class.new(
-            book_id: :merchant_balance, currency: :BRL,
+            book_id: :merchant_available, currency: :BRL,
             start_date:, end_date:, page: 0,
           )
         }.to raise_error(ArgumentError, /page cannot be 0/)
@@ -116,7 +116,7 @@ module Stern
       it "raises on non-positive per_page" do
         expect {
           described_class.new(
-            book_id: :merchant_balance, currency: :BRL,
+            book_id: :merchant_available, currency: :BRL,
             start_date:, end_date:, per_page: 0,
           )
         }.to raise_error(ArgumentError, /per_page must be positive/)
@@ -125,7 +125,7 @@ module Stern
       it "raises on an unknown currency" do
         expect {
           described_class.new(
-            book_id: :merchant_balance, currency: "ZZZ",
+            book_id: :merchant_available, currency: "ZZZ",
             start_date:, end_date:,
           )
         }.to raise_error(ArgumentError, /unknown currency/)
@@ -134,7 +134,7 @@ module Stern
       it "raises when currency is nil" do
         expect {
           described_class.new(
-            book_id: :merchant_balance, currency: nil,
+            book_id: :merchant_available, currency: nil,
             start_date:, end_date:,
           )
         }.to raise_error(ArgumentError)

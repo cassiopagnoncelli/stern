@@ -7,7 +7,7 @@ module Stern
   RSpec.describe "Concurrent ledger writes", type: :model do
     self.use_transactional_tests = false
 
-    let(:book_id) { ::Stern.chart.book_code(:merchant_balance) }
+    let(:book_id) { ::Stern.chart.book_code(:merchant_available) }
     let(:gid) { 424_242 }
     let(:currency) { ::Stern.cur("BRL") }
     let(:pair_code) { ::Stern.chart.entry_pair_codes.values.first }

@@ -20,7 +20,7 @@ module Stern
 
     def seed_one_pair(gid: merchant_id, amount: 500, op_name: "invariant_seed", op_params: {})
       op = Operation.create!(name: op_name, params: op_params)
-      EntryPair.add_merchant_balance(
+      EntryPair.add_merchant_available(
         SecureRandom.random_number(1 << 30), gid, amount, brl, operation_id: op.id,
       )
       op
@@ -62,7 +62,7 @@ module Stern
         # unique index (book_id, gid, currency, entry_pair_id) does not block
         # this — we're moving to a different book_id, not colliding with the
         # other half's book_id.
-        wrong_book = ::Stern.chart.book_code(:customer_balance)
+        wrong_book = ::Stern.chart.book_code(:customer_available)
         Entry.connection.execute(<<~SQL)
           UPDATE stern_entries
           SET book_id = #{wrong_book}
@@ -107,7 +107,7 @@ module Stern
           params: { "merchant_id" => 12_345, "charge_id" => 1, "amount" => 100, "currency" => brl },
         )
         # Seed an EntryPair on a DIFFERENT gid than params.merchant_id claims.
-        EntryPair.add_pp_charge_pix(
+        EntryPair.add_charge_pix(
           SecureRandom.random_number(1 << 30), 99_999, 100, brl, operation_id: op.id,
         )
 

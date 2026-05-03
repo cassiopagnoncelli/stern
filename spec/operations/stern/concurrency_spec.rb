@@ -18,16 +18,16 @@ module Stern
           # automatically gets the right lock. Under today's lock_tables
           # (table-level EXCLUSIVE) the declaration is dormant but harmless.
           [
-            [ :merchant_balance, merchant_id, currency ],
-            [ :merchant_balance_0, merchant_id, currency ]
+            [ :merchant_available, merchant_id, currency ],
+            [ :merchant_available_0, merchant_id, currency ]
           ]
         end
 
         def perform(operation_id)
-          balance = ::Stern.balance(merchant_id, :merchant_balance, currency)
+          balance = ::Stern.balance(merchant_id, :merchant_available, currency)
           raise ::Stern::InsufficientFunds, "balance #{balance} < amount #{amount}" if balance < amount
 
-          ::Stern::EntryPair.add_merchant_balance(
+          ::Stern::EntryPair.add_merchant_available(
             SecureRandom.random_number(1 << 30), merchant_id, -amount, currency, operation_id:,
           )
         end
@@ -38,7 +38,7 @@ module Stern
 
     let(:merchant_id) { 900_101 }
     let(:currency) { ::Stern.cur("BRL") }
-    let(:book_id) { ::Stern.chart.book_code(:merchant_balance) }
+    let(:book_id) { ::Stern.chart.book_code(:merchant_available) }
 
     before { Repair.clear }
     # Structural invariants run before Repair.clear (LIFO) — every concurrency
@@ -52,7 +52,7 @@ module Stern
     # Seeds `amount` into the merchant's balance via a deposit-shaped entry pair.
     def seed_balance(amount:)
       op = Operation.create!(name: "seed", params: {})
-      EntryPair.add_merchant_balance(
+      EntryPair.add_merchant_available(
         SecureRandom.random_number(1 << 30), merchant_id, amount, currency, operation_id: op.id,
       )
     end
@@ -61,7 +61,7 @@ module Stern
       it "allows a single withdraw that fits within the balance" do
         seed_balance(amount: 100)
         WithdrawTest.new(merchant_id:, amount: 80, currency:).call
-        expect(::Stern.balance(merchant_id, :merchant_balance, currency)).to eq(20)
+        expect(::Stern.balance(merchant_id, :merchant_available, currency)).to eq(20)
       end
 
       it "raises InsufficientFunds when a single withdraw exceeds the balance" do
@@ -98,7 +98,7 @@ module Stern
 
         expect(successes.size).to eq(1)
         expect(errors.size).to eq(2)
-        expect(::Stern.balance(merchant_id, :merchant_balance, currency)).to eq(20)
+        expect(::Stern.balance(merchant_id, :merchant_available, currency)).to eq(20)
         expect(Doctor.ending_balance_consistent?(book_id:, gid: merchant_id, currency:)).to be(true)
         expect(Doctor.amount_consistent?).to be(true)
       end
@@ -156,18 +156,18 @@ module Stern
           inputs :gid_a, :gid_b, :currency
 
           def target_tuples
-            # Declares (merchant_balance, A) before (merchant_balance, B)
+            # Declares (merchant_available, A) before (merchant_available, B)
             [
-              [ :merchant_balance,   gid_a, currency ],
-              [ :merchant_balance,   gid_b, currency ]
+              [ :merchant_available,   gid_a, currency ],
+              [ :merchant_available,   gid_b, currency ]
             ]
           end
 
           def perform(operation_id)
-            ::Stern::EntryPair.add_merchant_balance(
+            ::Stern::EntryPair.add_merchant_available(
               SecureRandom.random_number(1 << 30), gid_a, 1, currency, operation_id:,
             )
-            ::Stern::EntryPair.add_merchant_balance(
+            ::Stern::EntryPair.add_merchant_available(
               SecureRandom.random_number(1 << 30), gid_b, 1, currency, operation_id:,
             )
           end
@@ -179,18 +179,18 @@ module Stern
           inputs :gid_a, :gid_b, :currency
 
           def target_tuples
-            # Declares (merchant_balance, B) before (merchant_balance, A) — reverse
+            # Declares (merchant_available, B) before (merchant_available, A) — reverse
             [
-              [ :merchant_balance,   gid_b, currency ],
-              [ :merchant_balance,   gid_a, currency ]
+              [ :merchant_available,   gid_b, currency ],
+              [ :merchant_available,   gid_a, currency ]
             ]
           end
 
           def perform(operation_id)
-            ::Stern::EntryPair.add_merchant_balance(
+            ::Stern::EntryPair.add_merchant_available(
               SecureRandom.random_number(1 << 30), gid_b, 1, currency, operation_id:,
             )
-            ::Stern::EntryPair.add_merchant_balance(
+            ::Stern::EntryPair.add_merchant_available(
               SecureRandom.random_number(1 << 30), gid_a, 1, currency, operation_id:,
             )
           end
@@ -249,18 +249,18 @@ module Stern
 
           def target_tuples
             [
-              [ :merchant_balance, merchant_id, currency ],
-              [ :merchant_balance_0, merchant_id, currency ]
+              [ :merchant_available, merchant_id, currency ],
+              [ :merchant_available_0, merchant_id, currency ]
             ]
           end
 
           def perform(operation_id)
-            balance = ::Stern.balance(merchant_id, :merchant_balance, currency)
+            balance = ::Stern.balance(merchant_id, :merchant_available, currency)
             raise ::Stern::InsufficientFunds if balance < amount
 
             sleep(sleep_seconds || 0)
 
-            ::Stern::EntryPair.add_merchant_balance(
+            ::Stern::EntryPair.add_merchant_available(
               SecureRandom.random_number(1 << 30), merchant_id, -amount, currency, operation_id:,
             )
           end
@@ -275,7 +275,7 @@ module Stern
         merchants = (1..n).map { |i| 900_200 + i }
         merchants.each do |mid|
           op = Operation.create!(name: "seed", params: {})
-          EntryPair.add_merchant_balance(
+          EntryPair.add_merchant_available(
             SecureRandom.random_number(1 << 30), mid, 100, currency, operation_id: op.id,
           )
         end
@@ -301,7 +301,7 @@ module Stern
         expect(wall).to be < (0.5 * serialized_lower_bound)
 
         merchants.each do |mid|
-          expect(::Stern.balance(mid, :merchant_balance, currency)).to eq(20)
+          expect(::Stern.balance(mid, :merchant_available, currency)).to eq(20)
         end
       end
     end

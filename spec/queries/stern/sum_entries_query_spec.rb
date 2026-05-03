@@ -12,7 +12,7 @@ module Stern
     before { Repair.clear }
 
     def seed(uid, amount, currency)
-      EntryPair.add_merchant_balance(uid, gid, amount, currency, operation_id: operation.id)
+      EntryPair.add_merchant_available(uid, gid, amount, currency, operation_id: operation.id)
     end
 
     describe "#call" do
@@ -22,11 +22,11 @@ module Stern
         seed(3, 999, usd)
 
         brl_rows = described_class.new(
-          gid:, book_id: :merchant_balance, currency: :BRL,
+          gid:, book_id: :merchant_available, currency: :BRL,
           time_grouping: :daily, start_date:, end_date:,
         ).call
         usd_rows = described_class.new(
-          gid:, book_id: :merchant_balance, currency: :USD,
+          gid:, book_id: :merchant_available, currency: :USD,
           time_grouping: :daily, start_date:, end_date:,
         ).call
 
@@ -38,7 +38,7 @@ module Stern
         seed(1, 100, brl)
 
         rows = described_class.new(
-          gid:, book_id: :merchant_balance, currency: :EUR,
+          gid:, book_id: :merchant_available, currency: :EUR,
           time_grouping: :daily, start_date:, end_date:,
         ).call
         expect(rows).to eq([])
@@ -48,17 +48,17 @@ module Stern
         seed(1, 100, brl)
 
         rows = described_class.new(
-          gid:, book_id: :merchant_balance, currency: :BRL,
+          gid:, book_id: :merchant_available, currency: :BRL,
           time_grouping: :daily, start_date:, end_date:,
         ).call
-        expect(rows.first["code"]).to eq("merchant_balance")
+        expect(rows.first["code"]).to eq("merchant_available")
       end
 
       it "converts time_window to a DateTime" do
         seed(1, 100, brl)
 
         rows = described_class.new(
-          gid:, book_id: :merchant_balance, currency: :BRL,
+          gid:, book_id: :merchant_available, currency: :BRL,
           time_grouping: :daily, start_date:, end_date:,
         ).call
         expect(rows.first["time_window"]).to be_a(DateTime)
@@ -69,7 +69,7 @@ module Stern
       it "raises on an unknown currency" do
         expect {
           described_class.new(
-            gid:, book_id: :merchant_balance, currency: "ZZZ",
+            gid:, book_id: :merchant_available, currency: "ZZZ",
             time_grouping: :daily, start_date:, end_date:,
           )
         }.to raise_error(ArgumentError, /unknown currency/)
@@ -78,7 +78,7 @@ module Stern
       it "raises when currency is nil" do
         expect {
           described_class.new(
-            gid:, book_id: :merchant_balance, currency: nil,
+            gid:, book_id: :merchant_available, currency: nil,
             time_grouping: :daily, start_date:, end_date:,
           )
         }.to raise_error(ArgumentError)
@@ -87,7 +87,7 @@ module Stern
       it "raises on an invalid time_grouping" do
         expect {
           described_class.new(
-            gid:, book_id: :merchant_balance, currency: :BRL,
+            gid:, book_id: :merchant_available, currency: :BRL,
             time_grouping: :weird, start_date:, end_date:,
           )
         }.to raise_error(ArgumentError, /invalid grouping/)

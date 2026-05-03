@@ -46,7 +46,7 @@ module Stern
 
     describe "#resolve_book_id!" do
       it "returns the integer code for a symbol book name" do
-        expect(query.resolve_book_id!(:merchant_balance)).to eq(::Stern.chart.book_code(:merchant_balance))
+        expect(query.resolve_book_id!(:merchant_available)).to eq(::Stern.chart.book_code(:merchant_available))
       end
 
       it "raises on an unknown book" do

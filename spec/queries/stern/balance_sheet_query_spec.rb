@@ -11,7 +11,7 @@ module Stern
     before { Repair.clear }
 
     def seed(uid, gid, amount, currency)
-      EntryPair.add_merchant_balance(uid, gid, amount, currency, operation_id: operation.id)
+      EntryPair.add_merchant_available(uid, gid, amount, currency, operation_id: operation.id)
     end
 
     describe "#call" do
@@ -20,14 +20,14 @@ module Stern
         seed(2, 1101, 500, usd)
 
         brl_rows = described_class.new(
-          start_date:, end_date:, currency: :BRL, book_ids: [ :merchant_balance ],
+          start_date:, end_date:, currency: :BRL, book_ids: [ :merchant_available ],
         ).call
         usd_rows = described_class.new(
-          start_date:, end_date:, currency: :USD, book_ids: [ :merchant_balance ],
+          start_date:, end_date:, currency: :USD, book_ids: [ :merchant_available ],
         ).call
 
-        brl_mb = brl_rows.find { |r| r[:book_id] == ::Stern.chart.book_code(:merchant_balance) }
-        usd_mb = usd_rows.find { |r| r[:book_id] == ::Stern.chart.book_code(:merchant_balance) }
+        brl_mb = brl_rows.find { |r| r[:book_id] == ::Stern.chart.book_code(:merchant_available) }
+        usd_mb = usd_rows.find { |r| r[:book_id] == ::Stern.chart.book_code(:merchant_available) }
 
         expect(brl_mb[:credits]).to eq(100)
         expect(brl_mb[:final_balance]).to eq(100)
@@ -41,9 +41,9 @@ module Stern
         seed(3, 1102, 999, usd)
 
         rows = described_class.new(
-          start_date:, end_date:, currency: :BRL, book_ids: [ :merchant_balance ],
+          start_date:, end_date:, currency: :BRL, book_ids: [ :merchant_available ],
         ).call
-        mb = rows.find { |r| r[:book_id] == ::Stern.chart.book_code(:merchant_balance) }
+        mb = rows.find { |r| r[:book_id] == ::Stern.chart.book_code(:merchant_available) }
 
         expect(mb[:credits]).to eq(100)
         expect(mb[:debits]).to eq(-30)
@@ -54,9 +54,9 @@ module Stern
         seed(1, 1101, 100, brl)
 
         rows = described_class.new(
-          start_date:, end_date:, currency: :USD, book_ids: [ :merchant_balance ],
+          start_date:, end_date:, currency: :USD, book_ids: [ :merchant_available ],
         ).call
-        mb = rows.find { |r| r[:book_id] == ::Stern.chart.book_code(:merchant_balance) }
+        mb = rows.find { |r| r[:book_id] == ::Stern.chart.book_code(:merchant_available) }
 
         expect(mb[:credits]).to eq(0)
         expect(mb[:debits]).to eq(0)
@@ -66,15 +66,15 @@ module Stern
 
       it "excludes prior balances recorded in a different currency from previous_balance" do
         old = 2.days.ago.to_datetime
-        EntryPair.add_merchant_balance(1, 1101, 500, usd, timestamp: old, operation_id: operation.id)
+        EntryPair.add_merchant_available(1, 1101, 500, usd, timestamp: old, operation_id: operation.id)
 
         rows = described_class.new(
           start_date: 1.day.ago.to_datetime,
           end_date: 1.day.from_now.to_datetime,
           currency: :BRL,
-          book_ids: [ :merchant_balance ],
+          book_ids: [ :merchant_available ],
         ).call
-        mb = rows.find { |r| r[:book_id] == ::Stern.chart.book_code(:merchant_balance) }
+        mb = rows.find { |r| r[:book_id] == ::Stern.chart.book_code(:merchant_available) }
 
         expect(mb[:previous_balance]).to eq(0)
         expect(mb[:final_balance]).to eq(0)
@@ -82,17 +82,17 @@ module Stern
 
       it "rolls prior balances into previous_balance per book, per gid" do
         old = 2.days.ago.to_datetime
-        EntryPair.add_merchant_balance(1, 1101, 100, brl, timestamp: old, operation_id: operation.id)
-        EntryPair.add_merchant_balance(2, 1102, 50, brl, timestamp: old, operation_id: operation.id)
+        EntryPair.add_merchant_available(1, 1101, 100, brl, timestamp: old, operation_id: operation.id)
+        EntryPair.add_merchant_available(2, 1102, 50, brl, timestamp: old, operation_id: operation.id)
 
         rows = described_class.new(
           start_date: 1.day.ago.to_datetime,
           end_date: 1.day.from_now.to_datetime,
           currency: :BRL,
-          book_ids: [ :merchant_balance, :merchant_balance_0 ],
+          book_ids: [ :merchant_available, :merchant_available_0 ],
         ).call
-        mb = rows.find { |r| r[:book_id] == ::Stern.chart.book_code(:merchant_balance) }
-        mb0 = rows.find { |r| r[:book_id] == ::Stern.chart.book_code(:merchant_balance_0) }
+        mb = rows.find { |r| r[:book_id] == ::Stern.chart.book_code(:merchant_available) }
+        mb0 = rows.find { |r| r[:book_id] == ::Stern.chart.book_code(:merchant_available_0) }
 
         expect(mb[:previous_balance]).to eq(150)
         expect(mb0[:previous_balance]).to eq(-150)
@@ -103,7 +103,7 @@ module Stern
       it "raises on an unknown currency" do
         expect {
           described_class.new(
-            start_date:, end_date:, currency: "ZZZ", book_ids: [ :merchant_balance ],
+            start_date:, end_date:, currency: "ZZZ", book_ids: [ :merchant_available ],
           )
         }.to raise_error(ArgumentError, /unknown currency/)
       end
@@ -111,7 +111,7 @@ module Stern
       it "raises when currency is nil" do
         expect {
           described_class.new(
-            start_date:, end_date:, currency: nil, book_ids: [ :merchant_balance ],
+            start_date:, end_date:, currency: nil, book_ids: [ :merchant_available ],
           )
         }.to raise_error(ArgumentError)
       end

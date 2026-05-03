@@ -105,8 +105,8 @@ module Stern
         )
       end
 
-      it "writes four entry pairs (pay_pix + pp_charge_pix + pp_charge + customer pair)" do
-        expect { described_class.new(**valid_inputs).call }.to change(EntryPair, :count).by(4)
+      it "writes one entry pair (charge_pix_payment)" do
+        expect { described_class.new(**valid_inputs).call }.to change(EntryPair, :count).by(1)
       end
 
       it "writes the double entry stamped with currency" do
@@ -123,28 +123,22 @@ module Stern
 
         brl = ::Stern.balance(payment_id, :payment_pix, :BRL)
         usd = ::Stern.balance(payment_id, :payment_pix, :USD)
-        expect(brl).to eq(-10_900)
-        expect(usd).to eq(-5000)
+        expect(brl).to eq(10_900)
+        expect(usd).to eq(5000)
       end
 
       it "allows the same charge_id to exist in two currencies" do
         described_class.new(**valid_inputs(charge_id: 7, currency: "BRL")).call
         expect {
           described_class.new(**valid_inputs(charge_id: 7, currency: "USD")).call
-        }.to change(EntryPair, :count).by(4)
+        }.to change(EntryPair, :count).by(1)
       end
 
       context "with customer_id" do
-        it "writes to charge_identified_customer instead of charge_unidentified_customer" do
+        it "still writes one entry pair" do
           expect {
             described_class.new(**valid_inputs(customer_id: 5001)).call
-          }.to change(EntryPair, :count).by(4)
-        end
-
-        it "records the amount in the pp_charge_identified_customer book keyed by customer_id" do
-          described_class.new(**valid_inputs(charge_id: 20, customer_id: 5001)).call
-          balance = ::Stern.balance(5001, :pp_charge_identified_customer, :BRL)
-          expect(balance).to eq(-9900)
+          }.to change(EntryPair, :count).by(1)
         end
 
         it "rejects a non-positive customer_id" do
@@ -155,16 +149,10 @@ module Stern
       end
 
       context "without customer_id" do
-        it "still writes four entry pairs" do
+        it "still writes one entry pair" do
           expect {
             described_class.new(**valid_inputs(customer_id: nil)).call
-          }.to change(EntryPair, :count).by(4)
-        end
-
-        it "records the amount in pp_charge_unidentified_customer keyed by 1" do
-          described_class.new(**valid_inputs(charge_id: 30, customer_id: nil)).call
-          balance = ::Stern.balance(1, :pp_charge_unidentified_customer, :BRL)
-          expect(balance).to eq(-9900)
+          }.to change(EntryPair, :count).by(1)
         end
       end
     end
