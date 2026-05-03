@@ -90,11 +90,11 @@ module Stern
         groups = { "Most used" => [], "Units" => [], "Fiat" => [], "Stablecoins" => [], "Crypto" => [] }
         ::Stern.currencies.each do |name, code|
           group = case code
-                  when 800..899   then "Fiat"
-                  when 1000..1999 then "Stablecoins"
-                  when 2000..2999 then "Crypto"
-                  else "Units"
-                  end
+          when 800..899   then "Fiat"
+          when 1000..1999 then "Stablecoins"
+          when 2000..2999 then "Crypto"
+          else "Units"
+          end
           groups[group] << name
         end
         available = ::Stern.currencies.names
