@@ -50,7 +50,7 @@ module Stern
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
-      tuples_for_pair(:pp_charge_pix, merchant_id, currency)
+      tuples_for_pair(:pp_charge_pix, merchant_id, merchant_id, currency)
     end
 
     def perform(operation_id)
@@ -90,20 +90,22 @@ For the common double-entry pattern where the operation calls
 
 ```ruby
 def target_tuples
-  tuples_for_pair(:pp_charge_pix, merchant_id, currency)
+  tuples_for_pair(:pp_charge_pix, merchant_id, merchant_id, currency)
 end
 ```
 
-`tuples_for_pair(pair_name, gid, currency)` looks up the named entry pair in
-`Stern.chart` and returns both the `book_add` and `book_sub` tuples. Use it
-whenever the operation touches exactly one entry pair.
+`tuples_for_pair(pair_name, book_sub_gid, book_add_gid, currency)` looks up the
+named entry pair in `Stern.chart` and returns its two `(book, gid, currency)`
+tuples — one for `book_sub` and one for `book_add`. The two gids let custom
+entry pairs (declared under `entry_pairs:`) lock distinct entities per side;
+for symmetric pairs that share a single gid across both books, pass it twice.
 
 For operations that touch multiple pairs or additional books:
 
 ```ruby
 def target_tuples
-  tuples_for_pair(:split_merchant, merchant_id, currency) +
-    tuples_for_pair(:split_partner, partner_id, currency) +
+  tuples_for_pair(:split_merchant, payment_id, merchant_id, currency) +
+    tuples_for_pair(:split_partner, payment_id, partner_id, currency) +
     [[ :merchant_withholding, merchant_id, currency ]]
 end
 ```

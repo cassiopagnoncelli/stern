@@ -91,7 +91,7 @@ module Stern
           inputs :merchant_id, :uid, :amount, :currency
 
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
@@ -120,7 +120,7 @@ module Stern
           inputs :merchant_id, :uid, :amount, :currency
 
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
@@ -228,7 +228,7 @@ module Stern
           inputs :merchant_id, :uid, :amount, :currency
 
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
@@ -266,7 +266,7 @@ module Stern
           inputs :merchant_id, :uid, :amount, :currency
 
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
@@ -284,7 +284,7 @@ module Stern
           inputs :merchant_id, :uid, :amount, :currency
 
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)

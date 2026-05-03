@@ -184,7 +184,7 @@ module Stern
     # BaseOperation#call acquires a per-tuple advisory lock before perform
     # runs, so concurrent ops on the same tuple serialize cleanly.
     def target_tuples
-      tuples_for_pair(:merchant_balance, merchant_id, currency)
+      tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
     end
 
     def perform(operation_id)

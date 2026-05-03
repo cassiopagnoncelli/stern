@@ -21,7 +21,7 @@ module Stern
         inputs :merchant_id, :amount, :currency
 
         def target_tuples
-          tuples_for_pair(:merchant_balance, merchant_id, currency)
+          tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
         end
 
         def perform(operation_id)
@@ -337,7 +337,7 @@ module Stern
         raising_op = Class.new(BaseOperation) do
           inputs :merchant_id, :currency
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(_operation_id)

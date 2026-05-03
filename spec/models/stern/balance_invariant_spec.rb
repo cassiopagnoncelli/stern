@@ -102,7 +102,7 @@ module Stern
         op_class = Class.new(BaseOperation) do
           inputs :merchant_id, :amount, :currency
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
@@ -142,7 +142,7 @@ module Stern
         op_class = Class.new(BaseOperation) do
           inputs :merchant_id, :amount, :currency
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
@@ -188,7 +188,7 @@ module Stern
         op_class = Class.new(BaseOperation) do
           inputs :merchant_id, :amount, :currency, :book_name
           def target_tuples
-            tuples_for_pair(book_name.to_sym, merchant_id, currency)
+            tuples_for_pair(book_name.to_sym, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
@@ -237,7 +237,7 @@ module Stern
         withdraw_class = Class.new(BaseOperation) do
           inputs :merchant_id, :amount, :currency
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
@@ -358,7 +358,7 @@ module Stern
         varied_withdraw = Class.new(BaseOperation) do
           inputs :merchant_id, :uid, :amount, :currency
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
@@ -412,7 +412,7 @@ module Stern
         exact_withdraw = Class.new(BaseOperation) do
           inputs :merchant_id, :uid, :currency
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
@@ -459,7 +459,7 @@ module Stern
         rolling_op = Class.new(BaseOperation) do
           inputs :merchant_id, :uid, :amount, :currency
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
@@ -513,7 +513,7 @@ module Stern
         writer_op = Class.new(BaseOperation) do
           inputs :merchant_id, :uid, :currency
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
@@ -600,7 +600,7 @@ module Stern
           inputs :merchant_id, :uid, :currency
 
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(_operation_id)
@@ -664,7 +664,7 @@ module Stern
         overdraft_op = Class.new(BaseOperation) do
           inputs :merchant_id, :uid, :currency
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
@@ -722,7 +722,7 @@ module Stern
         raising_op = Class.new(BaseOperation) do
           inputs :merchant_id, :currency
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
@@ -775,7 +775,7 @@ module Stern
         deposit_op = Class.new(BaseOperation) do
           inputs :merchant_id, :uid, :currency
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)
@@ -829,7 +829,7 @@ module Stern
         first_op_class = Class.new(BaseOperation) do
           inputs :merchant_id, :amount, :currency
           def target_tuples
-            tuples_for_pair(:merchant_balance, merchant_id, currency)
+            tuples_for_pair(:merchant_balance, merchant_id, merchant_id, currency)
           end
 
           def perform(operation_id)

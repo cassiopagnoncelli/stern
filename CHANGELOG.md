@@ -126,8 +126,11 @@ upgrading.
 
 Operations that previously relied on the table-level `EXCLUSIVE` lock now
 need to declare `target_tuples` (or inherit the default empty array for
-ops that touch no ledger state). The `tuples_for_pair(pair_name, gid,
-currency)` helper covers the common double-entry case.
+ops that touch no ledger state). The `tuples_for_pair(pair_name,
+book_sub_gid, book_add_gid, currency)` helper covers the common
+double-entry case; pass the same gid twice when both sides are indexed
+by the same entity, or distinct gids for custom pairs declared under
+`entry_pairs:` whose sides index different entities.
 
 ## [1.2.0] — prior release
 

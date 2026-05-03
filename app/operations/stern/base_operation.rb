@@ -109,7 +109,7 @@ module Stern
     # Subclasses override with something like:
     #
     #   def target_tuples
-    #     tuples_for_pair(:pp_charge_pix, merchant_id, currency)
+    #     tuples_for_pair(:pp_charge_pix, merchant_id, merchant_id, currency)
     #   end
     #
     # Book references can be Symbols/Strings (resolved via the chart) or integer codes.
@@ -203,12 +203,15 @@ module Stern
     end
 
     # Helper for the common double-entry pattern: returns the two `(book, gid, currency)`
-    # tuples `EntryPair.add_<pair_name>(...)` will write to.
-    def tuples_for_pair(pair_name, gid, currency)
+    # tuples `EntryPair.add_<pair_name>(...)` will write to. Takes one gid per side so
+    # custom entry pairs whose two books index by different entities (e.g. `split_merchant`
+    # locks `payment_id` on the sub side and `merchant_id` on the add side) can be expressed.
+    # For symmetric pairs, pass the same gid twice.
+    def tuples_for_pair(pair_name, book_sub_gid, book_add_gid, currency)
       pair = ::Stern.chart.entry_pair(pair_name)
       raise ArgumentError, "unknown entry pair #{pair_name.inspect}" unless pair
 
-      [ [ pair.book_add, gid, currency ], [ pair.book_sub, gid, currency ] ]
+      [ [ pair.book_sub, book_sub_gid, currency ], [ pair.book_add, book_add_gid, currency ] ]
     end
 
     # Takes a transaction-scoped Postgres advisory lock on each `(book_id, gid, currency)`
