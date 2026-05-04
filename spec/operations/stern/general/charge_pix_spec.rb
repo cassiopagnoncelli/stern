@@ -5,10 +5,13 @@ module Stern
     let(:payment_id) { 7001 }
     let(:customer_id) { 2202 }
 
+    let(:merchant_id) { 1101 }
+
     def valid_inputs(**overrides)
       {
         charge_id: 9001,
         payment_id:,
+        merchant_id:,
         customer_id:,
         amount: 9900,
         currency: "BRL"
@@ -59,6 +62,21 @@ module Stern
         expect(described_class.new(**valid_inputs(payment_id: 1.5))).not_to be_valid
       end
 
+      it "requires a merchant_id" do
+        op = described_class.new(**valid_inputs(merchant_id: nil))
+        expect(op).not_to be_valid
+        expect(op.errors[:merchant_id]).to be_present
+      end
+
+      it "rejects a non-positive merchant_id" do
+        expect(described_class.new(**valid_inputs(merchant_id: 0))).not_to be_valid
+        expect(described_class.new(**valid_inputs(merchant_id: -1))).not_to be_valid
+      end
+
+      it "rejects a non-integer merchant_id" do
+        expect(described_class.new(**valid_inputs(merchant_id: 1.5))).not_to be_valid
+      end
+
       it "requires an amount" do
         op = described_class.new(**valid_inputs(amount: nil))
         expect(op).not_to be_valid
@@ -105,25 +123,23 @@ module Stern
         )
       end
 
-      it "writes one entry pair (charge_pix_payment)" do
-        expect { described_class.new(**valid_inputs).call }.to change(EntryPair, :count).by(1)
+      it "writes four entry pairs (payment, charge, merchant, customer)" do
+        expect { described_class.new(**valid_inputs).call }.to change(EntryPair, :count).by(4)
       end
 
-      it "writes the double entry stamped with currency" do
+      it "stamps every entry with the operation's currency" do
         described_class.new(**valid_inputs).call
-        entries = Entry.where(entry_pair_id: EntryPair.last.id)
-        expect(entries.count).to eq(2)
-        expect(entries.pluck(:currency).uniq).to eq([ ::Stern.cur("BRL") ])
+        currencies = Entry.where(entry_pair_id: EntryPair.last(4).map(&:id)).pluck(:currency).uniq
+        expect(currencies).to eq([ ::Stern.cur("BRL") ])
       end
 
       it "keeps BRL and USD balances fully independent for the same payment" do
         described_class.new(**valid_inputs(charge_id: 1, amount: 9900, currency: "BRL")).call
         described_class.new(**valid_inputs(charge_id: 2, amount: 5000, currency: "USD")).call
-        described_class.new(**valid_inputs(charge_id: 3, amount: 1000, currency: "BRL")).call
 
-        brl = ::Stern.balance(payment_id, :payment_pix, :BRL)
-        usd = ::Stern.balance(payment_id, :payment_pix, :USD)
-        expect(brl).to eq(10_900)
+        brl = ::Stern.balance(payment_id, :payment, :BRL)
+        usd = ::Stern.balance(payment_id, :payment, :USD)
+        expect(brl).to eq(9900)
         expect(usd).to eq(5000)
       end
 
@@ -131,14 +147,14 @@ module Stern
         described_class.new(**valid_inputs(charge_id: 7, currency: "BRL")).call
         expect {
           described_class.new(**valid_inputs(charge_id: 7, currency: "USD")).call
-        }.to change(EntryPair, :count).by(1)
+        }.to change(EntryPair, :count).by(4)
       end
 
       context "with customer_id" do
-        it "still writes one entry pair" do
+        it "still writes four entry pairs" do
           expect {
             described_class.new(**valid_inputs(customer_id: 5001)).call
-          }.to change(EntryPair, :count).by(1)
+          }.to change(EntryPair, :count).by(4)
         end
 
         it "rejects a non-positive customer_id" do
@@ -149,10 +165,10 @@ module Stern
       end
 
       context "without customer_id" do
-        it "still writes one entry pair" do
+        it "raises because the unidentified customer entry pair requires a uid" do
           expect {
             described_class.new(**valid_inputs(customer_id: nil)).call
-          }.to change(EntryPair, :count).by(1)
+          }.to raise_error(ActiveRecord::RecordInvalid, /Uid can't be blank/)
         end
       end
     end

@@ -26,13 +26,15 @@ module Stern
       end
 
       # Seeds a pending SOP that will fire immediately.
-      def seed_sop(merchant_id: 1101, charge_id: nil)
+      def seed_sop(merchant_id: nil, charge_id: nil)
+        merchant_id ||= SecureRandom.random_number(1 << 30)
         ScheduledOperation.create!(
           name: "ChargePix",
           params: {
             charge_id: charge_id || SecureRandom.random_number(1 << 30),
             payment_id: merchant_id,
-            customer_id: 2,
+            merchant_id: merchant_id,
+            customer_id: SecureRandom.random_number(1 << 30),
             amount: 100,
             currency: "usd"
           },
