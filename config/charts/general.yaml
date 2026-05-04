@@ -54,9 +54,7 @@ books:
   - charge_wallet
   - charge_pix
 
-  - charge_fee_merchant
-  - charge_fee_partner
-  - charge_fee_customer
+  - payment_fee
 
   # Accounting
   #
@@ -84,3 +82,13 @@ entry_pairs:
   split_partner:
     book_sub: payment
     book_add: partner_pending
+
+  # Settle (pending -> available)
+  settle_merchant:
+    book_sub: merchant_pending
+    book_add: merchant_available
+
+  # Charge fees
+  merchant_payment_fee:
+    book_sub: merchant_available
+    book_add: payment_fee
