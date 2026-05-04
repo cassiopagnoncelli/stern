@@ -4,7 +4,7 @@ module Stern
   class ChargePix < BaseOperation
     include ActiveModel::Validations
 
-    inputs :charge_id, :payment_id, :merchant_id, :customer_id, :amount, :currency, :fee
+    inputs :charge_id, :payment_id, :merchant_id, :customer_id, :amount, :currency
 
     validates :charge_id, presence: true, numericality: { greater_than: 0, only_integer: true }
     validates :payment_id, presence: true, numericality: { greater_than: 0, only_integer: true }
