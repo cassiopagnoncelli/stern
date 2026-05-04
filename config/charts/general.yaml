@@ -42,11 +42,13 @@ books:
   - wdw_customer_request
 
   # Payment Processing: PSP, gateway
+  - payment
   - payment_bank_transfer
   - payment_credit_card
   - payment_wallet
   - payment_pix
 
+  - charge
   - charge_bank_transfer
   - charge_credit_card
   - charge_wallet
@@ -56,19 +58,29 @@ books:
   - charge_fee_partner
   - charge_fee_customer
 
+  # Accounting
+  #
+  - merchant_payment
+  - identified_customer_payment
+  - unidentified_customer_payment
+
 #
 # Entry pairs.
 #
 entry_pairs:
   # Payments
-  charge_pix_payment:
+  charge_with_pix:
     book_sub: charge_pix
-    book_add: payment_pix
+    book_add: charge
+
+  payment_with_pix:
+    book_sub: payment_pix
+    book_add: payment
 
   # Splits
   split_merchant:
     book_sub: payment
-    book_add: merchant_withholding
+    book_add: merchant_pending
   split_partner:
     book_sub: payment
-    book_add: partner_withholding
+    book_add: partner_pending
