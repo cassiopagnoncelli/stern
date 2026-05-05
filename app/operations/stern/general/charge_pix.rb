@@ -14,8 +14,7 @@ module Stern
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
-      tuples = tuples_for_pair(:charge_pix, charge_id, payment_id, currency)
-      tuples
+      tuples_for_pair(:charge_pix, payment_id, payment_id, currency)
     end
 
     def perform(operation_id)
