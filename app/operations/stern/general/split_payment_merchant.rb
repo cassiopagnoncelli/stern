@@ -12,13 +12,13 @@ module Stern
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
-      tuples_for_pair(:split_merchant, merchant_id, merchant_id, currency)
+      tuples_for_pair(:split_payment_merchant, merchant_id, merchant_id, currency)
     end
 
     def perform(operation_id)
       raise ArgumentError if invalid? || operation_id.blank?
 
-      EntryPair.add_split_merchant(payment_id, merchant_id, amount, currency, operation_id:)
+      EntryPair.add_split_payment_merchant(payment_id, merchant_id, amount, currency, operation_id:)
     end
   end
 end

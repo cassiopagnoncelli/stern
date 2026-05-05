@@ -1,7 +1,7 @@
 require "rails_helper"
 
 module Stern
-  RSpec.describe MerchantPayFee, type: :model do
+  RSpec.describe ChargePixFeeMerchant, type: :model do
     let(:merchant_id) { 1101 }
 
     def valid_inputs(**overrides)
@@ -76,20 +76,20 @@ module Stern
       it "records an Operation row with currency in params" do
         described_class.new(**valid_inputs).call
         expect(Operation.last).to have_attributes(
-          name: "MerchantPayFee",
+          name: "ChargePixFeeMerchant",
           params: hash_including("currency" => ::Stern.cur("BRL")),
         )
       end
 
-      it "writes one entry pair (merchant_pay_fee)" do
+      it "writes one entry pair (charge_pix_fee_merchant)" do
         expect { described_class.new(**valid_inputs).call }.to change(EntryPair, :count).by(1)
       end
 
-      it "writes the merchant_pay_fee pair keyed by merchant_id" do
+      it "writes the charge_pix_fee_merchant pair keyed by merchant_id" do
         described_class.new(**valid_inputs).call
         pair = EntryPair.last
         expect(pair).to have_attributes(
-          code: "merchant_pay_fee",
+          code: "charge_pix_fee_merchant",
           uid: merchant_id,
           amount: 100,
           currency: ::Stern.cur("BRL"),

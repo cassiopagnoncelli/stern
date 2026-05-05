@@ -77,10 +77,10 @@ entry_pairs:
     book_add: payment
 
   # Splits
-  split_merchant:
+  split_payment_merchant:
     book_sub: payment
     book_add: merchant_pending
-  split_partner:
+  split_payment_partner:
     book_sub: payment
     book_add: partner_pending
 
@@ -93,9 +93,9 @@ entry_pairs:
     book_add: partner_available
 
   # Charge fees
-  merchant_pay_fee:
+  charge_pix_fee_merchant:
     book_sub: merchant_available
     book_add: payment_fee
-  partner_pay_fee:
+  charge_pix_fee_partner:
     book_sub: partner_available
     book_add: payment_fee

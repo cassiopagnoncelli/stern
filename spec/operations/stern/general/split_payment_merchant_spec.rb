@@ -98,15 +98,15 @@ module Stern
         )
       end
 
-      it "writes one entry pair (split_merchant)" do
+      it "writes one entry pair (split_payment_merchant)" do
         expect { described_class.new(**valid_inputs).call }.to change(EntryPair, :count).by(1)
       end
 
-      it "writes the split_merchant pair keyed by payment_id" do
+      it "writes the split_payment_merchant pair keyed by payment_id" do
         described_class.new(**valid_inputs).call
         pair = EntryPair.last
         expect(pair).to have_attributes(
-          code: "split_merchant",
+          code: "split_payment_merchant",
           uid: payment_id,
           amount: 5000,
           currency: ::Stern.cur("BRL"),

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Stern
-  class MerchantPayFee < BaseOperation
+  class ChargePixFeeMerchant < BaseOperation
     include ActiveModel::Validations
 
     inputs :merchant_id, :fee, :currency
@@ -11,13 +11,13 @@ module Stern
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
-      tuples_for_pair(:merchant_pay_fee, merchant_id, merchant_id, currency)
+      tuples_for_pair(:charge_pix_fee_merchant, merchant_id, merchant_id, currency)
     end
 
     def perform(operation_id)
       raise ArgumentError if invalid? || operation_id.blank?
 
-      EntryPair.add_merchant_pay_fee(merchant_id, merchant_id, fee, currency, operation_id:)
+      EntryPair.add_charge_pix_fee_merchant(merchant_id, merchant_id, fee, currency, operation_id:)
     end
   end
 end
