@@ -18,7 +18,6 @@ module Stern
     def perform(operation_id)
       raise ArgumentError if invalid? || operation_id.blank?
 
-      # Operational info pairs.
       EntryPair.add_split_merchant(payment_id, merchant_id, amount, currency, operation_id:)
     end
   end

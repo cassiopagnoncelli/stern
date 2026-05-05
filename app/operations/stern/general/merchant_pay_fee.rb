@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Stern
-  class MerchantPaymentFee < BaseOperation
+  class MerchantPayFee < BaseOperation
     include ActiveModel::Validations
 
     inputs :merchant_id, :fee, :currency
@@ -17,7 +17,6 @@ module Stern
     def perform(operation_id)
       raise ArgumentError if invalid? || operation_id.blank?
 
-      # Operational info pairs.
       EntryPair.add_merchant_payment_fee(merchant_id, merchant_id, fee, currency, operation_id:)
     end
   end

@@ -1,7 +1,9 @@
 operations: general
 
 #
-# Accounting books
+# Accounting books.
+#
+# Books hold historically retrievable, per-gid, per-currency segregated balances.
 #
 books:
   # Merchant
@@ -48,11 +50,11 @@ books:
   - payment_wallet
   - payment_pix
 
-  - charge
-  - charge_bank_transfer
-  - charge_credit_card
-  - charge_wallet
-  - charge_pix
+  - charged
+  - charged_bank_transfer
+  - charged_credit_card
+  - charged_wallet
+  - charged_pix
 
   - payment_fee
 
@@ -65,14 +67,13 @@ books:
 #
 # Entry pairs.
 #
+# Books are pairwise recorded wrapped in entry pairs.
+# Custom entry pairs use verbs to denote motion between books.
+#
 entry_pairs:
   # Payments
-  charge_with_pix:
-    book_sub: charge_pix
-    book_add: charge
-
-  payment_with_pix:
-    book_sub: payment_pix
+  charge_pix:
+    book_sub: charged_pix
     book_add: payment
 
   # Splits
@@ -83,12 +84,18 @@ entry_pairs:
     book_sub: payment
     book_add: partner_pending
 
-  # Settle (pending -> available)
-  settle_merchant:
+  # Settle
+  settle_merchant_balance:
     book_sub: merchant_pending
     book_add: merchant_available
+  settle_partner_balance:
+    book_sub: partner_pending
+    book_add: partner_available
 
   # Charge fees
-  merchant_payment_fee:
+  merchant_pay_fee:
     book_sub: merchant_available
+    book_add: payment_fee
+  partner_pay_fee:
+    book_sub: partner_available
     book_add: payment_fee

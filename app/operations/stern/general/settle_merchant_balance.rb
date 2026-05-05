@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Stern
-  class SettleMerchant < BaseOperation
+  class SettleMerchantBalance < BaseOperation
     include ActiveModel::Validations
 
     inputs :merchant_id, :amount, :currency
@@ -11,14 +11,13 @@ module Stern
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
-      tuples_for_pair(:settle_merchant, merchant_id, merchant_id, currency)
+      tuples_for_pair(:settle_merchant_balance, merchant_id, merchant_id, currency)
     end
 
     def perform(operation_id)
       raise ArgumentError if invalid? || operation_id.blank?
 
-      # Operational info pairs.
-      EntryPair.add_settle_merchant(merchant_id, merchant_id, amount, currency, operation_id:)
+      EntryPair.add_settle_merchant_balance(merchant_id, merchant_id, amount, currency, operation_id:)
     end
   end
 end
