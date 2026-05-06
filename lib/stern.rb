@@ -12,10 +12,6 @@ module Stern
     attr_accessor :chart, :currencies
   end
 
-  def self.generate_gid
-    ApplicationRecord.generate_gid
-  end
-
   def self.outstanding_balance(book_id, currency, timestamp = DateTime.current)
     OutstandingBalanceQuery.new(book_id:, currency:, timestamp:).call
   end

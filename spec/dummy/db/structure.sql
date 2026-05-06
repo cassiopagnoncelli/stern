@@ -312,18 +312,6 @@ CREATE TABLE public.ar_internal_metadata (
 
 
 --
--- Name: gid_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.gid_seq
-    START WITH 1201
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
 -- Name: schema_migrations; Type: TABLE; Schema: public; Owner: -
 --
 

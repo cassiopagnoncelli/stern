@@ -1,7 +1,5 @@
 class InitSternSchema < ActiveRecord::Migration[7.0]
   def up
-    execute "CREATE SEQUENCE IF NOT EXISTS gid_seq START 1201;"
-
     create_table :stern_books, if_not_exists: true do |t|
       t.timestamps
       t.string :name, null: false
