@@ -33,7 +33,7 @@ class InitSternSchema < ActiveRecord::Migration[7.0]
       t.bigint :operation_id, null: false
       t.integer :currency, null: false
     end
-    add_index :stern_entry_pairs, [ :code, :currency, :uid ], unique: true
+    add_index :stern_entry_pairs, [ :code, :currency, :uid ]
     add_index :stern_entry_pairs, :operation_id
 
     create_table :stern_operations, if_not_exists: true do |t|

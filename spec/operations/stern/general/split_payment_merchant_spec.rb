@@ -132,11 +132,11 @@ module Stern
         }.to change(EntryPair, :count).by(1)
       end
 
-      it "rejects re-running for the same payment_id and currency" do
+      it "allows re-running for the same payment_id and currency" do
         described_class.new(**valid_inputs).call
         expect {
           described_class.new(**valid_inputs(merchant_id: merchant_id + 1)).call
-        }.to raise_error(ActiveRecord::RecordInvalid, /Uid has already been taken/)
+        }.to change(EntryPair, :count).by(1)
       end
     end
   end

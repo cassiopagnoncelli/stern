@@ -605,7 +605,7 @@ CREATE UNIQUE INDEX index_stern_entries_on_bgct ON public.stern_entries USING bt
 -- Name: index_stern_entry_pairs_on_code_and_currency_and_uid; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_stern_entry_pairs_on_code_and_currency_and_uid ON public.stern_entry_pairs USING btree (code, currency, uid);
+CREATE INDEX index_stern_entry_pairs_on_code_and_currency_and_uid ON public.stern_entry_pairs USING btree (code, currency, uid);
 
 
 --

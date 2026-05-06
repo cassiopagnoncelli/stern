@@ -13,7 +13,7 @@ module Stern
 
     validates :code, presence: true
     validates :currency, presence: true
-    validates :uid, presence: true, uniqueness: { scope: [ :code, :currency ] }
+    validates :uid, presence: true
     validates :amount, presence: true, numericality: {
       only_integer: true,
       greater_than_or_equal_to: -9_223_372_036_854_775_808,
