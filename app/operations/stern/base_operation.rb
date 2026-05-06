@@ -182,14 +182,6 @@ module Stern
       raise NotImplementedError
     end
 
-    def perform_undo
-      raise NotImplementedError
-    end
-
-    def new_gid
-      raise NotImplementedError
-    end
-
     def display
       params_str = operation_params.map { |k, v| "#{k}=#{v}" }.join(" ")
       format(
