@@ -58,31 +58,5 @@ module Stern
         EntryPair.add_partner_available(to_partner_id, to_partner_id, amount, currency, operation_id:)
       end
     end
-
-    private
-
-    def from_shareholder
-      if from_merchant_id.present?
-        "merchant"
-      elsif from_customer_id.present?
-        "customer"
-      elsif from_partner_id.present?
-        "partner"
-      else
-        raise ArgumentError, "Either of from_merchant_id, from_partner_id, from_ustomer_id must be set"
-      end
-    end
-
-    def to_shareholder
-      if to_merchant_id.present?
-        "merchant"
-      elsif to_customer_id.present?
-        "customer"
-      elsif to_partner_id.present?
-        "partner"
-      else
-        raise ArgumentError, "Either of to_merchant_id, to_partner_id, to_customer_id must be set"
-      end
-    end
   end
 end
