@@ -14,6 +14,12 @@ module Stern
     validates :currency, presence: true, allow_blank: false, allow_nil: false
     validates_exactly_one_of :from_merchant_id, :from_customer_id, :from_partner_id
     validates_exactly_one_of :to_merchant_id, :to_customer_id, :to_partner_id
+    validate do
+      errors.add(:base, "cannot transfer to self") if
+        (from_merchant_id.present? && from_merchant_id == to_merchant_id) ||
+        (from_customer_id.present? && from_customer_id == to_customer_id) ||
+        (from_partner_id.present? && from_partner_id == to_partner_id)
+    end
 
     def target_tuples
       tuples = []
