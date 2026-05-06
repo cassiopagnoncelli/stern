@@ -45,10 +45,6 @@ books:
 
   # Payment Processing: PSP, gateway
   - payment
-  - payment_bank_transfer
-  - payment_credit_card
-  - payment_wallet
-  - payment_pix
 
   - charged
   - charged_bank_transfer
@@ -122,9 +118,29 @@ entry_pairs:
     book_add: partner_available
 
   # Payments
+  charge_bank_transfer:
+    book_sub: charged_bank_transfer
+    book_add: payment
+  charge_credit_card:
+    book_sub: charged_credit_card
+    book_add: payment
+  charge_wallet:
+    book_sub: charged_wallet
+    book_add: payment
   charge_pix:
     book_sub: charged_pix
     book_add: payment
+
+  # Charge fees
+  charge_pix_fee_merchant:
+    book_sub: merchant_available
+    book_add: payment_fee
+  charge_pix_fee_customer:
+    book_sub: customer_available
+    book_add: payment_fee
+  charge_pix_fee_partner:
+    book_sub: partner_available
+    book_add: payment_fee
 
   # Splits
   split_payment_merchant:
@@ -133,19 +149,3 @@ entry_pairs:
   split_payment_partner:
     book_sub: payment
     book_add: partner_pending
-
-  # Settle
-  settle_merchant_balance:
-    book_sub: merchant_pending
-    book_add: merchant_available
-  settle_partner_balance:
-    book_sub: partner_pending
-    book_add: partner_available
-
-  # Charge fees
-  charge_pix_fee_merchant:
-    book_sub: merchant_available
-    book_add: payment_fee
-  charge_pix_fee_partner:
-    book_sub: partner_available
-    book_add: payment_fee
