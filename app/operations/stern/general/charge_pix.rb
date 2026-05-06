@@ -14,13 +14,13 @@ module Stern
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
-      tuples_for_pair(:charge_pix, payment_id, payment_id, currency)
+      tuples_for_pair(:charge_pix, charge_id, payment_id, currency)
     end
 
     def perform(operation_id)
       raise ArgumentError if invalid? || operation_id.blank?
 
-      EntryPair.add_charge_pix(payment_id, payment_id, amount, currency, operation_id:)
+      EntryPair.add_charge_pix(charge_id, payment_id, amount, currency, operation_id:)
     end
   end
 end
