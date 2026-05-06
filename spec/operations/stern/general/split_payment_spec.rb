@@ -81,7 +81,7 @@ module Stern
         op = described_class.new(**valid_inputs)
         expect(op.target_tuples).to eq([
           [ "payment", merchant_id, "BRL" ],
-          [ "merchant_pending", merchant_id, "BRL" ],
+          [ "merchant_pending", merchant_id, "BRL" ]
         ])
       end
 
@@ -89,7 +89,7 @@ module Stern
         op = described_class.new(**valid_inputs(merchant_id: nil, partner_id: partner_id))
         expect(op.target_tuples).to eq([
           [ "payment", partner_id, "BRL" ],
-          [ "partner_pending", partner_id, "BRL" ],
+          [ "partner_pending", partner_id, "BRL" ]
         ])
       end
     end

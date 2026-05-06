@@ -95,7 +95,7 @@ module Stern
         op = described_class.new(**valid_inputs(payment_method: "pix"))
         expect(op.target_tuples).to eq([
           [ "charged_pix", charge_id, "BRL" ],
-          [ "payment", payment_id, "BRL" ],
+          [ "payment", payment_id, "BRL" ]
         ])
       end
     end
