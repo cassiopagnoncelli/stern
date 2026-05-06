@@ -43,6 +43,11 @@ books:
   - wdw_customer
   - wdw_customer_request
 
+  # Deposits
+  - merchant_deposit
+  - customer_deposit
+  - partner_deposit
+
   # Payment Processing: PSP, gateway
   - payment
 
@@ -114,6 +119,17 @@ entry_pairs:
     book_add: partner_available
   apply_partner_credit:
     book_sub: partner_credit
+    book_add: partner_available
+  
+  # Deposits
+  deposit_merchant:
+    book_sub: merchant_deposit
+    book_add: merchant_available
+  deposit_customer:
+    book_sub: customer_deposit
+    book_add: customer_available
+  deposit_partner:
+    book_sub: partner_deposit
     book_add: partner_available
 
   # Charges
