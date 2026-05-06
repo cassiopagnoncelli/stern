@@ -49,16 +49,16 @@ books:
   - charged
   - charged_bank_transfer
   - charged_credit_card
+  - charged_debit_card
   - charged_wallet
   - charged_pix
 
-  - payment_fee
+  - payment_fee_bank_transfer
+  - payment_fee_credit_card
+  - payment_fee_debit_card
+  - payment_fee_wallet
+  - payment_fee_pix
 
-  # Accounting
-  #
-  - merchant_payment
-  - identified_customer_payment
-  - unidentified_customer_payment
 
 #
 # Entry pairs.
@@ -68,7 +68,6 @@ books:
 #
 entry_pairs:
   # Balances
-  # Merchant
   withhold_merchant_balance:
     book_sub: merchant_available
     book_add: merchant_withheld
@@ -84,7 +83,7 @@ entry_pairs:
   apply_merchant_credit:
     book_sub: merchant_credit
     book_add: merchant_available
-  # Customer
+
   withhold_customer_balance:
     book_sub: customer_available
     book_add: customer_withheld
@@ -100,7 +99,7 @@ entry_pairs:
   apply_customer_credit:
     book_sub: customer_credit
     book_add: customer_available
-  # Partner
+
   withhold_partner_balance:
     book_sub: partner_available
     book_add: partner_withheld
@@ -117,12 +116,15 @@ entry_pairs:
     book_sub: partner_credit
     book_add: partner_available
 
-  # Payments
+  # Charges
   charge_bank_transfer:
     book_sub: charged_bank_transfer
     book_add: payment
   charge_credit_card:
     book_sub: charged_credit_card
+    book_add: payment
+  charge_debit_card:
+    book_sub: charged_debit_card
     book_add: payment
   charge_wallet:
     book_sub: charged_wallet
@@ -132,15 +134,55 @@ entry_pairs:
     book_add: payment
 
   # Charge fees
+  charge_bank_transfer_fee_merchant:
+    book_sub: merchant_available
+    book_add: payment_fee_bank_transfer
+  charge_bank_transfer_fee_customer:
+    book_sub: customer_available
+    book_add: payment_fee_bank_transfer
+  charge_bank_transfer_fee_partner:
+    book_sub: partner_available
+    book_add: payment_fee_bank_transfer
+
+  charge_credit_card_fee_merchant:
+    book_sub: merchant_available
+    book_add: payment_fee_credit_card
+  charge_credit_card_fee_customer:
+    book_sub: customer_available
+    book_add: payment_fee_credit_card
+  charge_credit_card_fee_partner:
+    book_sub: partner_available
+    book_add: payment_fee_credit_card
+  
+  charge_debit_card_fee_merchant:
+    book_sub: merchant_available
+    book_add: payment_fee_debit_card
+  charge_debit_card_fee_customer:
+    book_sub: customer_available
+    book_add: payment_fee_debit_card
+  charge_debit_card_fee_partner:
+    book_sub: partner_available
+    book_add: payment_fee_debit_card
+  
+  charge_wallet_fee_merchant:
+    book_sub: merchant_available
+    book_add: payment_fee_wallet
+  charge_wallet_fee_customer:
+    book_sub: customer_available
+    book_add: payment_fee_wallet
+  charge_wallet_fee_partner:
+    book_sub: partner_available
+    book_add: payment_fee_wallet
+
   charge_pix_fee_merchant:
     book_sub: merchant_available
-    book_add: payment_fee
+    book_add: payment_fee_pix
   charge_pix_fee_customer:
     book_sub: customer_available
-    book_add: payment_fee
+    book_add: payment_fee_pix
   charge_pix_fee_partner:
     book_sub: partner_available
-    book_add: payment_fee
+    book_add: payment_fee_pix
 
   # Splits
   split_payment_merchant:

@@ -4,7 +4,7 @@ module Stern
   class ChargePayment < BaseOperation
     include ActiveModel::Validations
 
-    PAYMENT_METHODS = %w[bank_transfer credit_card wallet pix].freeze
+    PAYMENT_METHODS = %w[bank_transfer credit_card debit_card wallet pix].freeze
 
     inputs :charge_id, :payment_id, :method, :amount, :currency
 
