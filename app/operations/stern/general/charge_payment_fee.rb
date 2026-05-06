@@ -4,24 +4,24 @@ module Stern
   class ChargePaymentFee < BaseOperation
     PAYMENT_METHODS = %w[bank_transfer credit_card debit_card wallet pix].freeze
 
-    inputs :merchant_id, :customer_id, :partner_id, :payment_id, :method, :amount, :currency
+    inputs :merchant_id, :customer_id, :partner_id, :payment_id, :payment_method, :amount, :currency
 
     validates :merchant_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :customer_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :partner_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :payment_id, presence: true, numericality: { greater_than: 0, only_integer: true }
-    validates :method, presence: true, inclusion: { in: PAYMENT_METHODS }
+    validates :payment_method, presence: true, inclusion: { in: PAYMENT_METHODS }
     validates :amount, presence: true, numericality: { other_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
     validates_exactly_one_of :merchant_id, :customer_id, :partner_id
 
     def target_tuples
       if merchant_id.present?
-        tuples_for_pair("charge_#{method}_fee_merchant".to_sym, merchant_id, payment_id, currency)
+        tuples_for_pair("charge_#{payment_method}_fee_merchant".to_sym, merchant_id, payment_id, currency)
       elsif customer_id.present?
-        tuples_for_pair("charge_#{method}_fee_customer".to_sym, customer_id, payment_id, currency)
+        tuples_for_pair("charge_#{payment_method}_fee_customer".to_sym, customer_id, payment_id, currency)
       elsif partner_id.present?
-        tuples_for_pair("charge_#{method}_fee_partner".to_sym, partner_id, payment_id, currency)
+        tuples_for_pair("charge_#{payment_method}_fee_partner".to_sym, partner_id, payment_id, currency)
       else
         []
       end
@@ -29,11 +29,11 @@ module Stern
 
     def perform(operation_id)
       if merchant_id.present?
-        EntryPair.public_send("add_charge_#{method}_fee_merchant".to_sym, merchant_id, payment_id, amount, currency, operation_id:)
+        EntryPair.public_send("add_charge_#{payment_method}_fee_merchant".to_sym, merchant_id, payment_id, amount, currency, operation_id:)
       elsif customer_id.present?
-        EntryPair.public_send("add_charge_#{method}_fee_customer".to_sym, customer_id, payment_id, amount, currency, operation_id:)
+        EntryPair.public_send("add_charge_#{payment_method}_fee_customer".to_sym, customer_id, payment_id, amount, currency, operation_id:)
       elsif partner_id.present?
-        EntryPair.public_send("add_charge_#{method}_fee_partner".to_sym, partner_id, payment_id, amount, currency, operation_id:)
+        EntryPair.public_send("add_charge_#{payment_method}_fee_partner".to_sym, partner_id, payment_id, amount, currency, operation_id:)
       end
     end
   end
