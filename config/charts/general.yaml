@@ -76,24 +76,50 @@ entry_pairs:
   withhold_merchant_balance:
     book_sub: merchant_available
     book_add: merchant_withheld
-  release_merchant_balance:
-    book_sub: merchant_withheld
-    book_add: merchant_available
   settle_merchant_balance:
     book_sub: merchant_pending
     book_add: merchant_available
   lock_merchant_balance:
     book_sub: merchant_available
     book_add: merchant_locked
-  unlock_merchant_balance:
-    book_sub: merchant_locked
-    book_add: merchant_available
   adjust_merchant_balance:
     book_sub: merchant_adjusted
     book_add: merchant_available
-  use_merchant_credit:
+  apply_merchant_credit:
     book_sub: merchant_credit
     book_add: merchant_available
+  # Customer
+  withhold_customer_balance:
+    book_sub: customer_available
+    book_add: customer_withheld
+  settle_customer_balance:
+    book_sub: customer_pending
+    book_add: customer_available
+  lock_customer_balance:
+    book_sub: customer_available
+    book_add: customer_locked
+  adjust_customer_balance:
+    book_sub: customer_adjusted
+    book_add: customer_available
+  apply_customer_credit:
+    book_sub: customer_credit
+    book_add: customer_available
+  # Partner
+  withhold_partner_balance:
+    book_sub: partner_available
+    book_add: partner_withheld
+  settle_partner_balance:
+    book_sub: partner_pending
+    book_add: partner_available
+  lock_partner_balance:
+    book_sub: partner_available
+    book_add: partner_locked
+  adjust_partner_balance:
+    book_sub: partner_adjusted
+    book_add: partner_available
+  apply_partner_credit:
+    book_sub: partner_credit
+    book_add: partner_available
 
   # Payments
   charge_pix:
