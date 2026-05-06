@@ -229,10 +229,11 @@ module Stern
     end
 
     # Helper for the common double-entry pattern: returns the two `(book, gid, currency)`
-    # tuples `EntryPair.add_<pair_name>(...)` will write to. Takes one gid per side so
-    # custom entry pairs whose two books index by different entities (e.g. `split_merchant`
-    # locks `payment_id` on the sub side and `merchant_id` on the add side) can be expressed.
-    # For symmetric pairs, pass the same gid twice.
+    # tuples `EntryPair.add_<pair_name>(...)` will write to. `EntryPair.add_<pair_name>`
+    # takes a single `gid` and writes it to both the sub and add entries, so the two
+    # gids passed here should be the same one the caller will pass to `add_<pair_name>`;
+    # they exist as separate parameters only to make the per-side lock target explicit
+    # at the call site.
     def tuples_for_pair(pair_name, book_sub_gid, book_add_gid, currency)
       pair = ::Stern.chart.entry_pair(pair_name)
       raise ArgumentError, "unknown entry pair #{pair_name.inspect}" unless pair
