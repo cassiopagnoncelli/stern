@@ -229,11 +229,19 @@ module Stern
     end
 
     # Helper for the common double-entry pattern: returns the two `(book, gid, currency)`
-    # tuples `EntryPair.add_<pair_name>(...)` will write to. `EntryPair.add_<pair_name>`
-    # takes a single `gid` and writes it to both the sub and add entries, so the two
-    # gids passed here should be the same one the caller will pass to `add_<pair_name>`;
-    # they exist as separate parameters only to make the per-side lock target explicit
-    # at the call site.
+    # tuples to lock for an `EntryPair.add_<pair_name>(...)` write. The two gids are
+    # the natural sharding entity for each side's book, which may or may not coincide:
+    #
+    #   * ChargePayment (`charge_<method>`: book_sub=charged_<method>, book_add=payment)
+    #     — both books are sharded by `payment_id`, so pass `(payment_id, payment_id)`.
+    #
+    #   * ChargePaymentFee (`charge_<method>_fee_merchant`: book_sub=merchant_available,
+    #     book_add=payment_fee_<method>) — sub side is sharded by the stakeholder, add
+    #     side by the payment, so pass `(merchant_id, payment_id)`.
+    #
+    # The two gids are independent because each book has its own logical key. They
+    # are not required to match the single `gid` argument the caller will pass to
+    # `EntryPair.add_<pair_name>`.
     def tuples_for_pair(pair_name, book_sub_gid, book_add_gid, currency)
       pair = ::Stern.chart.entry_pair(pair_name)
       raise ArgumentError, "unknown entry pair #{pair_name.inspect}" unless pair
