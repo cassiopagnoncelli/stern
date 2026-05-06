@@ -43,11 +43,11 @@ module Stern
       raise ArgumentError if [to_merchant_id, to_customer_id, to_partner_id].compact.count != 1
 
       if from_merchant_id.present?
-        EntryPair.add_merchant_available(from_merchant_id, from_merchant_id, amount, currency, operation_id:)
+        EntryPair.add_merchant_available(from_merchant_id, from_merchant_id, -amount, currency, operation_id:)
       elsif from_customer_id.present?
-        EntryPair.add_customer_available(from_customer_id, from_customer_id, amount, currency, operation_id:)
+        EntryPair.add_customer_available(from_customer_id, from_customer_id, -amount, currency, operation_id:)
       elsif from_partner_id.present?
-        EntryPair.add_partner_available(from_partner_id, from_partner_id, amount, currency, operation_id:)
+        EntryPair.add_partner_available(from_partner_id, from_partner_id, -amount, currency, operation_id:)
       end
 
       if to_merchant_id.present?
