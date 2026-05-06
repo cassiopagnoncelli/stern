@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Stern
-  class WithholdMerchantBalance < BaseOperation
+  class WithholdBalance < BaseOperation
     include ActiveModel::Validations
 
     inputs :merchant_id, :customer_id, :partner_id, :amount, :currency

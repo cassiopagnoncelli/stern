@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Stern
-  class ApplyMerchantCredit < BaseOperation
+  class ApplyCredit < BaseOperation
     include ActiveModel::Validations
 
     inputs :merchant_id, :customer_id, :partner_id, :amount, :currency
