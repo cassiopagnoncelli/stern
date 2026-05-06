@@ -8,7 +8,7 @@ module Stern
   # To schedule an operation, you may want to use
   #
   # > sop = ScheduledOperation.build(
-  #     name: 'ChargePix',
+  #     name: 'ChargePayment',
   #     params: { charge_id: 1, merchant_id: 1101, customer_id: 2, amount: 9900, currency: 'usd' },
   #     after_time: 10.seconds.from_now
   #   )
@@ -103,6 +103,8 @@ module Stern
       end
     end
 
+    validate :currency_must_be_known
+
     def initialize(**kwargs)
       extra = kwargs.keys - self.class.inputs
       raise ArgumentError, "unknown inputs for #{self.class.name}: #{extra}" if extra.any?
@@ -116,8 +118,6 @@ module Stern
     # normalization is deferred to `call` so unknown currencies surface as
     # validation errors rather than raising from the constructor.
     def normalize_inputs; end
-
-    validate :currency_must_be_known
 
     # Declares the `(book, gid, currency)` tuples this operation reads from or writes
     # to. `BaseOperation#call` takes a per-tuple Postgres advisory lock on each before
