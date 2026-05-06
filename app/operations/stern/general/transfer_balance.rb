@@ -14,6 +14,8 @@ module Stern
     validates :to_partner_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :amount, presence: true, numericality: { greater_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
+    validates_exactly_one_of :from_merchant_id, :from_customer_id, :from_partner_id
+    validates_exactly_one_of :to_merchant_id, :to_customer_id, :to_partner_id
 
     def target_tuples
       tuples = []
@@ -38,10 +40,6 @@ module Stern
     end
 
     def perform(operation_id)
-      raise ArgumentError if invalid? || operation_id.blank?
-      raise ArgumentError if [from_merchant_id, from_customer_id, from_partner_id].compact.count != 1
-      raise ArgumentError if [to_merchant_id, to_customer_id, to_partner_id].compact.count != 1
-
       if from_merchant_id.present?
         EntryPair.add_merchant_available(from_merchant_id, from_merchant_id, -amount, currency, operation_id:)
       elsif from_customer_id.present?

@@ -15,6 +15,7 @@ module Stern
     validates :method, presence: true, inclusion: { in: PAYMENT_METHODS }
     validates :amount, presence: true, numericality: { other_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
+    validates_exactly_one_of :merchant_id, :customer_id, :partner_id
 
     def target_tuples
       if merchant_id.present?
@@ -29,9 +30,6 @@ module Stern
     end
 
     def perform(operation_id)
-      raise ArgumentError if invalid? || operation_id.blank?
-      raise ArgumentError if [merchant_id, customer_id, partner_id].compact.count != 1
-
       if merchant_id.present?
         EntryPair.public_send("add_charge_#{method}_fee_merchant".to_sym, merchant_id, payment_id, amount, currency, operation_id:)
       elsif customer_id.present?

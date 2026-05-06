@@ -15,6 +15,8 @@ module Stern
   # > sop.save!
   #
   class BaseOperation
+    include ActiveModel::Validations
+
     attr_accessor :operation
 
     # Default retry profile applied to subclasses that do not declare their
@@ -36,6 +38,19 @@ module Stern
 
         @inputs.concat(names)
         attr_accessor(*names)
+      end
+
+      # Declares that exactly one of the given attributes must be present. Adds an
+      # error on `:base` when the count is not 1, so validation messages flow through
+      # the standard `errors.full_messages` path instead of bare `ArgumentError`s
+      # raised from `perform`.
+      def validates_exactly_one_of(*attrs)
+        validate do
+          present = attrs.count { |a| public_send(a).present? }
+          next if present == 1
+
+          errors.add(:base, "exactly one of #{attrs.join(', ')} must be set (got #{present})")
+        end
       end
 
       # Declares per-class retry behavior. Unspecified keys fall back to
@@ -130,6 +145,8 @@ module Stern
     # @param idem_key [String, nil] idempotency key. If present and an Operation with this
     #   key already exists with identical name/params, returns its id without re-running.
     def call(transaction: true, idem_key: nil)
+      raise ArgumentError, errors.full_messages.to_sentence if invalid?
+
       existing = find_existing_operation(idem_key)
       return existing.id if existing
 

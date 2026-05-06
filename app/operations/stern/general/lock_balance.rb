@@ -11,6 +11,7 @@ module Stern
     validates :partner_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :amount, presence: true, numericality: { other_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
+    validates_exactly_one_of :merchant_id, :customer_id, :partner_id
 
     def target_tuples
       if merchant_id.present?
@@ -25,9 +26,6 @@ module Stern
     end
 
     def perform(operation_id)
-      raise ArgumentError if invalid? || operation_id.blank?
-      raise ArgumentError if [merchant_id, customer_id, partner_id].compact.count != 1
-
       if merchant_id.present?
         EntryPair.add_lock_merchant_balance(merchant_id, merchant_id, amount, currency, operation_id:)
       elsif customer_id.present?

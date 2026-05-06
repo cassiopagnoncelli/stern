@@ -19,8 +19,6 @@ module Stern
     end
 
     def perform(operation_id)
-      raise ArgumentError if invalid? || operation_id.blank?
-
       EntryPair.public_send("add_charge_#{method}".to_sym, charge_id, payment_id, amount, currency, operation_id:)
     end
   end
