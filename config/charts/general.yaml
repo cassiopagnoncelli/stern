@@ -71,6 +71,30 @@ books:
 # Custom entry pairs use verbs to denote motion between books.
 #
 entry_pairs:
+  # Balances
+  # Merchant
+  withhold_merchant_balance:
+    book_sub: merchant_available
+    book_add: merchant_withheld
+  release_merchant_balance:
+    book_sub: merchant_withheld
+    book_add: merchant_available
+  settle_merchant_balance:
+    book_sub: merchant_pending
+    book_add: merchant_available
+  lock_merchant_balance:
+    book_sub: merchant_available
+    book_add: merchant_locked
+  unlock_merchant_balance:
+    book_sub: merchant_locked
+    book_add: merchant_available
+  adjust_merchant_balance:
+    book_sub: merchant_adjusted
+    book_add: merchant_available
+  use_merchant_credit:
+    book_sub: merchant_credit
+    book_add: merchant_available
+
   # Payments
   charge_pix:
     book_sub: charged_pix
