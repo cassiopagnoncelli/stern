@@ -16,25 +16,49 @@ module Stern
     validates_exactly_one_of :merchant_id, :customer_id, :partner_id
 
     def target_tuples
-      if merchant_id.present?
-        tuples_for_pair("charge_#{payment_method}_fee_merchant".to_sym, merchant_id, payment_id, currency)
-      elsif customer_id.present?
-        tuples_for_pair("charge_#{payment_method}_fee_customer".to_sym, customer_id, payment_id, currency)
-      elsif partner_id.present?
-        tuples_for_pair("charge_#{payment_method}_fee_partner".to_sym, partner_id, payment_id, currency)
-      else
-        []
-      end
+      stakeholder_id, type = stakeholder
+      return [] if stakeholder_id.nil?
+
+      tuples_for_pair("charge_#{payment_method}_fee_#{type}".to_sym, stakeholder_id, payment_id, currency) +
+        tuples_for_pair("apply_#{type}_credit".to_sym, stakeholder_id, stakeholder_id, currency)
     end
 
     def perform(operation_id)
-      if merchant_id.present?
-        EntryPair.public_send("add_charge_#{payment_method}_fee_merchant".to_sym, merchant_id, payment_id, amount, currency, operation_id:)
-      elsif customer_id.present?
-        EntryPair.public_send("add_charge_#{payment_method}_fee_customer".to_sym, customer_id, payment_id, amount, currency, operation_id:)
-      elsif partner_id.present?
-        EntryPair.public_send("add_charge_#{payment_method}_fee_partner".to_sym, partner_id, payment_id, amount, currency, operation_id:)
-      end
+      stakeholder_id, type = stakeholder
+
+      apply_available_credit(stakeholder_id, type, operation_id)
+
+      EntryPair.public_send(
+        "add_charge_#{payment_method}_fee_#{type}".to_sym,
+        stakeholder_id, payment_id, amount, currency, operation_id:,
+      )
+    end
+
+    private
+
+    # Draws from the stakeholder's *_credit book up to the fee amount and moves
+    # it into *_available before the fee is charged in full. The full `amount`
+    # is then debited from *_available, so the stakeholder's net out-of-pocket
+    # is `amount - credit_used`. No-op for non-positive amounts.
+    def apply_available_credit(stakeholder_id, type, operation_id)
+      return unless amount.positive?
+
+      credit_balance = ::Stern.balance(stakeholder_id, "#{type}_credit".to_sym, currency)
+      credit_to_apply = [ credit_balance, amount ].min
+      return unless credit_to_apply.positive?
+
+      EntryPair.public_send(
+        "add_apply_#{type}_credit".to_sym,
+        stakeholder_id, stakeholder_id, credit_to_apply, currency, operation_id:,
+      )
+    end
+
+    def stakeholder
+      return [ merchant_id, :merchant ] if merchant_id.present?
+      return [ customer_id, :customer ] if customer_id.present?
+      return [ partner_id, :partner ] if partner_id.present?
+
+      [ nil, nil ]
     end
   end
 end

@@ -64,27 +64,33 @@ module Stern
     end
 
     describe "#target_tuples" do
-      it "for merchant: pins merchant_id to merchant_available, payment_id to payment_fee_<method>" do
+      it "for merchant: locks merchant_available, payment_fee_<method>, and merchant_credit" do
         op = described_class.new(**valid_inputs(payment_method: "pix"))
         expect(op.target_tuples).to eq([
           [ "merchant_available", merchant_id, "BRL" ],
-          [ "payment_fee_pix", payment_id, "BRL" ]
+          [ "payment_fee_pix", payment_id, "BRL" ],
+          [ "merchant_credit", merchant_id, "BRL" ],
+          [ "merchant_available", merchant_id, "BRL" ]
         ])
       end
 
-      it "for customer: pins customer_id to customer_available, payment_id to payment_fee_<method>" do
+      it "for customer: locks customer_available, payment_fee_<method>, and customer_credit" do
         op = described_class.new(**valid_inputs(merchant_id: nil, customer_id: customer_id))
         expect(op.target_tuples).to eq([
           [ "customer_available", customer_id, "BRL" ],
-          [ "payment_fee_pix", payment_id, "BRL" ]
+          [ "payment_fee_pix", payment_id, "BRL" ],
+          [ "customer_credit", customer_id, "BRL" ],
+          [ "customer_available", customer_id, "BRL" ]
         ])
       end
 
-      it "for partner: pins partner_id to partner_available, payment_id to payment_fee_<method>" do
+      it "for partner: locks partner_available, payment_fee_<method>, and partner_credit" do
         op = described_class.new(**valid_inputs(merchant_id: nil, partner_id: partner_id))
         expect(op.target_tuples).to eq([
           [ "partner_available", partner_id, "BRL" ],
-          [ "payment_fee_pix", payment_id, "BRL" ]
+          [ "payment_fee_pix", payment_id, "BRL" ],
+          [ "partner_credit", partner_id, "BRL" ],
+          [ "partner_available", partner_id, "BRL" ]
         ])
       end
     end
@@ -144,6 +150,77 @@ module Stern
         expect {
           described_class.new(**valid_inputs(currency: "USD")).call
         }.to change(EntryPair, :count).by(1)
+      end
+
+      context "with available credit" do
+        it "applies partial credit when balance < fee, debiting available by the net" do
+          AddCredit.new(merchant_id:, amount: 30, currency: "BRL").call
+
+          expect {
+            described_class.new(**valid_inputs(amount: 100)).call
+          }.to change(EntryPair, :count).by(2)
+
+          expect(::Stern.balance(merchant_id, :merchant_credit, :BRL)).to eq(0)
+          expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(30)
+          expect(::Stern.balance(payment_id, :merchant_available, :BRL)).to eq(-100)
+          expect(::Stern.balance(payment_id, :payment_fee_pix, :BRL)).to eq(100)
+        end
+
+        it "caps credit at the fee amount when balance > fee" do
+          AddCredit.new(merchant_id:, amount: 500, currency: "BRL").call
+
+          described_class.new(**valid_inputs(amount: 100)).call
+
+          expect(::Stern.balance(merchant_id, :merchant_credit, :BRL)).to eq(400)
+          expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(100)
+        end
+
+        it "skips credit application when the credit balance is zero" do
+          expect {
+            described_class.new(**valid_inputs(amount: 100)).call
+          }.to change(EntryPair, :count).by(1)
+
+          expect(::Stern.balance(merchant_id, :merchant_credit, :BRL)).to eq(0)
+        end
+
+        it "skips credit application for negative amounts (fee reversal)" do
+          AddCredit.new(merchant_id:, amount: 30, currency: "BRL").call
+
+          expect {
+            described_class.new(**valid_inputs(amount: -50)).call
+          }.to change(EntryPair, :count).by(1)
+
+          expect(::Stern.balance(merchant_id, :merchant_credit, :BRL)).to eq(30)
+        end
+
+        it "applies customer credit for the customer variant" do
+          AddCredit.new(customer_id:, amount: 40, currency: "BRL").call
+
+          described_class.new(**valid_inputs(merchant_id: nil, customer_id:, amount: 100)).call
+
+          expect(::Stern.balance(customer_id, :customer_credit, :BRL)).to eq(0)
+          expect(::Stern.balance(customer_id, :customer_available, :BRL)).to eq(40)
+          expect(::Stern.balance(payment_id, :customer_available, :BRL)).to eq(-100)
+        end
+
+        it "applies partner credit for the partner variant" do
+          AddCredit.new(partner_id:, amount: 70, currency: "BRL").call
+
+          described_class.new(**valid_inputs(merchant_id: nil, partner_id:, amount: 100)).call
+
+          expect(::Stern.balance(partner_id, :partner_credit, :BRL)).to eq(0)
+          expect(::Stern.balance(partner_id, :partner_available, :BRL)).to eq(70)
+          expect(::Stern.balance(payment_id, :partner_available, :BRL)).to eq(-100)
+        end
+
+        it "only consumes credit in the operation's currency" do
+          AddCredit.new(merchant_id:, amount: 50, currency: "USD").call
+
+          described_class.new(**valid_inputs(amount: 100, currency: "BRL")).call
+
+          expect(::Stern.balance(merchant_id, :merchant_credit, :USD)).to eq(50)
+          expect(::Stern.balance(merchant_id, :merchant_credit, :BRL)).to eq(0)
+        end
       end
     end
   end
