@@ -229,19 +229,22 @@ module Stern
     end
 
     # Helper for the common double-entry pattern: returns the two `(book, gid, currency)`
-    # tuples to lock for an `EntryPair.add_<pair_name>(...)` write. The two gids are
-    # the natural sharding entity for each side's book, which may or may not coincide:
+    # tuples to lock for an `EntryPair.add_<pair_name>(...)` write. Each gid is the
+    # natural sharding entity for its side's book — independent of the other side
+    # and independent of the single `gid` the caller passes to `EntryPair.add_<pair_name>`.
+    #
+    # Examples:
     #
     #   * ChargePayment (`charge_<method>`: book_sub=charged_<method>, book_add=payment)
-    #     — both books are sharded by `payment_id`, so pass `(payment_id, payment_id)`.
+    #     — sub side is sharded by `charge_id` (one charge per row in `charged_<method>`),
+    #     add side by `payment_id` — pass `(charge_id, payment_id)`.
     #
     #   * ChargePaymentFee (`charge_<method>_fee_merchant`: book_sub=merchant_available,
-    #     book_add=payment_fee_<method>) — sub side is sharded by the stakeholder, add
-    #     side by the payment, so pass `(merchant_id, payment_id)`.
+    #     book_add=payment_fee_<method>) — sub side by the stakeholder, add side by the
+    #     payment — pass `(merchant_id, payment_id)`.
     #
-    # The two gids are independent because each book has its own logical key. They
-    # are not required to match the single `gid` argument the caller will pass to
-    # `EntryPair.add_<pair_name>`.
+    #   * TransferBalance (`merchant_available`) — both sides sharded by the same
+    #     `merchant_id` — pass it twice.
     def tuples_for_pair(pair_name, book_sub_gid, book_add_gid, currency)
       pair = ::Stern.chart.entry_pair(pair_name)
       raise ArgumentError, "unknown entry pair #{pair_name.inspect}" unless pair
