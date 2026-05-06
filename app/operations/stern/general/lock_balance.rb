@@ -19,6 +19,8 @@ module Stern
         tuples_for_pair(:lock_customer_balance, customer_id, customer_id, currency)
       elsif partner_id.present?
         tuples_for_pair(:lock_partner_balance, partner_id, partner_id, currency)
+      else
+        []
       end
     end
 

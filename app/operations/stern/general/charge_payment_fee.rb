@@ -23,6 +23,8 @@ module Stern
         tuples_for_pair("charge_#{method}_fee_customer".to_sym, customer_id, payment_id, currency)
       elsif partner_id.present?
         tuples_for_pair("charge_#{method}_fee_partner".to_sym, partner_id, payment_id, currency)
+      else
+        []
       end
     end
 

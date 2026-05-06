@@ -17,6 +17,8 @@ module Stern
         tuples_for_pair(:split_payment_merchant, merchant_id, merchant_id, currency)
       elsif partner_id.present?
         tuples_for_pair(:split_payment_partner, partner_id, partner_id, currency)
+      else
+        []
       end
     end
 
