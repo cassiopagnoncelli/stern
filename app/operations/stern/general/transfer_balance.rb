@@ -12,7 +12,7 @@ module Stern
     validates :to_merchant_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :to_customer_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :to_partner_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
-    validates :amount, presence: true, numericality: { other_than: 0, only_integer: true }
+    validates :amount, presence: true, numericality: { greater_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
