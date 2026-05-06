@@ -2,8 +2,6 @@
 
 module Stern
   class TransferBalance < BaseOperation
-    include ActiveModel::Validations
-
     inputs :from_merchant_id, :from_customer_id, :from_partner_id, :to_merchant_id, :to_customer_id, :to_partner_id, :amount, :currency
 
     validates :from_merchant_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true

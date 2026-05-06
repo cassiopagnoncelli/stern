@@ -2,8 +2,6 @@
 
 module Stern
   class AdjustBalance < BaseOperation
-    include ActiveModel::Validations
-
     inputs :merchant_id, :customer_id, :partner_id, :amount, :currency
 
     validates :merchant_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true

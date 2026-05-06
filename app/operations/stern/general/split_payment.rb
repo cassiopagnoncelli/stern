@@ -2,8 +2,6 @@
 
 module Stern
   class SplitPayment < BaseOperation
-    include ActiveModel::Validations
-
     inputs :payment_id, :merchant_id, :partner_id, :amount, :currency
 
     validates :payment_id, presence: true, numericality: { greater_than: 0, only_integer: true }
