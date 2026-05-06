@@ -449,37 +449,29 @@ module Stern
       context "with a :currency input" do
         let(:klass) { Class.new(described_class) { inputs :currency } }
 
-        it "coerces a currency string to its integer code" do
-          expect(klass.new(currency: "BRL").currency).to eq(::Stern.cur("BRL"))
-        end
-
-        it "is case- and whitespace-insensitive" do
-          expect(klass.new(currency: " usd ").currency).to eq(::Stern.cur("USD"))
-        end
-
-        it "passes integer codes through untouched" do
-          code = ::Stern.cur("BRL")
-          expect(klass.new(currency: code).currency).to eq(code)
+        it "leaves the input untouched at construction time" do
+          expect(klass.new(currency: "BRL").currency).to eq("BRL")
         end
 
         it "leaves nil currency as nil" do
           expect(klass.new(currency: nil).currency).to be_nil
         end
 
-        it "raises on an unknown currency" do
-          expect { klass.new(currency: "ZZZ") }.to raise_error(UnknownCurrencyError)
+        it "treats an unknown currency as invalid rather than raising" do
+          op = klass.new(currency: "ZZZ")
+          expect(op).to be_invalid
+          expect(op.errors[:currency]).to include(/not a recognized currency/)
         end
 
-        it "runs before the subclass normalize_inputs hook" do
-          subclass = Class.new(described_class) do
-            inputs :currency
-            attr_reader :currency_seen_by_hook
-            def normalize_inputs
-              @currency_seen_by_hook = currency
-            end
-          end
-          op = subclass.new(currency: "BRL")
-          expect(op.currency_seen_by_hook).to eq(::Stern.cur("BRL"))
+        it "treats a known currency as valid (string or integer code)" do
+          expect(klass.new(currency: "BRL")).to be_valid
+          expect(klass.new(currency: ::Stern.cur("BRL"))).to be_valid
+        end
+
+        it "leaves a blank currency to the subclass presence validation" do
+          op = klass.new(currency: nil)
+          op.valid?
+          expect(op.errors[:currency]).to be_empty
         end
       end
 
@@ -539,6 +531,29 @@ module Stern
       it "dispatches to perform with the operation id" do
         op.call(transaction: false)
         expect(op.perform_calls).to eq([ Operation.last.id ])
+      end
+
+      context "with a :currency input" do
+        let(:cur_klass) do
+          Class.new(described_class) do
+            inputs :currency
+            def perform(_); end
+          end
+        end
+
+        it "normalizes a currency string to its integer code before perform runs" do
+          stub_const("Stern::CurOp", cur_klass)
+          op = cur_klass.new(currency: "BRL")
+          op.call(transaction: false)
+          expect(op.currency).to eq(::Stern.cur("BRL"))
+        end
+
+        it "raises ArgumentError with a validation message on an unknown currency" do
+          stub_const("Stern::CurOp", cur_klass)
+          op = cur_klass.new(currency: "ZZZ")
+          expect { op.call(transaction: false) }
+            .to raise_error(ArgumentError, /currency.*not a recognized currency/i)
+        end
       end
 
       context "with idem_key" do

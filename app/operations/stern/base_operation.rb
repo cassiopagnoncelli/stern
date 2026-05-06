@@ -108,13 +108,16 @@ module Stern
       raise ArgumentError, "unknown inputs for #{self.class.name}: #{extra}" if extra.any?
 
       self.class.inputs.each { |n| public_send("#{n}=", kwargs[n]) }
-      normalize_shared_inputs
       normalize_inputs
     end
 
-    # Hook for subclasses to coerce/transform assigned inputs. Runs after
-    # `normalize_shared_inputs`, so subclasses don't need to call `super`.
+    # Hook for subclasses to coerce/transform assigned inputs. Runs at the end
+    # of `initialize`, so subclasses don't need to call `super`. Currency
+    # normalization is deferred to `call` so unknown currencies surface as
+    # validation errors rather than raising from the constructor.
     def normalize_inputs; end
+
+    validate :currency_must_be_known
 
     # Declares the `(book, gid, currency)` tuples this operation reads from or writes
     # to. `BaseOperation#call` takes a per-tuple Postgres advisory lock on each before
@@ -146,6 +149,8 @@ module Stern
     #   key already exists with identical name/params, returns its id without re-running.
     def call(transaction: true, idem_key: nil)
       raise ArgumentError, errors.full_messages.to_sentence if invalid?
+
+      normalize_validated_inputs
 
       existing = find_existing_operation(idem_key)
       return existing.id if existing
@@ -197,13 +202,25 @@ module Stern
 
     private
 
-    # Coerces shared inputs common across operations (e.g. `currency` from its
-    # string name to its integer code). Runs before the subclass `normalize_inputs`
-    # hook so subclasses see already-canonical values. `Stern.cur(_, result: :index)`
-    # is idempotent for integer inputs, so this is safe whether the caller passed
-    # a name or a code.
-    def normalize_shared_inputs
-      self.currency = cur(currency, result: :index) if self.class.inputs.include?(:currency) && currency
+    # Validates that `currency` (when declared as an input) refers to a known
+    # currency. Runs through `Stern.cur` and translates `UnknownCurrencyError`
+    # into a regular validation error so callers see `errors.full_messages`
+    # rather than a raw raise from the constructor. Blank values fall through
+    # to the subclass's `presence` validation.
+    def currency_must_be_known
+      return unless self.class.inputs.include?(:currency)
+      return if currency.blank?
+
+      ::Stern.cur(currency, result: :index)
+    rescue ::Stern::UnknownCurrencyError
+      errors.add(:currency, "is not a recognized currency")
+    end
+
+    # Canonicalizes validated inputs (e.g. currency name → integer code). Runs
+    # in `call` after `invalid?` passes, so unknown values cannot reach this
+    # point. `Stern.cur(_, result: :index)` is idempotent for integer inputs.
+    def normalize_validated_inputs
+      self.currency = ::Stern.cur(currency, result: :index) if self.class.inputs.include?(:currency) && currency
     end
 
     # Creates the Operation audit record and dispatches to the subclass's `perform`.
