@@ -5,8 +5,8 @@ module Stern # rubocop:disable Metrics/ModuleLength
     subject(:service) { described_class }
 
     let(:scheduled_op) { ScheduledOperation.build(name:, params:, after_time:) }
-    let(:name) { "ChargePix" }
-    let(:params) { { charge_id: 1, payment_id: 1101, merchant_id: 1101, customer_id: 2, amount: 9900, currency: "usd" } }
+    let(:name) { "ChargePayment" }
+    let(:params) { { charge_id: 1, payment_id: 1101, payment_method: "pix", amount: 9900, currency: "usd" } }
     let(:after_time) { described_class::QUEUE_ITEM_TIMEOUT_IN_SECONDS.seconds.ago.utc }
 
     describe ".list" do
@@ -159,7 +159,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
 
       context "with a per-class retry policy" do
         it "respects a tighter per-class :max_retries (terminal earlier than default)" do
-          allow(::Stern::ChargePix).to receive(:resolved_retry_policy).and_return(
+          allow(::Stern::ChargePayment).to receive(:resolved_retry_policy).and_return(
             max_retries: 1, backoff: :exponential, base: 30,
           )
           scheduled_op.update!(retry_count: 1)
@@ -169,7 +169,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
         end
 
         it "uses :constant backoff when declared" do
-          allow(::Stern::ChargePix).to receive(:resolved_retry_policy).and_return(
+          allow(::Stern::ChargePayment).to receive(:resolved_retry_policy).and_return(
             max_retries: 5, backoff: :constant, base: 90,
           )
           scheduled_op.update!(retry_count: 3)
@@ -179,7 +179,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
         end
 
         it "applies max_retries: 0 (first crash is terminal)" do
-          allow(::Stern::ChargePix).to receive(:resolved_retry_policy).and_return(
+          allow(::Stern::ChargePayment).to receive(:resolved_retry_policy).and_return(
             max_retries: 0, backoff: :exponential, base: 30,
           )
           scheduled_op.update!(retry_count: 0)
@@ -265,19 +265,18 @@ module Stern # rubocop:disable Metrics/ModuleLength
         it "calls process_operation with the operation and scheduled_op" do
           service.process_sop(scheduled_op.id)
           expect(service).to have_received(:process_operation).with(
-            an_instance_of(::Stern::ChargePix),
+            an_instance_of(::Stern::ChargePayment),
             scheduled_op
           )
         end
 
         it "creates the operation with symbolized params" do
-          allow(::Stern::ChargePix).to receive(:new).and_call_original
+          allow(::Stern::ChargePayment).to receive(:new).and_call_original
           service.process_sop(scheduled_op.id)
-          expect(::Stern::ChargePix).to have_received(:new).with(
+          expect(::Stern::ChargePayment).to have_received(:new).with(
             charge_id: 1,
             payment_id: 1101,
-            merchant_id: 1101,
-            customer_id: 2,
+            payment_method: "pix",
             amount: 9900,
             currency: "usd"
           )
@@ -301,8 +300,8 @@ module Stern # rubocop:disable Metrics/ModuleLength
         end
 
         it "propagates a stable idem_key derived from the SOP id to op.call" do
-          op_spy = ::Stern::ChargePix.new(**params.symbolize_keys)
-          allow(::Stern::ChargePix).to receive(:new).and_return(op_spy)
+          op_spy = ::Stern::ChargePayment.new(**params.symbolize_keys)
+          allow(::Stern::ChargePayment).to receive(:new).and_return(op_spy)
           allow(op_spy).to receive(:call)
 
           service.process_sop(scheduled_op.id)
@@ -512,7 +511,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
           before { allow(operation).to receive(:call).and_raise(StandardError, "boom") }
 
           it "respects a tighter per-class :max_retries (terminal earlier than default)" do
-            allow(::Stern::ChargePix).to receive(:resolved_retry_policy).and_return(
+            allow(::Stern::ChargePayment).to receive(:resolved_retry_policy).and_return(
               max_retries: 1, backoff: :exponential, base: 30,
             )
             scheduled_op.update!(retry_count: 1, status: :in_progress)
@@ -522,7 +521,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
           end
 
           it "uses :constant backoff when declared" do
-            allow(::Stern::ChargePix).to receive(:resolved_retry_policy).and_return(
+            allow(::Stern::ChargePayment).to receive(:resolved_retry_policy).and_return(
               max_retries: 5, backoff: :constant, base: 90,
             )
             scheduled_op.update!(retry_count: 3, status: :in_progress)
@@ -533,7 +532,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
           end
 
           it "treats max_retries: 0 as fail-fast (first failure is terminal)" do
-            allow(::Stern::ChargePix).to receive(:resolved_retry_policy).and_return(
+            allow(::Stern::ChargePayment).to receive(:resolved_retry_policy).and_return(
               max_retries: 0, backoff: :exponential, base: 30,
             )
             scheduled_op.update!(retry_count: 0, status: :in_progress)
@@ -544,7 +543,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
           end
 
           it "retries one more time when retry_count == max_retries - 1" do
-            allow(::Stern::ChargePix).to receive(:resolved_retry_policy).and_return(
+            allow(::Stern::ChargePayment).to receive(:resolved_retry_policy).and_return(
               max_retries: 3, backoff: :exponential, base: 30,
             )
             scheduled_op.update!(retry_count: 2, status: :in_progress)
@@ -555,7 +554,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
           end
 
           it "is terminal when retry_count == max_retries" do
-            allow(::Stern::ChargePix).to receive(:resolved_retry_policy).and_return(
+            allow(::Stern::ChargePayment).to receive(:resolved_retry_policy).and_return(
               max_retries: 3, backoff: :exponential, base: 30,
             )
             scheduled_op.update!(retry_count: 3, status: :in_progress)
@@ -565,7 +564,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
           end
 
           it "is terminal when retry_count exceeds max_retries (state corruption guard)" do
-            allow(::Stern::ChargePix).to receive(:resolved_retry_policy).and_return(
+            allow(::Stern::ChargePayment).to receive(:resolved_retry_policy).and_return(
               max_retries: 1, backoff: :exponential, base: 30,
             )
             scheduled_op.update!(retry_count: 99, status: :in_progress)
@@ -580,7 +579,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
             # touches Object.const_get. Prove it by passing a stub op whose
             # class isn't even registered as Stern::*.
             stub_klass = Class.new(::Stern::BaseOperation) do
-              inputs :charge_id, :payment_id, :merchant_id, :customer_id, :amount, :currency
+              inputs :charge_id, :payment_id, :payment_method, :amount, :currency
               retry_policy max_retries: 0
             end
             stub_const("Stern::EphemeralOp", stub_klass)
@@ -597,8 +596,8 @@ module Stern # rubocop:disable Metrics/ModuleLength
 
     describe ".policy_for (private)" do
       it "returns the op class's resolved_retry_policy when name resolves" do
-        sop = ScheduledOperation.new(name: "ChargePix")
-        expect(service.send(:policy_for, sop)).to eq(::Stern::ChargePix.resolved_retry_policy)
+        sop = ScheduledOperation.new(name: "ChargePayment")
+        expect(service.send(:policy_for, sop)).to eq(::Stern::ChargePayment.resolved_retry_policy)
       end
 
       it "falls back to BaseOperation::DEFAULT_RETRY_POLICY when name is unknown" do
@@ -626,7 +625,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
       end
 
       it "returns the same hash on consecutive calls (no per-call allocation surprise)" do
-        sop = ScheduledOperation.new(name: "ChargePix")
+        sop = ScheduledOperation.new(name: "ChargePayment")
         a = service.send(:policy_for, sop)
         b = service.send(:policy_for, sop)
         expect(a).to eq(b)
@@ -688,16 +687,16 @@ module Stern # rubocop:disable Metrics/ModuleLength
       end
     end
 
-    describe "no-policy backward compat (existing ChargePix behavior)" do
+    describe "no-policy backward compat (existing ChargePayment behavior)" do
       # Belt-and-suspenders: the existing retry/backoff specs above implicitly
       # cover this, but call it out explicitly so a future contributor sees
       # that the default-retry path is the contract preserved by Phase B.
-      it "ChargePix without a retry_policy declaration uses DEFAULT_RETRY_POLICY" do
-        expect(::Stern::ChargePix.resolved_retry_policy).to eq(::Stern::BaseOperation::DEFAULT_RETRY_POLICY)
+      it "ChargePayment without a retry_policy declaration uses DEFAULT_RETRY_POLICY" do
+        expect(::Stern::ChargePayment.resolved_retry_policy).to eq(::Stern::BaseOperation::DEFAULT_RETRY_POLICY)
       end
 
-      it "policy_for(ChargePix-named SOP) returns DEFAULT_RETRY_POLICY" do
-        sop = ScheduledOperation.new(name: "ChargePix")
+      it "policy_for(ChargePayment-named SOP) returns DEFAULT_RETRY_POLICY" do
+        sop = ScheduledOperation.new(name: "ChargePayment")
         expect(service.send(:policy_for, sop)).to eq(::Stern::BaseOperation::DEFAULT_RETRY_POLICY)
       end
     end

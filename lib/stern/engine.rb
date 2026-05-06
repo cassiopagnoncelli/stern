@@ -28,8 +28,8 @@ module Stern
       Stern.currencies = Stern::Currencies.load(Engine.root.join("config/currencies_catalog.yaml"))
 
       # Collapsing operations allows for operations to be defined in subdirectories of
-      # app/operations/stern without the dir prefix — e.g. `ChargePix` instead of
-      # `General::ChargePix`.
+      # app/operations/stern without the dir prefix — e.g. `ChargePayment` instead of
+      # `General::ChargePayment`.
       Dir[root.join("app/operations/stern/#{Stern.chart.operations_module}/")].each do |dir|
         next if File.basename(dir) == "concerns"
         Rails.autoloaders.main.collapse(dir)

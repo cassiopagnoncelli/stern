@@ -65,7 +65,7 @@ module Stern
       #   backoff     — one of SUPPORTED_BACKOFF_STRATEGIES
       #
       # Example:
-      #   class ChargePix < BaseOperation
+      #   class ChargePayment < BaseOperation
       #     retry_policy max_retries: 3, backoff: :constant, base: 60
       #   end
       def retry_policy(max_retries: nil, backoff: nil, base: nil)

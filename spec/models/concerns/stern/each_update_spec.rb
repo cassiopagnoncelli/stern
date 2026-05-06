@@ -35,7 +35,7 @@ module Stern
         ScheduledOperation.delete_all
         3.times do |i|
           ScheduledOperation.create!(
-            name: "ChargePix",
+            name: "ChargePayment",
             params: { charge_id: i },
             after_time: 1.minute.ago,
           )

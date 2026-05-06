@@ -116,13 +116,13 @@ module Stern
       it "populates the sop_count gauge from DB status counts" do
         3.times do |i|
           ScheduledOperation.create!(
-            name: "ChargePix", params: {},
+            name: "ChargePayment", params: {},
             after_time: 1.minute.ago, status: :pending,
             status_time: Time.current,
           )
         end
         ScheduledOperation.create!(
-          name: "ChargePix", params: {},
+          name: "ChargePayment", params: {},
           after_time: 1.minute.ago, status: :finished,
           status_time: Time.current,
         )
@@ -143,8 +143,8 @@ module Stern
 
       it "records enqueue + terminal events when processing a real SOP" do
         sop = ScheduledOperation.create!(
-          name: "ChargePix",
-          params: { charge_id: 1, payment_id: 1101, merchant_id: 1101, customer_id: 2, amount: 100, currency: "usd" },
+          name: "ChargePayment",
+          params: { charge_id: 1, payment_id: 1101, payment_method: "pix", amount: 100, currency: "usd" },
           after_time: 1.minute.ago,
           status: :pending,
         )
@@ -156,7 +156,7 @@ module Stern
         ScheduledOperationService.process_sop(sop.id)
 
         terminal = described_class.sop_terminal_total.get(
-          labels: { outcome: "finished", op_name: "ChargePix" },
+          labels: { outcome: "finished", op_name: "ChargePayment" },
         )
         expect(terminal).to eq(1)
       end

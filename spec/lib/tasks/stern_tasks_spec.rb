@@ -32,7 +32,7 @@ RSpec.describe "stern rake tasks", type: :task do
       end
 
       it "logs the rescue with id and name" do
-        expect(Rails.logger).to receive(:info).with(/stern:sop:rescue.*id=#{sop.id}.*name=ChargePix/)
+        expect(Rails.logger).to receive(:info).with(/stern:sop:rescue.*id=#{sop.id}.*name=ChargePayment/)
         task.invoke(sop.id.to_s)
       end
 
@@ -69,11 +69,11 @@ RSpec.describe "stern rake tasks", type: :task do
     describe "filtered bulk recovery" do
       let!(:target_a) do
         create(:scheduled_operation,
-               name: "ChargePix", status: :runtime_error, retry_count: 5, error_message: "boom")
+               name: "ChargePayment", status: :runtime_error, retry_count: 5, error_message: "boom")
       end
       let!(:target_b) do
         create(:scheduled_operation,
-               name: "ChargePix", status: :runtime_error, retry_count: 3, error_message: "boom")
+               name: "ChargePayment", status: :runtime_error, retry_count: 3, error_message: "boom")
       end
       let!(:other_op) do
         create(:scheduled_operation,
@@ -81,36 +81,36 @@ RSpec.describe "stern rake tasks", type: :task do
       end
 
       it "rescues every :runtime_error SOP whose name matches" do
-        task.invoke("ChargePix")
+        task.invoke("ChargePayment")
         expect(target_a.reload.status).to eq("pending")
         expect(target_b.reload.status).to eq("pending")
       end
 
       it "leaves SOPs of other names alone" do
-        task.invoke("ChargePix")
+        task.invoke("ChargePayment")
         expect(other_op.reload.status).to eq("runtime_error")
         expect(other_op.error_message).to eq("x")
       end
 
       it "logs the count of rescued SOPs" do
-        expect(Rails.logger).to receive(:info).with(/stern:sop:rescue_all.*count=2.*name=ChargePix/)
-        task.invoke("ChargePix")
+        expect(Rails.logger).to receive(:info).with(/stern:sop:rescue_all.*count=2.*name=ChargePayment/)
+        task.invoke("ChargePayment")
       end
     end
 
     describe "non-matching scope" do
       it "does not touch :runtime_error SOPs whose name differs" do
         ignored = create(:scheduled_operation,
-                         name: "ChargePix", status: :runtime_error, retry_count: 5)
+                         name: "ChargePayment", status: :runtime_error, retry_count: 5)
         task.invoke("OtherOp")
         expect(ignored.reload.status).to eq("runtime_error")
       end
 
       it "skips non-:runtime_error SOPs even when the name matches" do
         %i[pending picked in_progress finished canceled argument_error].each do |status|
-          sop = create(:scheduled_operation, name: "ChargePix", status: status, retry_count: 1)
+          sop = create(:scheduled_operation, name: "ChargePayment", status: status, retry_count: 1)
           before_attrs = sop.attributes
-          task.invoke("ChargePix")
+          task.invoke("ChargePayment")
           task.reenable
           expect(sop.reload.attributes.except("updated_at")).to eq(before_attrs.except("updated_at"))
         end
@@ -122,7 +122,7 @@ RSpec.describe "stern rake tasks", type: :task do
       end
 
       it "runs cleanly with an empty database" do
-        expect { task.invoke("ChargePix") }.not_to raise_error
+        expect { task.invoke("ChargePayment") }.not_to raise_error
       end
     end
 
@@ -144,10 +144,10 @@ RSpec.describe "stern rake tasks", type: :task do
       it "rescues many SOPs without truncation (find_each)" do
         25.times do
           create(:scheduled_operation,
-                 name: "ChargePix", status: :runtime_error, retry_count: 5, error_message: "boom")
+                 name: "ChargePayment", status: :runtime_error, retry_count: 5, error_message: "boom")
         end
-        task.invoke("ChargePix")
-        expect(::Stern::ScheduledOperation.runtime_error.where(name: "ChargePix").count).to eq(0)
+        task.invoke("ChargePayment")
+        expect(::Stern::ScheduledOperation.runtime_error.where(name: "ChargePayment").count).to eq(0)
       end
     end
   end

@@ -11,7 +11,7 @@ module Stern
       length: { minimum: 8, maximum: 24, allow_nil: true, allow_blank: false }
 
     # Returns the CamelCase names of every operation class exposed by the active chart's
-    # operations module (e.g. ["ChargePix"] when the chart declares `operations: general`).
+    # operations module (e.g. ["ChargePayment"] when the chart declares `operations: general`).
     # Returns strings, not classes, to avoid depending on Zeitwerk having already loaded them.
     def self.list
       dir = Engine.root.join("app", "operations", "stern", ::Stern.chart.operations_module)

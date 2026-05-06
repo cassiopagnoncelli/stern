@@ -101,18 +101,18 @@ module Stern
           .to raise_error(RSpec::Expectations::ExpectationNotMetError, /no associated EntryPairs/)
       end
 
-      it "catches a ChargePix whose params.merchant_id does not match the written gid" do
+      it "catches a ChargePayment whose params.payment_id does not match the written gid" do
         op = Operation.create!(
-          name: "ChargePix",
-          params: { "merchant_id" => 12_345, "charge_id" => 1, "amount" => 100, "currency" => brl },
+          name: "ChargePayment",
+          params: { "payment_id" => 12_345, "charge_id" => 1, "payment_method" => "pix", "amount" => 100, "currency" => brl },
         )
-        # Seed an EntryPair on a DIFFERENT gid than params.merchant_id claims.
+        # Seed an EntryPair on a DIFFERENT gid than params.payment_id claims.
         EntryPair.add_charge_pix(
           SecureRandom.random_number(1 << 30), 99_999, 100, brl, operation_id: op.id,
         )
 
         expect { assert_operations_integral! }
-          .to raise_error(RSpec::Expectations::ExpectationNotMetError, /params\.merchant_id=12345/)
+          .to raise_error(RSpec::Expectations::ExpectationNotMetError, /params\.payment_id=12345/)
       end
 
       it "restored clean state passes again" do

@@ -18,7 +18,7 @@
 #      - has_many :entry_pairs is non-empty (a committed Operation without any
 #        EntryPair should be impossible under BaseOperation#call's transaction)
 #      - every EntryPair has a non-null operation FK
-#      - per-op-class params↔gid coherence (ChargePix: params["merchant_id"] ==
+#      - per-op-class params↔gid coherence (ChargePayment: params["payment_id"] ==
 #        gid on every written Entry; extend the switch as ops come online)
 #
 # Guaranteed structurally by EntryPair.double_entry_add and BaseOperation#call —
@@ -102,18 +102,20 @@ module Stern
           next
         end
 
-        # Per-op-class params↔ledger coherence. The only real op today is
-        # ChargePix; future op classes should add their own branch rather than
-        # a generic rule (different ops relate gid to params differently).
+        # Per-op-class params↔ledger coherence. ChargePayment writes both Entry
+        # rows (sub side `charged_<method>`, add side `payment`) at the same
+        # `gid = payment_id`; future op classes should add their own branch
+        # rather than a generic rule (different ops relate gid to params
+        # differently).
         case op.name
-        when "ChargePix"
-          expected_gid = op.params["merchant_id"].to_i
+        when "ChargePayment"
+          expected_gid = op.params["payment_id"].to_i
           bad_gids = pairs.flat_map { |ep| ep.entries.pluck(:gid) }.uniq.reject { |g| g == expected_gid }
           unless bad_gids.empty?
             offenders << {
               operation_id: op.id,
               name: op.name,
-              problem: "entries have gid(s) #{bad_gids.inspect} != params.merchant_id=#{expected_gid}"
+              problem: "entries have gid(s) #{bad_gids.inspect} != params.payment_id=#{expected_gid}"
             }
           end
         end

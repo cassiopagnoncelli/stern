@@ -22,7 +22,7 @@ module Stern
 
     describe "#build" do
       subject(:build) { described_class.build(name:, params:, after_time:, status:, status_time:) }
-      let(:name) { "ChargePix" }
+      let(:name) { "ChargePayment" }
       let(:params) { scheduled_operation.params }
       let(:after_time) { scheduled_operation.after_time }
       let(:status) { :pending }

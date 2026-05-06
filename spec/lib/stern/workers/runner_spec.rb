@@ -29,12 +29,11 @@ module Stern
       def seed_sop(merchant_id: nil, charge_id: nil)
         merchant_id ||= SecureRandom.random_number(1 << 30)
         ScheduledOperation.create!(
-          name: "ChargePix",
+          name: "ChargePayment",
           params: {
             charge_id: charge_id || SecureRandom.random_number(1 << 30),
             payment_id: merchant_id,
-            merchant_id: merchant_id,
-            customer_id: SecureRandom.random_number(1 << 30),
+            payment_method: "pix",
             amount: 100,
             currency: "usd"
           },
@@ -236,8 +235,8 @@ module Stern
 
         it "fires a NOTIFY when a SOP transitions back to pending after a retry" do
           sop = ScheduledOperation.create!(
-            name: "ChargePix",
-            params: { charge_id: 1, payment_id: 1101, customer_id: 2, amount: 100, currency: "usd" },
+            name: "ChargePayment",
+            params: { charge_id: 1, payment_id: 1101, payment_method: "pix", amount: 100, currency: "usd" },
             after_time: 1.minute.ago,
             status: :picked,
           )
@@ -250,8 +249,8 @@ module Stern
 
         it "does NOT fire a NOTIFY on transitions to non-pending statuses" do
           sop = ScheduledOperation.create!(
-            name: "ChargePix",
-            params: { charge_id: 1, payment_id: 1101, customer_id: 2, amount: 100, currency: "usd" },
+            name: "ChargePayment",
+            params: { charge_id: 1, payment_id: 1101, payment_method: "pix", amount: 100, currency: "usd" },
             after_time: 1.minute.ago,
             status: :pending,
           )
@@ -505,9 +504,9 @@ module Stern
           # Pre-seed 3 picked SOPs.
           sops = 3.times.map do
             ScheduledOperation.create!(
-              name: "ChargePix",
+              name: "ChargePayment",
               params: { charge_id: SecureRandom.random_number(1 << 30), payment_id: 1,
-                       customer_id: 2, amount: 100, currency: "usd" },
+                       payment_method: "pix", amount: 100, currency: "usd" },
               after_time: 1.minute.ago, status: :picked,
             )
           end
@@ -547,16 +546,16 @@ module Stern
         # already knows about.
         it "does NOT fire NOTIFY for rows whose status was already :pending" do
           already_pending = ScheduledOperation.create!(
-            name: "ChargePix",
+            name: "ChargePayment",
             params: { charge_id: SecureRandom.random_number(1 << 30), payment_id: 1,
-                     customer_id: 2, amount: 100, currency: "usd" },
+                     payment_method: "pix", amount: 100, currency: "usd" },
             after_time: 1.minute.ago, status: :pending,
           )
           transitioning = 2.times.map do
             ScheduledOperation.create!(
-              name: "ChargePix",
+              name: "ChargePayment",
               params: { charge_id: SecureRandom.random_number(1 << 30), payment_id: 1,
-                       customer_id: 2, amount: 100, currency: "usd" },
+                       payment_method: "pix", amount: 100, currency: "usd" },
               after_time: 1.minute.ago, status: :picked,
             )
           end

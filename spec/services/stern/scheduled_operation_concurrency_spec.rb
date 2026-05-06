@@ -45,9 +45,9 @@ module Stern
   RSpec.describe "ScheduledOperationService concurrent picking", type: :service do
     self.use_transactional_tests = false
 
-    let(:name) { "ChargePix" }
+    let(:name) { "ChargePayment" }
     let(:params) do
-      { charge_id: 1, payment_id: 1101, customer_id: 2, amount: 9900, currency: "usd" }
+      { charge_id: 1, payment_id: 1101, payment_method: "pix", amount: 9900, currency: "usd" }
     end
     let(:after_time) { 1.minute.ago.utc }
 

@@ -9,7 +9,7 @@ module Stern
 
     describe ".list" do
       it "returns CamelCase names of operations in the active operations module" do
-        expect(described_class.list).to include("ChargePix")
+        expect(described_class.list).to include("ChargePayment")
       end
 
       it "returns strings (not classes) so callers don't depend on autoload state" do
