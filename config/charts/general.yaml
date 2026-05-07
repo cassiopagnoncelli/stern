@@ -64,6 +64,13 @@ books:
   - payment_fee_wallet
   - payment_fee_pix
 
+  # Trade Operation
+  - customer_allocation
+
+  - customer_trade
+
+  - custoemr_trade_fee
+
 
 #
 # Entry pairs.
@@ -207,3 +214,14 @@ entry_pairs:
   split_payment_partner:
     book_sub: payment
     book_add: partner_pending
+
+  # Trade Operation
+  allocate_customer:
+    book_sub: customer_available
+    book_add: customer_allocation
+  trade:
+    book_sub: customer_trade
+    book_add: customer_allocation
+  trade_fee:
+    book_sub: custoemr_trade_fee
+    book_add: customer_allocation
