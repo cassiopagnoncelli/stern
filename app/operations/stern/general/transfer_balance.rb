@@ -18,7 +18,7 @@ module Stern
         (from_customer_id.present? && from_customer_id == to_customer_id) ||
         (from_partner_id.present? && from_partner_id == to_partner_id)
     end
-    validates :amount, presence: true, numericality: { greater_than: 0, only_integer: true }
+    validates :amount, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
@@ -44,6 +44,12 @@ module Stern
     end
 
     def perform(operation_id)
+      stakeholder_id, type = from_stakeholder
+      
+      self.amount = BalanceQuery.new(gid: stakeholder_id, book_id: "#{type}_available".to_sym, currency:, timestamp: Time.current).call
+
+      return unless amount.positive?
+
       if from_merchant_id.present?
         EntryPair.add_merchant_available(from_merchant_id, from_merchant_id, -amount, currency, operation_id:)
       elsif from_customer_id.present?
@@ -59,6 +65,16 @@ module Stern
       elsif to_partner_id.present?
         EntryPair.add_partner_available(to_partner_id, to_partner_id, amount, currency, operation_id:)
       end
+    end
+
+    private
+
+    def from_stakeholder
+      return [ from_merchant_id, :merchant ] if from_merchant_id.present?
+      return [ from_customer_id, :customer ] if from_customer_id.present?
+      return [ from_partner_id, :partner ] if from_partner_id.present?
+
+      [ nil, nil ]
     end
   end
 end
