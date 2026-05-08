@@ -74,8 +74,8 @@ books:
   - payment_fee_wallet
   - payment_fee_pix
 
-  # Trade Operation
-  - customer_provision
+  # Investment
+  - customer_investment
   - customer_trade
   - customer_trade_fee
 
@@ -257,15 +257,15 @@ entry_pairs:
     book_add: partner_pending
 
   # Trade Operation
-  provision_invest:
+  investment_invest:
     book_sub: customer_available
-    book_add: customer_provision
-  provision_trade_operation:
+    book_add: customer_investment
+  investment_trade_operation:
     book_sub: customer_available
-    book_add: customer_provision
-  provision_trade:
+    book_add: customer_investment
+  investment_trade:
     book_sub: customer_trade
-    book_add: customer_provision
-  provision_trade_fee:
+    book_add: customer_investment
+  investment_trade_fee:
     book_sub: customer_trade_fee
-    book_add: customer_provision
+    book_add: customer_investment

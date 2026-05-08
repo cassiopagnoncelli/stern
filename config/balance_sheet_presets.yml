@@ -63,7 +63,7 @@ presets:
     currency: USD
     date_range: today
     book_names:
-      - customer_provision
+      - customer_investment
       - customer_trade
       - customer_trade_fee
 
@@ -73,6 +73,6 @@ presets:
     currency: USD
     date_range: this_week
     book_names:
-      - customer_provision
+      - customer_investment
       - customer_trade
       - customer_trade_fee
