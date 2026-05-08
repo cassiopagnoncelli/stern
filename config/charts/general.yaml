@@ -43,12 +43,15 @@ books:
   # Withdrawals
   - wdw_merchant_locked
   - wdw_merchant_confirmed
+  - wdw_merchant_fee
   
   - wdw_partner_locked
   - wdw_partner_confirmed
+  - wdw_partner_fee
 
   - wdw_customer_locked
   - wdw_customer_confirmed
+  - wdw_customer_fee
 
   # Deposits
   - merchant_deposit
@@ -101,22 +104,6 @@ entry_pairs:
     book_sub: merchant_credit
     book_add: merchant_available
 
-  withhold_customer_balance:
-    book_sub: customer_available
-    book_add: customer_withheld
-  settle_customer_balance:
-    book_sub: customer_pending
-    book_add: customer_available
-  lock_customer_balance:
-    book_sub: customer_available
-    book_add: customer_locked
-  adjust_customer_balance:
-    book_sub: customer_adjusted
-    book_add: customer_available
-  apply_customer_credit:
-    book_sub: customer_credit
-    book_add: customer_available
-
   withhold_partner_balance:
     book_sub: partner_available
     book_add: partner_withheld
@@ -132,30 +119,66 @@ entry_pairs:
   apply_partner_credit:
     book_sub: partner_credit
     book_add: partner_available
+
+  withhold_customer_balance:
+    book_sub: customer_available
+    book_add: customer_withheld
+  settle_customer_balance:
+    book_sub: customer_pending
+    book_add: customer_available
+  lock_customer_balance:
+    book_sub: customer_available
+    book_add: customer_locked
+  adjust_customer_balance:
+    book_sub: customer_adjusted
+    book_add: customer_available
+  apply_customer_credit:
+    book_sub: customer_credit
+    book_add: customer_available
   
   # Withdrawals
   withdraw_lock_withdrawal_merchant:
     book_sub: merchant_available
     book_add: wdw_merchant_locked
-
-  withdraw_lock_withdrawal_customer:
-    book_sub: customer_available
-    book_add: wdw_customer_locked
+  withdraw_confirm_withdrawal_merchant:
+    book_sub: wdw_merchant_locked
+    book_add: wdw_merchant_confirmed
+  withdraw_withdrawal_fee_merchant:
+    book_sub: merchant_available
+    book_add: wdw_merchant_fee
 
   withdraw_lock_withdrawal_partner:
     book_sub: partner_available
     book_add: wdw_partner_locked
+  withdraw_confirm_withdrawal_partner:
+    book_sub: wdw_partner_locked
+    book_add: wdw_partner_confirmed
+  withdraw_withdrawal_fee_partner:
+    book_sub: partner_available
+    book_add: wdw_partner_fee
+
+  withdraw_lock_withdrawal_customer:
+    book_sub: customer_available
+    book_add: wdw_customer_locked
+  withdraw_confirm_withdrawal_customer:
+    book_sub: wdw_customer_locked
+    book_add: wdw_customer_confirmed
+  withdraw_withdrawal_fee_customer:
+    book_sub: customer_available
+    book_add: wdw_customer_fee
   
   # Deposits
   deposit_merchant:
     book_sub: merchant_deposit
     book_add: merchant_available
-  deposit_customer:
-    book_sub: customer_deposit
-    book_add: customer_available
+
   deposit_partner:
     book_sub: partner_deposit
     book_add: partner_available
+
+  deposit_customer:
+    book_sub: customer_deposit
+    book_add: customer_available
 
   # Charges
   charge_bank_transfer:
@@ -178,51 +201,51 @@ entry_pairs:
   charge_bank_transfer_fee_merchant:
     book_sub: merchant_available
     book_add: payment_fee_bank_transfer
-  charge_bank_transfer_fee_customer:
-    book_sub: customer_available
-    book_add: payment_fee_bank_transfer
   charge_bank_transfer_fee_partner:
     book_sub: partner_available
+    book_add: payment_fee_bank_transfer
+  charge_bank_transfer_fee_customer:
+    book_sub: customer_available
     book_add: payment_fee_bank_transfer
 
   charge_credit_card_fee_merchant:
     book_sub: merchant_available
     book_add: payment_fee_credit_card
-  charge_credit_card_fee_customer:
-    book_sub: customer_available
-    book_add: payment_fee_credit_card
   charge_credit_card_fee_partner:
     book_sub: partner_available
+    book_add: payment_fee_credit_card
+  charge_credit_card_fee_customer:
+    book_sub: customer_available
     book_add: payment_fee_credit_card
   
   charge_debit_card_fee_merchant:
     book_sub: merchant_available
     book_add: payment_fee_debit_card
-  charge_debit_card_fee_customer:
-    book_sub: customer_available
-    book_add: payment_fee_debit_card
   charge_debit_card_fee_partner:
     book_sub: partner_available
+    book_add: payment_fee_debit_card
+  charge_debit_card_fee_customer:
+    book_sub: customer_available
     book_add: payment_fee_debit_card
   
   charge_wallet_fee_merchant:
     book_sub: merchant_available
     book_add: payment_fee_wallet
-  charge_wallet_fee_customer:
-    book_sub: customer_available
-    book_add: payment_fee_wallet
   charge_wallet_fee_partner:
     book_sub: partner_available
+    book_add: payment_fee_wallet
+  charge_wallet_fee_customer:
+    book_sub: customer_available
     book_add: payment_fee_wallet
 
   charge_pix_fee_merchant:
     book_sub: merchant_available
     book_add: payment_fee_pix
-  charge_pix_fee_customer:
-    book_sub: customer_available
-    book_add: payment_fee_pix
   charge_pix_fee_partner:
     book_sub: partner_available
+    book_add: payment_fee_pix
+  charge_pix_fee_customer:
+    book_sub: customer_available
     book_add: payment_fee_pix
 
   # Splits

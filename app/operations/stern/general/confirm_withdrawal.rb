@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Stern
-  class LockWithdraw < BaseOperation
+  class ConfirmWithdrawal < BaseOperation
     inputs :merchant_id, :partner_id, :customer_id, :amount, :currency
 
     validates :merchant_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
@@ -15,14 +15,14 @@ module Stern
       stakeholder_id, type = stakeholder
       return [] if stakeholder_id.nil?
 
-      tuples_for_pair("withdraw_lock_withdrawal_#{type}".to_sym, stakeholder_id, stakeholder_id, currency)
+      tuples_for_pair("withdraw_confirm_withdrawal_#{type}".to_sym, stakeholder_id, stakeholder_id, currency)
     end
 
     def perform(operation_id)
       stakeholder_id, type = stakeholder
 
       EntryPair.public_send(
-        "add_withdraw_lock_withdrawal_#{type}".to_sym,
+        "add_withdraw_confirm_withdrawal_#{type}".to_sym,
         stakeholder_id, stakeholder_id, amount, currency, operation_id:,
       )
     end
