@@ -64,10 +64,10 @@ module Stern
       private
 
       def load_common_params
-        @start_date = parse_dt(params[:start_date]) || DateTime.current.last_month
-        @end_date = parse_dt(params[:end_date]) || (DateTime.current + 1.minute)
-        @start_date_filter_value = @start_date.strftime("%Y-%m-%dT%H:%M")
-        @end_date_filter_value = @end_date.strftime("%Y-%m-%dT%H:%M")
+        @start_date = parse_dt(params[:start_date]) || Time.current.last_month
+        @end_date = parse_dt(params[:end_date]) || (Time.current + 1.minute)
+        @start_date_filter_value = @start_date.in_time_zone.strftime("%Y-%m-%dT%H:%M")
+        @end_date_filter_value = @end_date.in_time_zone.strftime("%Y-%m-%dT%H:%M")
         @decimal_places = if params[:decimal_places].present?
           dp = params[:decimal_places].to_i
           DECIMAL_PLACES_OPTIONS.include?(dp) ? dp : 2
@@ -143,7 +143,7 @@ module Stern
 
       def parse_dt(value)
         return nil if value.blank?
-        DateTime.parse(value)
+        Time.zone.parse(value)
       rescue ArgumentError
         nil
       end
