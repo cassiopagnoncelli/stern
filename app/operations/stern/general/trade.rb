@@ -12,14 +12,14 @@ module Stern
 
     def target_tuples
       tuples = []
-      tuples += tuples_for_pair(:trade, trade_id, customer_id, currency) unless amount.zero?
-      tuples += tuples_for_pair(:trade_fee, trade_id, customer_id, currency) unless fee.zero?
+      tuples += tuples_for_pair(:allocation_trade, trade_id, customer_id, currency) unless amount.zero?
+      tuples += tuples_for_pair(:allocation_trade_fee, trade_id, customer_id, currency) unless fee.zero?
       tuples
     end
 
     def perform(operation_id)
-      EntryPair.add_trade(trade_id, customer_id, amount, currency, operation_id:) unless amount.zero?
-      EntryPair.add_trade_fee(trade_id, customer_id, -fee, currency, operation_id:) unless fee.zero?
+      EntryPair.add_allocation_trade(trade_id, customer_id, amount, currency, operation_id:) unless amount.zero?
+      EntryPair.add_allocation_trade_fee(trade_id, customer_id, -fee, currency, operation_id:) unless fee.zero?
     end
   end
 end
