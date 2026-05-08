@@ -61,12 +61,12 @@ books:
   # Payment Processing: PSP, gateway
   - payment
 
-  - charged
-  - charged_bank_transfer
-  - charged_credit_card
-  - charged_debit_card
-  - charged_wallet
-  - charged_pix
+  - payment
+  - payment_bank_transfer
+  - payment_credit_card
+  - payment_debit_card
+  - payment_wallet
+  - payment_pix
 
   - payment_fee_bank_transfer
   - payment_fee_credit_card
@@ -182,19 +182,19 @@ entry_pairs:
 
   # Charges
   charge_bank_transfer:
-    book_sub: charged_bank_transfer
+    book_sub: payment_bank_transfer
     book_add: payment
   charge_credit_card:
-    book_sub: charged_credit_card
+    book_sub: payment_credit_card
     book_add: payment
   charge_debit_card:
-    book_sub: charged_debit_card
+    book_sub: payment_debit_card
     book_add: payment
   charge_wallet:
-    book_sub: charged_wallet
+    book_sub: payment_wallet
     book_add: payment
   charge_pix:
-    book_sub: charged_pix
+    book_sub: payment_pix
     book_add: payment
 
   # Charge fees

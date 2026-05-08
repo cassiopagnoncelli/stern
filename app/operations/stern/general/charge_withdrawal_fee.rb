@@ -1,17 +1,13 @@
 # frozen_string_literal: true
 
 module Stern
-  class ChargePaymentFee < BaseOperation
-    PAYMENT_METHODS = %w[bank_transfer credit_card debit_card wallet pix].freeze
-
+  class ChargeWithdrawalFee < BaseOperation
     inputs :merchant_id, :customer_id, :partner_id, :payment_id, :payment_method, :amount, :currency
 
     validates :merchant_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :customer_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :partner_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates_exactly_one_of :merchant_id, :customer_id, :partner_id
-    validates :payment_id, presence: true, numericality: { greater_than: 0, only_integer: true }
-    validates :payment_method, presence: true, inclusion: { in: PAYMENT_METHODS }
     validates :amount, presence: true, numericality: { other_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
@@ -19,8 +15,7 @@ module Stern
       stakeholder_id, type = stakeholder
       return [] if stakeholder_id.nil?
 
-      tuples_for_pair("charge_#{payment_method}_fee_#{type}".to_sym, stakeholder_id, payment_id, currency) +
-        tuples_for_pair("apply_#{type}_credit".to_sym, stakeholder_id, stakeholder_id, currency)
+      tuples_for_pair("withdraw_confirm_withdrawal_#{type}".to_sym, stakeholder_id, stakeholder_id, currency)
     end
 
     def perform(operation_id)

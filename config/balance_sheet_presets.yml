@@ -51,11 +51,11 @@ presets:
     date_range: today
     book_names:
       - payment
-      - charged_bank_transfer
-      - charged_credit_card
-      - charged_debit_card
-      - charged_wallet
-      - charged_pix
+      - payment_bank_transfer
+      - payment_credit_card
+      - payment_debit_card
+      - payment_wallet
+      - payment_pix
 
   - key: usd_trades_today
     label: "Trades — Today (USD)"

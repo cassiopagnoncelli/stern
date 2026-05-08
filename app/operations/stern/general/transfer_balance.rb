@@ -7,12 +7,10 @@ module Stern
     validates :from_merchant_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :from_customer_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :from_partner_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
+    validates_exactly_one_of :from_merchant_id, :from_customer_id, :from_partner_id
     validates :to_merchant_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :to_customer_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :to_partner_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
-    validates :amount, presence: true, numericality: { greater_than: 0, only_integer: true }
-    validates :currency, presence: true, allow_blank: false, allow_nil: false
-    validates_exactly_one_of :from_merchant_id, :from_customer_id, :from_partner_id
     validates_exactly_one_of :to_merchant_id, :to_customer_id, :to_partner_id
     validate do
       errors.add(:base, "cannot transfer to self") if
@@ -20,6 +18,8 @@ module Stern
         (from_customer_id.present? && from_customer_id == to_customer_id) ||
         (from_partner_id.present? && from_partner_id == to_partner_id)
     end
+    validates :amount, presence: true, numericality: { greater_than: 0, only_integer: true }
+    validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
       tuples = []

@@ -103,7 +103,7 @@ module Stern
         end
 
         # Per-op-class params↔ledger coherence. ChargePayment writes both Entry
-        # rows (sub side `charged_<method>`, add side `payment`) at the same
+        # rows (sub side `payment_<method>`, add side `payment`) at the same
         # `gid = payment_id`; future op classes should add their own branch
         # rather than a generic rule (different ops relate gid to params
         # differently).

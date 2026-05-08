@@ -235,8 +235,8 @@ module Stern
     #
     # Examples:
     #
-    #   * ChargePayment (`charge_<method>`: book_sub=charged_<method>, book_add=payment)
-    #     — sub side is sharded by `charge_id` (one charge per row in `charged_<method>`),
+    #   * ChargePayment (`charge_<method>`: book_sub=payment_<method>, book_add=payment)
+    #     — sub side is sharded by `charge_id` (one charge per row in `payment_<method>`),
     #     add side by `payment_id` — pass `(charge_id, payment_id)`.
     #
     #   * ChargePaymentFee (`charge_<method>_fee_merchant`: book_sub=merchant_available,
