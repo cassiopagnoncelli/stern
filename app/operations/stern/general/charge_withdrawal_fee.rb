@@ -2,7 +2,7 @@
 
 module Stern
   class ChargeWithdrawalFee < BaseOperation
-    inputs :merchant_id, :customer_id, :partner_id, :payment_id, :payment_method, :amount, :currency
+    inputs :merchant_id, :customer_id, :partner_id, :amount, :currency
 
     validates :merchant_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :customer_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
@@ -15,7 +15,7 @@ module Stern
       stakeholder_id, type = stakeholder
       return [] if stakeholder_id.nil?
 
-      tuples_for_pair("withdraw_confirm_withdrawal_#{type}".to_sym, stakeholder_id, stakeholder_id, currency)
+      tuples_for_pair("charge_withdrawal_fee_#{type}".to_sym, stakeholder_id, stakeholder_id, currency)
     end
 
     def perform(operation_id)
@@ -24,8 +24,8 @@ module Stern
       apply_available_credit(stakeholder_id, type, operation_id)
 
       EntryPair.public_send(
-        "add_charge_#{payment_method}_fee_#{type}".to_sym,
-        stakeholder_id, payment_id, amount, currency, operation_id:,
+        "add_charge_withdrawal_fee_#{type}".to_sym,
+        stakeholder_id, stakeholder_id, amount, currency, operation_id:,
       )
     end
 
