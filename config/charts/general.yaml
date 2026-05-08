@@ -78,6 +78,9 @@ books:
   - refund_locked
   - refund_confirmed
 
+  - refund_fee_merchant
+  - refund_fee_partner
+
   # Chargebacks
   - chargeback_locked
   - chargeback_confirmed
@@ -271,6 +274,15 @@ entry_pairs:
   lock_refund_partner:
     book_sub: partner_available
     book_add: refund_locked
+  
+  # Refund fees
+  charge_refund_fee_merchant:
+    book_sub: merchant_available
+    book_add: refund_fee_merchant
+  
+  charge_refund_fee_partner:
+    book_sub: partner_available
+    book_add: refund_fee_partner
   
   # Chargeback
   lock_chargeback_merchant:

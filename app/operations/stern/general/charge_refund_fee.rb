@@ -2,36 +2,29 @@
 
 module Stern
   class ChargePaymentFee < BaseOperation
-    PAYMENT_METHODS = %w[bank_transfer credit_card debit_card wallet pix].freeze
-
-    inputs :merchant_id, :customer_id, :partner_id, :payment_id, :payment_method, :amount, :currency
+    inputs :merchant_id, :partner_id, :amount, :currency
 
     validates :merchant_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
-    validates :customer_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :partner_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
-    validates_exactly_one_of :merchant_id, :customer_id, :partner_id
-    validates :payment_id, presence: true, numericality: { greater_than: 0, only_integer: true }
-    validates :payment_method, presence: true, inclusion: { in: PAYMENT_METHODS }
+    validates_exactly_one_of :merchant_id, :partner_id
     validates :amount, presence: true, numericality: { other_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
-      stakeholder_id, type = stakeholder
-      return [] if stakeholder_id.nil?
+      stakeholder_id, stakeholder_type = stakeholder
 
-      tuples_for_pair("charge_#{payment_method}_fee_#{type}".to_sym, stakeholder_id, payment_id, currency) +
-        tuples_for_pair("apply_#{type}_credit".to_sym, stakeholder_id, stakeholder_id, currency)
+      tuples_for_pair("apply_#{stakeholder_type}_credit".to_sym, stakeholder_id, stakeholder_id, currency)
     end
 
     def perform(operation_id)
-      stakeholder_id, type = stakeholder
+      stakeholder_id, stakeholder_type = stakeholder
 
-      apply_available_credit(stakeholder_id, type, operation_id)
+      apply_available_credit(stakeholder_id, stakeholder_type, operation_id)
 
       EntryPair.public_send(
-        "add_charge_#{payment_method}_fee_#{type}".to_sym,
+        "add_charge_refund_fee_#{stakeholder_type}".to_sym,
         stakeholder_id,
-        payment_id,
+        stakeholder_id,
         amount,
         currency,
         operation_id:,
@@ -59,7 +52,6 @@ module Stern
 
     def stakeholder
       return [ merchant_id, :merchant ] if merchant_id.present?
-      return [ customer_id, :customer ] if customer_id.present?
       return [ partner_id, :partner ] if partner_id.present?
 
       [ nil, nil ]

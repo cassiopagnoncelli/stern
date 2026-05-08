@@ -31,7 +31,11 @@ module Stern
 
       EntryPair.public_send(
         "add_withdraw_lock_withdrawal_#{type}".to_sym,
-        stakeholder_id, stakeholder_id, amount, currency, operation_id:,
+        stakeholder_id,
+        stakeholder_id,
+        amount,
+        currency,
+        operation_id:,
       )
     end
 
