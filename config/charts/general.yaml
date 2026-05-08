@@ -65,7 +65,7 @@ books:
   - payment_fee_pix
 
   # Trade Operation
-  - customer_allocation
+  - customer_provision
   - customer_trade
   - customer_trade_fee
 
@@ -214,12 +214,15 @@ entry_pairs:
     book_add: partner_pending
 
   # Trade Operation
-  allocate_customer:
+  provision_customer_funds:
     book_sub: customer_available
-    book_add: customer_allocation
-  allocation_trade:
+    book_add: customer_provision
+  deprovision_customer_funds:
+    book_sub: customer_provision
+    book_add: customer_available
+  provision_trade:
     book_sub: customer_trade
-    book_add: customer_allocation
-  allocation_trade_fee:
+    book_add: customer_provision
+  provision_trade_fee:
     book_sub: customer_trade_fee
-    book_add: customer_allocation
+    book_add: customer_provision
