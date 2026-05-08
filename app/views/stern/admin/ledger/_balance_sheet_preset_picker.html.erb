@@ -1,17 +1,16 @@
 <%
   picker_id ||= "balance-sheet-presets"
-  trigger_classes = "w-full sm:w-auto rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:focus:border-indigo-400 dark:focus:ring-indigo-400 inline-flex items-center gap-2 cursor-pointer"
+  trigger_classes = "inline-flex items-center justify-center p-1 cursor-pointer text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 focus:outline-none focus:text-indigo-600 dark:focus:text-indigo-400"
 
   book_name_to_code = books.transform_keys(&:to_sym)
 %>
 
-<div class="w-full sm:w-auto" data-bs-preset-picker data-bs-picker-id="<%= picker_id %>">
-  <button type="button" data-bs-preset-toggle class="<%= trigger_classes %>">
-    <svg class="h-4 w-4 text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+<div class="inline-flex" data-bs-preset-picker data-bs-picker-id="<%= picker_id %>">
+  <a role="button" tabindex="0" data-bs-preset-toggle title="Apply preset" aria-label="Apply preset" class="<%= trigger_classes %>">
+    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.75 6.75h.008v.008H3.75V6.75Zm0 5.25h.008v.008H3.75V12Zm0 5.25h.008v.008H3.75v-.008ZM7.5 6.75h12.75M7.5 12h12.75m-12.75 5.25h12.75"/>
     </svg>
-    <span>Presets</span>
-  </button>
+  </a>
 
   <div data-bs-preset-modal class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
     <div data-bs-preset-dialog class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-200 dark:border-gray-700 flex flex-col max-h-[80vh]">
@@ -147,6 +146,9 @@
       function close() { modal.classList.add("hidden"); }
 
       toggle.addEventListener("click", function (e) { e.preventDefault(); open(); });
+      toggle.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
+      });
 
       modal.addEventListener("click", function (e) {
         if (!dialog.contains(e.target)) close();

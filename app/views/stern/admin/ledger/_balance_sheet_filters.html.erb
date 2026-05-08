@@ -35,6 +35,14 @@
     book_groups: book_groups,
     selected_book_ids: selected_book_ids %>
 
-<button type="submit" class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-indigo-400">
-  Apply
-</button>
+<a role="button"
+   tabindex="0"
+   title="Apply"
+   aria-label="Apply"
+   onclick="this.closest('form').requestSubmit();"
+   onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.closest('form').requestSubmit();}"
+   class="inline-flex items-center justify-center p-1 cursor-pointer text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 focus:outline-none focus:text-indigo-600 dark:focus:text-indigo-400">
+  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
+  </svg>
+</a>
