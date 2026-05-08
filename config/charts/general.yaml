@@ -214,12 +214,12 @@ entry_pairs:
     book_add: partner_pending
 
   # Trade Operation
-  provision_customer_funds:
+  provision_invest:
     book_sub: customer_available
     book_add: customer_provision
-  deprovision_customer_funds:
-    book_sub: customer_provision
-    book_add: customer_available
+  provision_trade_operation:
+    book_sub: customer_available
+    book_add: customer_provision
   provision_trade:
     book_sub: customer_trade
     book_add: customer_provision

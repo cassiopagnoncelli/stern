@@ -9,14 +9,14 @@ module Stern
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
-      tuples_for_pair(:deprovision_customer_funds, provision_id, customer_id, currency)
+      tuples_for_pair(:provision_trade_operation, provision_id, customer_id, currency)
     end
 
     def perform(operation_id)
-      amount = BalanceQuery.new(gid: provision_id, book_id: :customer_provision, currency:).call
+      amount = BalanceQuery.new(gid: provision_id, book_id: :customer_provision, currency:, timestamp: Time.current).call
       return if amount.zero?
 
-      EntryPair.add_deprovision_customer_funds(provision_id, customer_id, amount, currency, operation_id:)
+      EntryPair.add_provision_trade_operation(customer_id, provision_id, -amount, currency, operation_id:)
     end
   end
 end
