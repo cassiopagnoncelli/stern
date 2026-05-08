@@ -55,6 +55,45 @@ RSpec.describe "Stern::Admin::Ledger", type: :request do
     end
   end
 
+  describe "passport time zone" do
+    it "interprets datetime-local params as wall-clock in the passport's zone" do
+      sign_in_as(build_passport(platform_admin: true, time_zone: "America/Sao_Paulo"))
+
+      query = instance_double(::Stern::EntriesQuery, call: [])
+      allow(::Stern::EntriesQuery).to receive(:new).and_return(query)
+
+      get "/stern/admin/ledger/entries", params: {
+        book_id: ::Stern.chart.book_codes.first,
+        currency: "USD",
+        start_date: "2026-05-07T00:00",
+        end_date: "2026-05-07T23:59"
+      }
+
+      expect(response).to have_http_status(:ok)
+      expect(::Stern::EntriesQuery).to have_received(:new) do |kwargs|
+        expect(kwargs[:start_date].utc).to eq(Time.utc(2026, 5, 7, 3, 0))
+        expect(kwargs[:end_date].utc).to eq(Time.utc(2026, 5, 8, 2, 59))
+      end
+    end
+
+    it "falls back to UTC when the passport has no time_zone claim" do
+      query = instance_double(::Stern::EntriesQuery, call: [])
+      allow(::Stern::EntriesQuery).to receive(:new).and_return(query)
+
+      get "/stern/admin/ledger/entries", params: {
+        book_id: ::Stern.chart.book_codes.first,
+        currency: "USD",
+        start_date: "2026-05-07T00:00",
+        end_date: "2026-05-07T23:59"
+      }
+
+      expect(::Stern::EntriesQuery).to have_received(:new) do |kwargs|
+        expect(kwargs[:start_date].utc).to eq(Time.utc(2026, 5, 7, 0, 0))
+        expect(kwargs[:end_date].utc).to eq(Time.utc(2026, 5, 7, 23, 59))
+      end
+    end
+  end
+
   describe "auth" do
     it "redirects to idp when unauthenticated" do
       allow_any_instance_of(Stern::ApplicationController)
