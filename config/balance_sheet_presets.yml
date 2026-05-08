@@ -56,3 +56,23 @@ presets:
       - charged_debit_card
       - charged_wallet
       - charged_pix
+
+  - key: usd_trades_today
+    label: "Trades — Today (USD)"
+    description: "Trades, today."
+    currency: USD
+    date_range: today
+    book_names:
+      - customer_allocation
+      - customer_trade
+      - customer_trade_fee
+
+  - key: usd_trades_this_week
+    label: "Trades — This Week (USD)"
+    description: "Trades, this week."
+    currency: USD
+    date_range: this_week
+    book_names:
+      - customer_allocation
+      - customer_trade
+      - customer_trade_fee

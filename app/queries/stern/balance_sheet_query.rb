@@ -35,7 +35,8 @@ module Stern
     def sql
       sql = %{
         WITH books AS (
-          SELECT unnest(ARRAY[:book_ids]) AS book_id
+          SELECT book_id, ord
+          FROM unnest(ARRAY[:book_ids]) WITH ORDINALITY AS t(book_id, ord)
         ),
         previous_balances AS (
           SELECT
@@ -76,7 +77,7 @@ module Stern
         FROM books b
         LEFT JOIN current_balances cb ON b.book_id = cb.book_id
         LEFT JOIN previous_balances pb ON b.book_id = pb.book_id
-        ORDER BY b.book_id
+        ORDER BY b.ord
       }
       ApplicationRecord.sanitize_sql_array([ sql, { start_date:, end_date:, currency:, book_ids: } ])
     end
