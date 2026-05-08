@@ -4,6 +4,13 @@ operations: general
 # Accounting books.
 #
 # Books hold historically retrievable, per-gid, per-currency segregated balances.
+# Naming conventions:
+# - available: immediately available for general operations
+# - withheld: frozen capital by management rule used as collateral
+# - pending: incoming funds
+# - locked: outgoing funds
+# - adjusted: manually adjusted available balance
+# - credit: untransferable credits used to automatically rebate fees
 #
 books:
   # Merchant
@@ -34,14 +41,14 @@ books:
       non_negative: true
   
   # Withdrawals
-  - wdw
-  - wdw_request
-  - wdw_merchant
-  - wdw_merchant_request
-  - wdw_partner
-  - wdw_partner_request
-  - wdw_customer
-  - wdw_customer_request
+  - wdw_merchant_locked
+  - wdw_merchant_confirmed
+  
+  - wdw_partner_locked
+  - wdw_partner_confirmed
+
+  - wdw_customer_locked
+  - wdw_customer_confirmed
 
   # Deposits
   - merchant_deposit
@@ -125,6 +132,19 @@ entry_pairs:
   apply_partner_credit:
     book_sub: partner_credit
     book_add: partner_available
+  
+  # Withdrawals
+  withdraw_lock_withdrawal_merchant:
+    book_sub: merchant_available
+    book_add: wdw_merchant_locked
+
+  withdraw_lock_withdrawal_customer:
+    book_sub: customer_available
+    book_add: wdw_customer_locked
+
+  withdraw_lock_withdrawal_partner:
+    book_sub: partner_available
+    book_add: wdw_partner_locked
   
   # Deposits
   deposit_merchant:
