@@ -2,12 +2,11 @@
 
 module Stern
   class ReintegratePayment < BaseOperation
-    inputs :merchant_id, :customer_id, :partner_id, :refund_id, :chargeback_id, :amount, :currency
+    inputs :merchant_id, :partner_id, :refund_id, :chargeback_id, :amount, :currency
 
     validates :merchant_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
-    validates :customer_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :partner_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
-    validates_exactly_one_of :merchant_id, :customer_id, :partner_id
+    validates_exactly_one_of :merchant_id, :partner_id
     validates :refund_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :chargeback_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates_exactly_one_of :refund_id, :chargeback_id
@@ -39,7 +38,6 @@ module Stern
 
     def stakeholder
       return [ merchant_id, :merchant ] if merchant_id.present?
-      return [ customer_id, :customer ] if customer_id.present?
       return [ partner_id, :partner ] if partner_id.present?
 
       [ nil, nil ]
