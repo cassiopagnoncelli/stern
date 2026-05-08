@@ -1,0 +1,188 @@
+<%
+  picker_id ||= "balance-sheet-presets"
+  trigger_classes = "w-full sm:w-auto rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:focus:border-indigo-400 dark:focus:ring-indigo-400 inline-flex items-center gap-2 cursor-pointer"
+
+  book_name_to_code = books.transform_keys(&:to_sym)
+%>
+
+<div class="w-full sm:w-auto" data-bs-preset-picker data-bs-picker-id="<%= picker_id %>">
+  <button type="button" data-bs-preset-toggle class="<%= trigger_classes %>">
+    <svg class="h-4 w-4 text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+    </svg>
+    <span>Presets</span>
+  </button>
+
+  <div data-bs-preset-modal class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div data-bs-preset-dialog class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-200 dark:border-gray-700 flex flex-col max-h-[80vh]">
+      <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-3">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Apply preset</h3>
+        <button type="button" data-bs-preset-close class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer" aria-label="Close">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto">
+        <% if presets.empty? %>
+          <div class="px-5 py-6 text-sm text-gray-500 dark:text-gray-400">
+            No presets configured. Add some in <code>config/balance_sheet_presets.yml</code>.
+          </div>
+        <% else %>
+          <% presets.each do |preset| %>
+            <button
+              type="button"
+              data-bs-preset-option
+              data-bs-preset='<%= preset.to_payload(book_name_to_code).to_json %>'
+              class="flex w-full cursor-pointer items-start gap-3 px-5 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700/50">
+              <span class="min-w-0 flex-1">
+                <span class="block text-sm font-medium text-gray-900 dark:text-gray-100"><%= preset.label %></span>
+                <% if preset.description.present? %>
+                  <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5"><%= preset.description %></span>
+                <% end %>
+                <span class="block text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                  <%= preset.currency %> ·
+                  <%= preset.date_range.presence&.tr("_", " ") || "#{preset.start_date} → #{preset.end_date}" %> ·
+                  <%= preset.book_names.size %> book<%= "s" if preset.book_names.size != 1 %>
+                </span>
+              </span>
+            </button>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 border-t border-gray-200 dark:border-gray-700 px-5 py-3">
+        <button type="button" data-bs-preset-cancel class="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    if (window.__sternPresetPickerInit) return;
+    window.__sternPresetPickerInit = true;
+
+    var DT = (window.luxon && window.luxon.DateTime) || null;
+    var INPUT_FMT = "yyyy-LL-dd'T'HH:mm";
+
+    function startOfDay(dt) { return dt.startOf("day"); }
+    function endOfDay(dt) { return dt.set({ hour: 23, minute: 59, second: 0, millisecond: 0 }); }
+
+    function presetRange(key, tz) {
+      if (!DT) return null;
+      var now = DT.now().setZone(tz);
+      switch (key) {
+        case "today":         return [startOfDay(now), endOfDay(now)];
+        case "yesterday":     var y = now.minus({ days: 1 }); return [startOfDay(y), endOfDay(y)];
+        case "this_week":     return [now.startOf("week"), endOfDay(now.endOf("week"))];
+        case "last_week":     var w = now.minus({ weeks: 1 }); return [w.startOf("week"), endOfDay(w.endOf("week"))];
+        case "this_month":    return [now.startOf("month"), endOfDay(now.endOf("month"))];
+        case "last_month":    var m = now.minus({ months: 1 }); return [m.startOf("month"), endOfDay(m.endOf("month"))];
+        case "this_quarter":  return [now.startOf("quarter"), endOfDay(now.endOf("quarter"))];
+        case "last_quarter":  var q = now.minus({ quarters: 1 }); return [q.startOf("quarter"), endOfDay(q.endOf("quarter"))];
+        case "this_year":     return [now.startOf("year"), endOfDay(now.endOf("year"))];
+        case "last_year":     var ly = now.minus({ years: 1 }); return [ly.startOf("year"), endOfDay(ly.endOf("year"))];
+      }
+      return null;
+    }
+
+    function setSelectValue(form, name, value) {
+      if (value === undefined || value === null || value === "") return;
+      var el = form.querySelector('[name="' + name + '"]');
+      if (!el) return;
+      el.value = String(value);
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    function applyPreset(form, payload) {
+      setSelectValue(form, "currency", payload.currency);
+      if (payload.decimal_places !== undefined && payload.decimal_places !== null) {
+        setSelectValue(form, "decimal_places", payload.decimal_places);
+      }
+
+      var dateRoot = form.querySelector("[data-bs-date-range]");
+      if (dateRoot) {
+        var startInput = dateRoot.querySelector("[data-bs-date-range-start]");
+        var endInput = dateRoot.querySelector("[data-bs-date-range-end]");
+        if (startInput && endInput) {
+          if (payload.date_range) {
+            var tz = dateRoot.getAttribute("data-bs-tz") || "UTC";
+            var range = presetRange(payload.date_range, tz);
+            if (range) {
+              startInput.value = range[0].toFormat(INPUT_FMT);
+              endInput.value = range[1].toFormat(INPUT_FMT);
+            }
+          } else if (payload.start_date && payload.end_date) {
+            startInput.value = payload.start_date;
+            endInput.value = payload.end_date;
+          }
+          startInput.dispatchEvent(new Event("change", { bubbles: true }));
+          endInput.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      }
+
+      var wantedIds = (payload.book_ids || []).map(String);
+      form.querySelectorAll("[data-bs-books-checkbox]").forEach(function (cb) {
+        cb.checked = wantedIds.indexOf(String(cb.value)) !== -1;
+        cb.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+
+      if (typeof form.requestSubmit === "function") form.requestSubmit();
+      else form.submit();
+    }
+
+    function init(root) {
+      var toggle = root.querySelector("[data-bs-preset-toggle]");
+      var modal = root.querySelector("[data-bs-preset-modal]");
+      var dialog = root.querySelector("[data-bs-preset-dialog]");
+      if (!toggle || !modal || !dialog) return;
+
+      var form = root.closest("form");
+
+      function open() { modal.classList.remove("hidden"); }
+      function close() { modal.classList.add("hidden"); }
+
+      toggle.addEventListener("click", function (e) { e.preventDefault(); open(); });
+
+      modal.addEventListener("click", function (e) {
+        if (!dialog.contains(e.target)) close();
+      });
+
+      root.querySelectorAll("[data-bs-preset-close], [data-bs-preset-cancel]").forEach(function (btn) {
+        btn.addEventListener("click", function (e) { e.preventDefault(); close(); });
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && !modal.classList.contains("hidden")) close();
+      });
+
+      root.querySelectorAll("[data-bs-preset-option]").forEach(function (opt) {
+        opt.addEventListener("click", function (e) {
+          e.preventDefault();
+          if (!form) return;
+          var raw = opt.getAttribute("data-bs-preset");
+          if (!raw) return;
+          var payload;
+          try { payload = JSON.parse(raw); } catch (err) { return; }
+          close();
+          applyPreset(form, payload);
+        });
+      });
+    }
+
+    function initAll() {
+      document.querySelectorAll("[data-bs-preset-picker]").forEach(function (root) {
+        if (root.__sternPresetPickerInited) return;
+        root.__sternPresetPickerInited = true;
+        init(root);
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", initAll);
+    if (document.readyState !== "loading") initAll();
+  })();
+</script>

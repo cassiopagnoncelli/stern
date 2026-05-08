@@ -1,0 +1,58 @@
+# Saved filters for the admin balance sheet view.
+#
+# Each preset fills the Currency, Date range, Decimal places, and Books filters
+# on /stern/admin/ledger/balance_sheet, then applies the form.
+#
+# Schema
+# ------
+# - key:            unique snake_case identifier
+#   label:          short human label shown in the picker
+#   description:    optional one-liner shown beneath the label
+#   currency:       currency code (must exist in config/currencies_catalog.yaml)
+#   decimal_places: optional integer 0..10 (defaults to current view value)
+#   date_range:     one of: today, yesterday, this_week, last_week,
+#                           this_month, last_month, this_quarter, last_quarter,
+#                           this_year, last_year
+#                   OR omit and supply explicit start_date/end_date below.
+#   start_date:     optional ISO8601 wall-clock string ("2026-01-01T00:00")
+#   end_date:       optional ISO8601 wall-clock string
+#   book_names:     list of book names from config/charts/general.yaml
+#                   (the canonical YAML keys, not numeric codes)
+
+presets:
+  - key: brl_merchants_last_week
+    label: "Merchants — Last week (BRL)"
+    description: "Merchant balances over the previous calendar week."
+    currency: BRL
+    date_range: last_week
+    book_names:
+      - merchant_available
+      - merchant_withheld
+      - merchant_pending
+      - merchant_locked
+      - merchant_credit
+
+  - key: brl_customers_last_month
+    label: "Customers — Last month (BRL)"
+    description: "Customer balances over the previous calendar month."
+    currency: BRL
+    date_range: last_month
+    book_names:
+      - customer_available
+      - customer_withheld
+      - customer_pending
+      - customer_locked
+      - customer_credit
+
+  - key: brl_payments_today
+    label: "Payments — Today (BRL)"
+    description: "Charge volume by method, today."
+    currency: BRL
+    date_range: today
+    book_names:
+      - payment
+      - charged_bank_transfer
+      - charged_credit_card
+      - charged_debit_card
+      - charged_wallet
+      - charged_pix
