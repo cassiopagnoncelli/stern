@@ -66,10 +66,8 @@ books:
 
   # Trade Operation
   - customer_allocation
-
   - customer_trade
-
-  - custoemr_trade_fee
+  - customer_trade_fee
 
 
 #
@@ -223,5 +221,5 @@ entry_pairs:
     book_sub: customer_trade
     book_add: customer_allocation
   trade_fee:
-    book_sub: custoemr_trade_fee
+    book_sub: customer_trade_fee
     book_add: customer_allocation
