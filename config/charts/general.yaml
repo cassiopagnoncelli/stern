@@ -74,6 +74,14 @@ books:
   - payment_fee_wallet
   - payment_fee_pix
 
+  # Refunds
+  - refund_locked
+  - refund_confirmed
+
+  # Chargebacks
+  - chargeback_locked
+  - chargeback_confirmed
+
   # Investment
   - customer_investment
   - customer_trade
@@ -255,6 +263,22 @@ entry_pairs:
   split_payment_partner:
     book_sub: payment
     book_add: partner_pending
+  
+  # Refund
+  lock_refund_merchant:
+    book_sub: merchant_available
+    book_add: refund_locked
+  lock_refund_partner:
+    book_sub: partner_available
+    book_add: refund_locked
+  
+  # Chargeback
+  lock_chargeback_merchant:
+    book_sub: merchant_available
+    book_add: chargeback_locked
+  lock_chargeback_partner:
+    book_sub: partner_available
+    book_add: chargeback_locked
 
   # Trade Operation
   investment_invest:
