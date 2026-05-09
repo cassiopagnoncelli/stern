@@ -29,11 +29,15 @@ module Stern
       return if allow_overdraft
 
       stakeholder_id, stakeholder_type = stakeholder_for
-      available = available_balance(stakeholder_id, stakeholder_type)
-      return if amount <= available
 
-      raise ::Stern::InsufficientFunds,
-        "lock_withdrawal amount #{amount} exceeds available balance #{available}"
+      require_sufficient_balance!(
+        book_id: "#{stakeholder_type}_available".to_sym,
+        gid: stakeholder_id,
+        currency:,
+        amount:,
+        op_label: "lock_withdrawal",
+        balance_label: "available balance",
+      )
     end
 
     def perform(operation_id)
@@ -47,17 +51,6 @@ module Stern
         currency,
         operation_id:,
       )
-    end
-
-    private
-
-    def available_balance(stakeholder_id, stakeholder_type)
-      BalanceQuery.new(
-        gid: stakeholder_id,
-        book_id: "#{stakeholder_type}_available".to_sym,
-        currency:,
-        timestamp: Time.current
-      ).call
     end
   end
 end
