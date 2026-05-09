@@ -57,6 +57,5 @@ module Stern
         stakeholder_id, stakeholder_id, credit_to_apply, currency, operation_id:,
       )
     end
-
   end
 end

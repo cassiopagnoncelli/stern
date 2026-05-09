@@ -29,6 +29,5 @@ module Stern
         operation_id:
       )
     end
-
   end
 end

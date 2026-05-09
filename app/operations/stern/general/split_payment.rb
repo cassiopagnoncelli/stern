@@ -10,7 +10,7 @@ module Stern
     validates :payment_id, presence: true, numericality: { greater_than: 0, only_integer: true }
     validates :amount, presence: true, numericality: { other_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
-    
+
     def target_tuples
       stakeholder_id, stakeholder_type = stakeholder_for
 
