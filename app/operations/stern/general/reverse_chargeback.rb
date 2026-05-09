@@ -26,23 +26,6 @@ module Stern
     validates :amount, presence: true, numericality: { greater_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
-    def target_tuples
-      stakeholder_id, stakeholder_type = stakeholder_for
-
-      tuples_for_pair("reverse_chargeback_#{stakeholder_type}".to_sym, chargeback_id, stakeholder_id, currency)
-    end
-
-    def perform(operation_id)
-      stakeholder_id, stakeholder_type = stakeholder_for
-
-      EntryPair.public_send(
-        "add_reverse_chargeback_#{stakeholder_type}".to_sym,
-        chargeback_id,
-        stakeholder_id,
-        amount,
-        currency,
-        operation_id:,
-      )
-    end
+    performs_stakeholder_pair "reverse_chargeback_%{type}", sub_gid: :chargeback_id
   end
 end

@@ -11,23 +11,6 @@ module Stern
     validates :amount, presence: true, numericality: { greater_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
-    def target_tuples
-      stakeholder_id, stakeholder_type = stakeholder_for
-
-      tuples_for_pair("withhold_#{stakeholder_type}_balance".to_sym, stakeholder_id, stakeholder_id, currency)
-    end
-
-    def perform(operation_id)
-      stakeholder_id, stakeholder_type = stakeholder_for
-
-      EntryPair.public_send(
-        "add_withhold_#{stakeholder_type}_balance".to_sym,
-        stakeholder_id,
-        stakeholder_id,
-        amount,
-        currency,
-        operation_id:
-      )
-    end
+    performs_stakeholder_pair "withhold_%{type}_balance"
   end
 end

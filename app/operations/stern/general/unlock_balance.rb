@@ -21,36 +21,7 @@ module Stern
     validates :amount, presence: true, numericality: { greater_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
-    def target_tuples
-      stakeholder_id, stakeholder_type = stakeholder_for
-
-      tuples_for_pair("unlock_#{stakeholder_type}_balance".to_sym, stakeholder_id, stakeholder_id, currency)
-    end
-
-    def runtime_check
-      stakeholder_id, stakeholder_type = stakeholder_for
-
-      require_sufficient_balance!(
-        book_id: "#{stakeholder_type}_locked".to_sym,
-        gid: stakeholder_id,
-        currency:,
-        amount:,
-        op_label: "unlock_balance",
-        balance_label: "locked balance",
-      )
-    end
-
-    def perform(operation_id)
-      stakeholder_id, stakeholder_type = stakeholder_for
-
-      EntryPair.public_send(
-        "add_unlock_#{stakeholder_type}_balance".to_sym,
-        stakeholder_id,
-        stakeholder_id,
-        amount,
-        currency,
-        operation_id:,
-      )
-    end
+    performs_stakeholder_pair "unlock_%{type}_balance",
+      requires_balance: { book: "%{type}_locked", label: "locked balance" }
   end
 end

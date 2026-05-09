@@ -11,23 +11,6 @@ module Stern
     validates :amount, presence: true, numericality: { only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
-    def target_tuples
-      stakeholder_id, stakeholder_type = stakeholder_for
-
-      tuples_for_pair("confirm_withdrawal_#{stakeholder_type}".to_sym, stakeholder_id, stakeholder_id, currency)
-    end
-
-    def perform(operation_id)
-      stakeholder_id, stakeholder_type = stakeholder_for
-
-      EntryPair.public_send(
-        "add_confirm_withdrawal_#{stakeholder_type}".to_sym,
-        stakeholder_id,
-        stakeholder_id,
-        amount,
-        currency,
-        operation_id:,
-      )
-    end
+    performs_stakeholder_pair "confirm_withdrawal_%{type}"
   end
 end
