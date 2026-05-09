@@ -228,16 +228,6 @@ module Stern
     # from a balance read) since this runs under the operation's locks.
     def runtime_check; end
 
-    def display
-      params_str = operation_params.map { |k, v| "#{k}=#{v}" }.join(" ")
-      format(
-        "{%<operation_uid>3d} %<operation_name>s: %<params_str>s",
-        operation_uid:,
-        operation_name:,
-        params_str:,
-      )
-    end
-
     private
 
     # Validates that `currency` (when declared as an input) refers to a known
