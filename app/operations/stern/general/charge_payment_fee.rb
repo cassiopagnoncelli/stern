@@ -17,7 +17,6 @@ module Stern
 
     def target_tuples
       stakeholder_id, stakeholder_type = stakeholder
-      return [] if stakeholder_id.nil?
 
       tuples = []
       tuples += tuples_for_pair("charge_#{payment_method}_fee_#{stakeholder_type}".to_sym, stakeholder_id, payment_id, currency)

@@ -13,7 +13,6 @@ module Stern
 
     def target_tuples
       stakeholder_id, stakeholder_type = stakeholder
-      return [] if stakeholder_id.nil?
 
       tuples_for_pair("withdraw_confirm_withdrawal_#{stakeholder_type}".to_sym, stakeholder_id, stakeholder_id, currency)
     end
