@@ -14,14 +14,14 @@ module Stern
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
-      stakeholder_id, stakeholder_type = stakeholder
+      stakeholder_id, stakeholder_type = stakeholder_for
       target_id, target_type = target
 
       tuples_for_pair("lock_#{target_type}_#{stakeholder_type}".to_sym, stakeholder_id, target_id, currency)
     end
 
     def perform(operation_id)
-      stakeholder_id, stakeholder_type = stakeholder
+      stakeholder_id, stakeholder_type = stakeholder_for
       target_id, target_type = target
 
       EntryPair.public_send(
@@ -35,13 +35,6 @@ module Stern
     end
 
     private
-
-    def stakeholder
-      return [ merchant_id, :merchant ] if merchant_id.present?
-      return [ partner_id, :partner ] if partner_id.present?
-
-      [ nil, nil ]
-    end
 
     def target
       return [ refund_id, :refund ] if refund_id.present?

@@ -22,39 +22,48 @@ module Stern
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
-      from_stakeholder_id, from_stakeholder_type = from_stakeholder
-      to_stakeholder_id, to_stakeholder_type = to_stakeholder
+      from_id, from_type = stakeholder_for("from_")
+      to_id, to_type = stakeholder_for("to_")
 
       tuples = []
-      tuples += tuples_for_pair("#{from_stakeholder_type}_available".to_sym, from_stakeholder_id, from_stakeholder_id, currency)
-      tuples += tuples_for_pair("#{to_stakeholder_type}_available".to_sym, to_stakeholder_id, to_stakeholder_id, currency)
+      tuples += tuples_for_pair("#{from_type}_available".to_sym, from_id, from_id, currency)
+      tuples += tuples_for_pair("#{to_type}_available".to_sym, to_id, to_id, currency)
       tuples
     end
 
-    def perform(operation_id)
-      from_stakeholder_id, from_stakeholder_type = from_stakeholder
-      to_stakeholder_id, to_stakeholder_type = to_stakeholder
+    def runtime_check
+      from_id, from_type = stakeholder_for("from_")
+      balance = available_balance(from_id, from_type)
 
-      balance = available_balance
-      if self.amount.nil?
-        self.amount = balance
-      elsif self.amount > balance
-        raise ArgumentError, "amount is larger than available balance"
+      if balance <= 0
+        errors.add(:base, "no available balance to transfer")
+        return
       end
 
+      if amount.nil?
+        self.amount = balance
+      elsif amount > balance
+        errors.add(:amount, "is larger than available balance")
+      end
+    end
+
+    def perform(operation_id)
+      from_id, from_type = stakeholder_for("from_")
+      to_id, to_type = stakeholder_for("to_")
+
       EntryPair.public_send(
-        "add_#{from_stakeholder_type}_available".to_sym,
-        from_stakeholder_id,
-        from_stakeholder_id,
-        -self.amount,
+        "add_#{from_type}_available".to_sym,
+        from_id,
+        from_id,
+        -amount,
         currency,
         operation_id:
       )
       EntryPair.public_send(
-        "add_#{to_stakeholder_type}_available".to_sym,
-        to_stakeholder_id,
-        to_stakeholder_id,
-        self.amount,
+        "add_#{to_type}_available".to_sym,
+        to_id,
+        to_id,
+        amount,
         currency,
         operation_id:
       )
@@ -62,31 +71,13 @@ module Stern
 
     private
 
-    def available_balance
-      stakeholder_id, stakeholder_type = from_stakeholder
-
+    def available_balance(stakeholder_id, stakeholder_type)
       BalanceQuery.new(
         gid: stakeholder_id,
         book_id: "#{stakeholder_type}_available".to_sym,
         currency:,
         timestamp: Time.current
       ).call
-    end
-
-    def from_stakeholder
-      return [ from_merchant_id, :merchant ] if from_merchant_id.present?
-      return [ from_customer_id, :customer ] if from_customer_id.present?
-      return [ from_partner_id, :partner ] if from_partner_id.present?
-
-      [ nil, nil ]
-    end
-
-    def to_stakeholder
-      return [ to_merchant_id, :merchant ] if to_merchant_id.present?
-      return [ to_customer_id, :customer ] if to_customer_id.present?
-      return [ to_partner_id, :partner ] if to_partner_id.present?
-
-      [ nil, nil ]
     end
   end
 end

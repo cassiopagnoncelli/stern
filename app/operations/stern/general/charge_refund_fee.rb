@@ -11,13 +11,13 @@ module Stern
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
-      stakeholder_id, stakeholder_type = stakeholder
+      stakeholder_id, stakeholder_type = stakeholder_for
 
       tuples_for_pair("apply_#{stakeholder_type}_credit".to_sym, stakeholder_id, stakeholder_id, currency)
     end
 
     def perform(operation_id)
-      stakeholder_id, stakeholder_type = stakeholder
+      stakeholder_id, stakeholder_type = stakeholder_for
 
       apply_available_credit(stakeholder_id, stakeholder_type, operation_id)
 
@@ -50,11 +50,5 @@ module Stern
       )
     end
 
-    def stakeholder
-      return [ merchant_id, :merchant ] if merchant_id.present?
-      return [ partner_id, :partner ] if partner_id.present?
-
-      [ nil, nil ]
-    end
   end
 end

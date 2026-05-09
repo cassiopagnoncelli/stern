@@ -140,6 +140,32 @@ module Stern
       ::Stern.cur(name_or_index, result:)
     end
 
+    # Returns `[id, type]` for the first present `<prefix><type>_id` input,
+    # scanning `:merchant`, `:customer`, `:partner` in that order. Returns
+    # `[nil, nil]` when none is set.
+    #
+    # `prefix` lets ops with multiple stakeholder slots (e.g. `TransferBalance`'s
+    # `from_*` / `to_*`) reuse the same scan:
+    #
+    #   stakeholder_for           # → [merchant_id, :merchant] etc.
+    #   stakeholder_for("from_")  # → [from_merchant_id, :merchant] etc.
+    #
+    # Subclasses pair this with `validates_exactly_one_of` on the same fields
+    # so exactly one branch is reachable after validation.
+    STAKEHOLDER_TYPES = %i[merchant customer partner].freeze
+
+    def stakeholder_for(prefix = "")
+      STAKEHOLDER_TYPES.each do |type|
+        attr = :"#{prefix}#{type}_id"
+        next unless self.class.inputs.include?(attr)
+
+        id = public_send(attr)
+        return [ id, type ] if id.present?
+      end
+
+      [ nil, nil ]
+    end
+
     # Runs the operation. Returns the Operation id (either a new one or, when `idem_key`
     # matches an existing operation with identical params, the existing one).
     #
@@ -182,6 +208,18 @@ module Stern
       raise NotImplementedError
     end
 
+    # Hook for subclasses to verify state-dependent preconditions that cannot be
+    # expressed as input validations (e.g. balance checks against a book that
+    # was just locked by `acquire_advisory_locks`). Runs after the audit row is
+    # written and before `perform`, so the read sees the same snapshot the
+    # writes will use. Add violations via `errors.add(...)`; `BaseOperation`
+    # will raise `ArgumentError` with `errors.full_messages.to_sentence` if any
+    # are present, matching the shape of input-validation failures.
+    #
+    # Subclasses may also assign to inputs (e.g. fill in a defaulted amount
+    # from a balance read) since this runs under the operation's locks.
+    def runtime_check; end
+
     def display
       params_str = operation_params.map { |k, v| "#{k}=#{v}" }.join(" ")
       format(
@@ -217,8 +255,15 @@ module Stern
 
     # Creates the Operation audit record and dispatches to the subclass's `perform`.
     # Mutates `self.operation` so the subclass can access it via attr_accessor.
+    # Between the audit row and `perform`, runs `runtime_check` so subclasses
+    # can verify state-dependent preconditions under the advisory locks; any
+    # `errors` accumulated there raise `ArgumentError` with the same message
+    # shape as input-validation failures.
     def record_and_perform(idem_key)
       log_operation(idem_key)
+      runtime_check
+      raise ArgumentError, errors.full_messages.to_sentence if errors.any?
+
       perform(operation.id)
     end
 
