@@ -337,12 +337,14 @@ instantiates the operation and runs it with the stored params.
 Audits (read-only, safe to call anywhere):
 
 ```ruby
-Stern::Doctor.consistent?                                              # sum(all amounts) == 0
+Stern::Doctor.amount_consistent?                                       # sum(all amounts) == 0
 Stern::Doctor.amount_inconsistency                                     # nil, or { sum: <non-zero> }
 Stern::Doctor.ending_balance_consistent?(book_id:, gid:, currency:)    # ledger cascade is intact
 Stern::Doctor.first_ending_balance_inconsistency(book_id:, gid:, currency:)
                                                                        # nil, or detail of the first bad row
 Stern::Doctor.ending_balances_inconsistencies(book_id:, gid:, currency:) # => [entry_id, ...]
+Stern::Doctor.first_inconsistency                                      # nil, or tagged detail of the first
+                                                                       # broken invariant across the whole ledger
 ```
 
 The `_inconsistency` / `first_*` companions return `nil` on success and a

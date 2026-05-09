@@ -5,6 +5,24 @@ All notable changes to Stern are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`Stern::Doctor.first_inconsistency`.** Full ledger health check that
+  walks both invariants (`sum(amount) == 0` and per-tuple ending-balance
+  cascade) and returns `nil` on success or a tagged detail hash
+  (`{ kind: :amount_sum, ... }` or `{ kind: :ending_balance, book_id:,
+  gid:, currency:, ... }`) identifying the first break. O(n_entries) —
+  not for hot paths.
+
+### Removed
+
+- **`Stern::Doctor.consistent?`.** The name implied a global health check
+  but the body only verified `sum(amount) == 0`, leaving cascade
+  corruption invisible. Call `amount_consistent?` for the narrow check or
+  the new `first_inconsistency` for a real audit.
+
 ## [1.8.0] — 2026-05-09
 
 Withdrawal-flow rework. The lifecycle now exposes explicit forward operations

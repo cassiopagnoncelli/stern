@@ -32,6 +32,10 @@ module Stern
       it "exposes nil detail when the global amount sums to zero" do
         expect(described_class.amount_inconsistency).to be_nil
       end
+
+      it "first_inconsistency returns nil when both invariants hold" do
+        expect(described_class.first_inconsistency).to be_nil
+      end
     end
 
     context "when inconsistent balance" do
@@ -66,6 +70,35 @@ module Stern
         # Original three entry-pairs sum to zero; corrupting one Entry's amount
         # from 100 → 50 leaves the global sum at -50.
         expect(described_class.amount_inconsistency).to eq(sum: -50)
+      end
+
+      it "first_inconsistency reports the amount-sum break first" do
+        expect(described_class.first_inconsistency).to eq(kind: :amount_sum, sum: -50)
+      end
+    end
+
+    context "when only the ending-balance cascade is broken" do
+      before do
+        seed_entries
+        # Corrupt the cascade without touching `amount`, so the global sum
+        # invariant still holds and `first_inconsistency` falls through to
+        # the per-tuple walk.
+        # rubocop:disable Rails/SkipsModelValidations
+        entries.second.update_column(:ending_balance, 9999)
+        # rubocop:enable Rails/SkipsModelValidations
+      end
+
+      it "first_inconsistency reports the ending-balance break with tuple context" do
+        detail = described_class.first_inconsistency
+
+        expect(detail).to include(
+          kind: :ending_balance,
+          book_id:,
+          gid:,
+          currency:,
+          entry_id: entries.second.id,
+          actual_ending_balance: 9999,
+        )
       end
     end
 
