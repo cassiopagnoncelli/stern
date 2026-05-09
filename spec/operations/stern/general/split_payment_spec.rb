@@ -77,20 +77,27 @@ module Stern
     end
 
     describe "#target_tuples" do
-      it "merchant: pins merchant_id to split_payment_merchant pair's two books" do
+      it "merchant: pins payment_id on the payment book, merchant_id on merchant_pending" do
         op = described_class.new(**valid_inputs)
         expect(op.target_tuples).to eq([
-          [ "payment", merchant_id, "BRL" ],
+          [ "payment", payment_id, "BRL" ],
           [ "merchant_pending", merchant_id, "BRL" ]
         ])
       end
 
-      it "partner: pins partner_id to split_payment_partner pair's two books" do
+      it "partner: pins payment_id on the payment book, partner_id on partner_pending" do
         op = described_class.new(**valid_inputs(merchant_id: nil, partner_id: partner_id))
         expect(op.target_tuples).to eq([
-          [ "payment", partner_id, "BRL" ],
+          [ "payment", payment_id, "BRL" ],
           [ "partner_pending", partner_id, "BRL" ]
         ])
+      end
+
+      it "two splits of the same payment to different merchants serialize on (payment, payment_id)" do
+        op_a = described_class.new(**valid_inputs)
+        op_b = described_class.new(**valid_inputs(merchant_id: merchant_id + 1))
+        shared = op_a.target_tuples & op_b.target_tuples
+        expect(shared).to eq([ [ "payment", payment_id, "BRL" ] ])
       end
     end
 

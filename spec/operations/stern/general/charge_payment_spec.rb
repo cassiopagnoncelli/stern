@@ -91,10 +91,10 @@ module Stern
     end
 
     describe "#target_tuples" do
-      it "pins charge_id to payment_<method> and payment_id to payment" do
+      it "pins charge_id to charged_<method> and payment_id to payment" do
         op = described_class.new(**valid_inputs(payment_method: "pix"))
         expect(op.target_tuples).to eq([
-          [ "payment_pix", charge_id, "BRL" ],
+          [ "charged_pix", charge_id, "BRL" ],
           [ "payment", payment_id, "BRL" ]
         ])
       end
@@ -132,10 +132,10 @@ module Stern
         )
       end
 
-      it "credits the payment book and debits payment_pix at gid=payment_id" do
+      it "credits the payment book and debits charged_pix at gid=payment_id" do
         described_class.new(**valid_inputs).call
         expect(::Stern.balance(payment_id, :payment, :BRL)).to eq(9900)
-        expect(::Stern.balance(payment_id, :payment_pix, :BRL)).to eq(-9900)
+        expect(::Stern.balance(payment_id, :charged_pix, :BRL)).to eq(-9900)
       end
 
       it "stamps every entry with the operation's currency" do
