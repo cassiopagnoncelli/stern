@@ -191,14 +191,22 @@ module Stern
           record_and_perform(idem_key)
         end
       rescue ActiveRecord::RecordNotUnique => e
-        # Lost the race against another concurrent caller with the same
-        # idem_key. Our transaction has rolled back; the other caller's
-        # Operation row is now committed. Return its id so the race is
-        # benign from this caller's perspective. Any RecordNotUnique not
-        # tied to idem_key propagates unchanged.
-        winner = idem_key && Operation.find_by(idem_key: idem_key)
-        raise e if winner.nil?
-        return winner.id
+        # Race-loser path: we lost an INSERT race on stern_operations.idem_key.
+        # Two narrowing requirements before we can treat this as a benign replay:
+        #
+        #   1. The unique-violation must be on the idem_key index — not on any
+        #      other unique constraint (e.g. an entries-table index hit during
+        #      `perform`). Otherwise we'd mask real bugs as idempotent successes.
+        #   2. The winner's name+params must match ours. Otherwise this is the
+        #      same hazard `find_existing_operation` raises on, just observed
+        #      one statement later through a transaction rollback. Routing
+        #      through `find_existing_operation` keeps both detection paths in
+        #      sync — same comparison, same raise.
+        raise e unless idem_key && Operation.idem_key_collision?(e)
+
+        existing = find_existing_operation(idem_key)
+        raise e if existing.nil? # winner deleted between rollback and reread; treat as fault
+        return existing.id
       end
 
       operation.id

@@ -1,5 +1,11 @@
 module Stern
   class Operation < ApplicationRecord
+    # Name of the partial unique index on `stern_operations.idem_key`. Kept in
+    # lockstep with the `add_index` in db/migrate/20260427000000_init_stern_schema.rb;
+    # used by `idem_key_collision?` to distinguish RecordNotUnique caused by an
+    # idem_key replay from any other unique-violation surfaced via this table.
+    IDEM_KEY_INDEX = "index_stern_operations_on_idem_key".freeze
+
     has_many :entry_pairs, class_name: "Stern::EntryPair", dependent: :restrict_with_exception
 
     validates :name, presence: true, allow_blank: false, allow_nil: false
@@ -9,6 +15,18 @@ module Stern
       allow_blank: true,
       uniqueness: true,
       length: { minimum: 8, maximum: 24, allow_nil: true, allow_blank: false }
+
+    # True iff `err` is a unique-violation specifically against the idem_key
+    # index. Inspects PG's CONSTRAINT_NAME diagnostic field (the same approach
+    # `Entry.non_negative_violation?` uses for CHECK violations) so the caller
+    # can swallow benign idem_key replay races without masking unrelated
+    # uniqueness failures from `perform`.
+    def self.idem_key_collision?(err)
+      cause = err.cause
+      return false unless defined?(PG::UniqueViolation) && cause.is_a?(PG::UniqueViolation)
+
+      cause.result&.error_field(PG::Result::PG_DIAG_CONSTRAINT_NAME) == IDEM_KEY_INDEX
+    end
 
     # Returns the CamelCase names of every operation class exposed by the active chart's
     # operations module (e.g. ["ChargePayment"] when the chart declares `operations: general`).
