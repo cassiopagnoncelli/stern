@@ -8,7 +8,7 @@ module Stern
     validates :customer_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :partner_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates_exactly_one_of :merchant_id, :customer_id, :partner_id
-    validates :amount, presence: true, numericality: { only_integer: true }
+    validates :amount, presence: true, numericality: { other_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
     validates :capped, inclusion: { in: [ true, false ] }
 
@@ -25,12 +25,12 @@ module Stern
     def perform(operation_id)
       stakeholder_id, stakeholder_type = stakeholder
 
-      if capped && amount > available_balance
+      if capped && amount.positive? && amount > available_balance
         raise ArgumentError, "amount is larger than available balance"
       end
 
       EntryPair.public_send(
-        "withdraw_lock_withdrawal_#{stakeholder_type}".to_sym,
+        "add_lock_withdrawal_#{stakeholder_type}".to_sym,
         stakeholder_id,
         stakeholder_id,
         amount,
@@ -42,6 +42,8 @@ module Stern
     private
 
     def available_balance
+      stakeholder_id, stakeholder_type = stakeholder
+
       BalanceQuery.new(
         gid: stakeholder_id,
         book_id: "#{stakeholder_type}_available".to_sym,
