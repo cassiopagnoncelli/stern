@@ -63,12 +63,12 @@ module Stern
         expect(op.errors[:currency]).to include(/not a recognized currency/)
       end
 
-      it "defaults capped to true when omitted" do
-        expect(described_class.new(**valid_inputs).capped).to eq(true)
+      it "defaults allow_overdraft to false when omitted" do
+        expect(described_class.new(**valid_inputs).allow_overdraft).to eq(false)
       end
 
-      it "rejects a non-boolean capped" do
-        expect(described_class.new(**valid_inputs(capped: "yes"))).not_to be_valid
+      it "rejects a non-boolean allow_overdraft" do
+        expect(described_class.new(**valid_inputs(allow_overdraft: "yes"))).not_to be_valid
       end
     end
 
@@ -135,7 +135,7 @@ module Stern
         expect(EntryPair.last.code).to eq("lock_withdrawal_partner")
       end
 
-      context "when capped (default)" do
+      context "when overdraft disallowed (default)" do
         it "raises InsufficientFunds when amount exceeds available balance" do
           seed_available({ merchant_id: }, amount: 1000)
 
@@ -178,11 +178,11 @@ module Stern
         end
       end
 
-      context "when uncapped" do
+      context "when allow_overdraft is true" do
         it "allows amount > available_balance and drives available negative" do
           seed_available({ merchant_id: }, amount: 1000)
 
-          described_class.new(**valid_inputs(amount: 5000, capped: false)).call
+          described_class.new(**valid_inputs(amount: 5000, allow_overdraft: true)).call
 
           expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(-4000)
           expect(::Stern.balance(merchant_id, :wdw_merchant_locked, :BRL)).to eq(5000)

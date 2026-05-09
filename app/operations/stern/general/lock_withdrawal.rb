@@ -2,7 +2,7 @@
 
 module Stern
   class LockWithdrawal < BaseOperation
-    inputs :merchant_id, :partner_id, :customer_id, :amount, :currency, :capped
+    inputs :merchant_id, :partner_id, :customer_id, :amount, :currency, :allow_overdraft
 
     validates :merchant_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :customer_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
@@ -10,13 +10,13 @@ module Stern
     validates_exactly_one_of :merchant_id, :customer_id, :partner_id
     validates :amount, presence: true, numericality: { greater_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
-    # capped defaults to true via normalize_inputs (runs in the constructor);
-    # this inclusion check is for type-guarding non-boolean inputs like "yes",
-    # not for enforcing the default.
-    validates :capped, inclusion: { in: [ true, false ] }
+    # allow_overdraft defaults to false via normalize_inputs (runs in the
+    # constructor); this inclusion check is for type-guarding non-boolean
+    # inputs like "yes", not for enforcing the default.
+    validates :allow_overdraft, inclusion: { in: [ true, false ] }
 
     def normalize_inputs
-      self.capped = true if capped.nil?
+      self.allow_overdraft = false if allow_overdraft.nil?
     end
 
     def target_tuples
@@ -26,7 +26,7 @@ module Stern
     end
 
     def runtime_check
-      return unless capped
+      return if allow_overdraft
 
       stakeholder_id, stakeholder_type = stakeholder_for
       available = available_balance(stakeholder_id, stakeholder_type)
