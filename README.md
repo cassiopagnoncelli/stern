@@ -130,7 +130,23 @@ operation_id = op.call(idem_key: "charge-1001-unique")
 
 `idem_key` makes the call replay-safe: calling again with the same key and identical
 params returns the existing `operation_id`; calling with the same key but different
-params raises.
+params raises `Stern::IdempotencyConflict`. The exception carries the conflicting
+state for translation into a 409-style response or a telemetry breadcrumb:
+
+```ruby
+begin
+  op.call(idem_key: key)
+rescue Stern::IdempotencyConflict => e
+  e.idem_key                # the key that collided
+  e.existing_operation_id   # id of the previously-recorded Operation
+  e.expected_params         # params the recorded Operation was called with
+  e.actual_params           # params the current call attempted
+end
+```
+
+The same exception surfaces from the race-loser path when two concurrent callers
+hit the unique index with mismatched params, so a single rescue covers both
+detection windows.
 
 ### Query a balance
 
