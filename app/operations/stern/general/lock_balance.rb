@@ -12,25 +12,32 @@ module Stern
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
-      if merchant_id.present?
-        tuples_for_pair(:lock_merchant_balance, merchant_id, merchant_id, currency)
-      elsif customer_id.present?
-        tuples_for_pair(:lock_customer_balance, customer_id, customer_id, currency)
-      elsif partner_id.present?
-        tuples_for_pair(:lock_partner_balance, partner_id, partner_id, currency)
-      else
-        []
-      end
+      stakeholder_id, stakeholder_type = stakeholder
+
+      tuples_for_pair("lock_#{stakeholder_type}_balance".to_sym, stakeholder_id, stakeholder_id, currency)
     end
 
     def perform(operation_id)
-      if merchant_id.present?
-        EntryPair.add_lock_merchant_balance(merchant_id, merchant_id, amount, currency, operation_id:)
-      elsif customer_id.present?
-        EntryPair.add_lock_customer_balance(customer_id, customer_id, amount, currency, operation_id:)
-      elsif partner_id.present?
-        EntryPair.add_lock_partner_balance(partner_id, partner_id, amount, currency, operation_id:)
-      end
+      stakeholder_id, stakeholder_type = stakeholder
+
+      EntryPair.public_send(
+        "add_lock_#{stakeholder_type}_balance".to_sym,
+        stakeholder_id,
+        stakeholder_id,
+        amount,
+        currency,
+        operation_id:
+      )
+    end
+
+    private
+
+    def stakeholder
+      return [ merchant_id, :merchant ] if merchant_id.present?
+      return [ customer_id, :customer ] if customer_id.present?
+      return [ partner_id, :partner ] if partner_id.present?
+
+      [ nil, nil ]
     end
   end
 end
