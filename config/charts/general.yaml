@@ -317,6 +317,18 @@ entry_pairs:
     book_sub: partner_available
     book_add: refund_locked
 
+  # Pre-confirm cancel (gateway declined the refund). Mirrors lock_refund_*
+  # keying by funder so the released funds return to the same available book
+  # they were drawn from. Use only before confirm_refund; once confirmed the
+  # refund_locked balance has drained to refund_confirmed and there is no
+  # cancel path — handle post-settlement reversals as a separate flow.
+  cancel_refund_merchant:
+    book_sub: refund_locked
+    book_add: merchant_available
+  cancel_refund_partner:
+    book_sub: refund_locked
+    book_add: partner_available
+
   confirm_refund:
     book_sub: refund_locked
     book_add: refund_confirmed
