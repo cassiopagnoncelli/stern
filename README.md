@@ -130,7 +130,9 @@ operation_id = op.call(idem_key: "charge-1001-unique")
 
 `idem_key` makes the call replay-safe: calling again with the same key and identical
 params returns the existing `operation_id`; calling with the same key but different
-params raises `Stern::IdempotencyConflict`. The exception carries the conflicting
+params raises `Stern::IdempotencyConflict`. Keys must be 8–24 characters (the column
+is `limit: 24` to keep the unique B-tree index compact, so UUIDs/ULIDs won't fit —
+use a shorter scheme). The exception carries the conflicting
 state for translation into a 409-style response or a telemetry breadcrumb:
 
 ```ruby

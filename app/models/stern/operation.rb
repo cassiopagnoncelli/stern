@@ -10,6 +10,9 @@ module Stern
 
     validates :name, presence: true, allow_blank: false, allow_nil: false
     validates :params, presence: true, allow_blank: true
+    # 24-char ceiling matches the `limit: 24` on the column (see init_stern_schema)
+    # and keeps the unique B-tree index in a fixed-footprint regime where comparisons
+    # are cheap. Don't widen to fit UUIDs (36) or ULIDs (26) — pick a shorter scheme.
     validates :idem_key,
       presence: true,
       allow_blank: true,
