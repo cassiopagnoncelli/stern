@@ -15,11 +15,12 @@ operations: general
 books:
   # Merchant
   #
-  # `*_locked` is non_negative so UnlockBalance cannot over-debit a
-  # stakeholder's locked slice (DB-level backstop behind the op's
-  # friendly pre-check).
+  # `*_locked` and `*_withheld` are non_negative so UnlockBalance and
+  # ReleaseWithheldBalance cannot over-debit a stakeholder's locked or
+  # withheld slice (DB-level backstop behind each op's friendly pre-check).
   - merchant_available
-  - merchant_withheld
+  - merchant_withheld:
+      non_negative: true
   - merchant_pending
   - merchant_locked:
       non_negative: true
@@ -29,7 +30,8 @@ books:
 
   # Partner
   - partner_available
-  - partner_withheld
+  - partner_withheld:
+      non_negative: true
   - partner_pending
   - partner_locked:
       non_negative: true
@@ -39,7 +41,8 @@ books:
 
   # Customer
   - customer_available
-  - customer_withheld
+  - customer_withheld:
+      non_negative: true
   - customer_pending
   - customer_locked:
       non_negative: true
@@ -123,9 +126,14 @@ entry_pairs:
   # `lock_*_balance` / `unlock_*_balance` form a two-state lifecycle
   # `*_available <-> *_locked`. Unlike withdrawals, there's no `confirmed`
   # companion, so a single inverse pair (UnlockBalance) suffices.
+  # `withhold_*_balance` / `release_withheld_*_balance` form the same
+  # two-state lifecycle for `*_available <-> *_withheld` (ReleaseWithheldBalance).
   withhold_merchant_balance:
     book_sub: merchant_available
     book_add: merchant_withheld
+  release_withheld_merchant_balance:
+    book_sub: merchant_withheld
+    book_add: merchant_available
   settle_merchant_balance:
     book_sub: merchant_pending
     book_add: merchant_available
@@ -145,6 +153,9 @@ entry_pairs:
   withhold_partner_balance:
     book_sub: partner_available
     book_add: partner_withheld
+  release_withheld_partner_balance:
+    book_sub: partner_withheld
+    book_add: partner_available
   settle_partner_balance:
     book_sub: partner_pending
     book_add: partner_available
@@ -164,6 +175,9 @@ entry_pairs:
   withhold_customer_balance:
     book_sub: customer_available
     book_add: customer_withheld
+  release_withheld_customer_balance:
+    book_sub: customer_withheld
+    book_add: customer_available
   settle_customer_balance:
     book_sub: customer_pending
     book_add: customer_available

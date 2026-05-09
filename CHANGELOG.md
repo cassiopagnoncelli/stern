@@ -10,7 +10,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Withdrawal-flow rework. The lifecycle now exposes explicit forward operations
 for every transition out of `wdw_*_locked` / `wdw_*_confirmed`, with intent
 preserved in the audit trail instead of inferred from a sign flip. The same
-shape is now extended to `lock_*_balance` via `UnlockBalance`.
+shape is now extended to `lock_*_balance` via `UnlockBalance` and to
+`withhold_*_balance` via `ReleaseWithheldBalance`.
 
 ### Added
 
@@ -26,6 +27,12 @@ shape is now extended to `lock_*_balance` via `UnlockBalance`.
   `confirmed` companion stage exists for `*_locked`, so a single inverse
   pair suffices. Pre-check raises `Stern::InsufficientFunds` when the
   unlock exceeds the current locked balance.
+- **`Stern::ReleaseWithheldBalance`.** Releases a previously withheld
+  balance back to `*_available` (`*_withheld → *_available`). Inverse of
+  `WithholdBalance`; like `*_locked`, `*_withheld` has no `confirmed`
+  companion, so a single inverse pair suffices. Pre-check raises
+  `Stern::InsufficientFunds` when the release exceeds the current
+  withheld balance.
 - **`allow_overdraft` flag on `LockWithdrawal`, `LockBalance`, `Divest`,
   and `TransferBalance`.** Defaults to `false` (the safe path); set `true`
   to authorize a write that would otherwise be rejected. Replaces the
@@ -40,6 +47,9 @@ shape is now extended to `lock_*_balance` via `UnlockBalance`.
 - **DB-level backstop on `*_locked`.** `merchant_locked`, `partner_locked`,
   and `customer_locked` are now `non_negative: true`, behind
   `UnlockBalance`'s pre-check.
+- **DB-level backstop on `*_withheld`.** `merchant_withheld`,
+  `partner_withheld`, and `customer_withheld` are now `non_negative: true`,
+  behind `ReleaseWithheldBalance`'s pre-check.
 
 ### Changed
 
@@ -54,6 +64,9 @@ shape is now extended to `lock_*_balance` via `UnlockBalance`.
 - **`LockBalance#amount` must be positive** — the validator is now
   `greater_than: 0` (was `other_than: 0`). The negative-amount unlock path
   is removed; use `UnlockBalance` instead.
+- **`WithholdBalance#amount` must be positive** — the validator is now
+  `greater_than: 0` (was `other_than: 0`). The negative-amount release
+  path is removed; use `ReleaseWithheldBalance` instead.
 
 ### Removed
 
@@ -61,6 +74,8 @@ shape is now extended to `lock_*_balance` via `UnlockBalance`.
   `CancelWithdrawal` for pre-settlement release, `ReverseWithdrawal` for
   post-settlement reversal.
 - **Negative-amount unlock path on `LockBalance`.** Use `UnlockBalance`.
+- **Negative-amount release path on `WithholdBalance`.** Use
+  `ReleaseWithheldBalance`.
 - **`capped` flag on `LockWithdrawal` and `Divest`.** Renamed to
   `allow_overdraft`; default behavior is unchanged
   (`capped: true` ↔ `allow_overdraft: false`).
@@ -70,12 +85,12 @@ shape is now extended to `lock_*_balance` via `UnlockBalance`.
 Hosts that pass `capped:` to `LockWithdrawal` or `Divest`, rescue
 `ArgumentError` from `LockWithdrawal` / `TransferBalance` for funds-shortage
 errors, rely on `LockWithdrawal.new(amount: -X)` /
-`LockBalance.new(amount: -X)` to unlock, or call `LockBalance` with an
-amount exceeding the per-gid available balance will need to update.
-`LockBalance` callers that intentionally overdraft can pass
-`allow_overdraft: true`. The chart-level `non_negative` additions take
-effect on the next `db/seeds/books.rb` run (test suite seeds in
-`before(:suite)`).
+`LockBalance.new(amount: -X)` / `WithholdBalance.new(amount: -X)` to
+unlock or release, or call `LockBalance` with an amount exceeding the
+per-gid available balance will need to update. `LockBalance` callers
+that intentionally overdraft can pass `allow_overdraft: true`. The
+chart-level `non_negative` additions take effect on the next
+`db/seeds/books.rb` run (test suite seeds in `before(:suite)`).
 
 ## [1.3.0] — 2026-04-23
 
