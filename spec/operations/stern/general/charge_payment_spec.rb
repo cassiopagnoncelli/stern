@@ -132,7 +132,7 @@ module Stern
         )
       end
 
-      it "credits the payment book and debits charged_pix at gid=payment_id" do
+      it "credits payment and debits charged_pix, both at gid=payment_id" do
         described_class.new(**valid_inputs).call
         expect(::Stern.balance(payment_id, :payment, :BRL)).to eq(9900)
         expect(::Stern.balance(payment_id, :charged_pix, :BRL)).to eq(-9900)

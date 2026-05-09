@@ -82,7 +82,7 @@ books:
 
   # Chargebacks
   - chargeback_locked
-  - chargeback_confirmed
+  - chargeback_loss
 
   - chargeback_fee_merchant
   - chargeback_fee_partner
@@ -282,6 +282,14 @@ entry_pairs:
   confirm_refund:
     book_sub: refund_locked
     book_add: refund_confirmed
+  # Refund is a liability transfer, not a P&L event: funds move from the
+  # funder's available book to customer_available, conserving total platform
+  # liability. Funder identity (merchant vs partner) is consumed at
+  # lock_refund_*, so refund_confirmed is fungible and settle has only one
+  # destination by design. If refunds ever need to route elsewhere
+  # (void-to-merchant, third party), split into settle_refund_customer /
+  # settle_refund_merchant variants and re-thread funder identity through
+  # confirm_refund.
   settle_refund:
     book_sub: refund_confirmed
     book_add: customer_available
@@ -303,9 +311,15 @@ entry_pairs:
     book_sub: partner_available
     book_add: chargeback_locked
   
+  # Chargeback is loss recognition, not a liability transfer: chargeback_loss
+  # is a terminal P&L sink (parallel to chargeback_fee_*), since the issuing
+  # bank has already paid the cardholder externally. There is no settle step,
+  # and no reversal pair — if dispute reversals ever become a real flow, add
+  # explicit reverse_* pairs keyed by funder; do not call Chargeback with a
+  # negative amount.
   confirm_chargeback:
     book_sub: chargeback_locked
-    book_add: chargeback_confirmed
+    book_add: chargeback_loss
   
   # Chargeback fees
   charge_chargeback_fee_merchant:
