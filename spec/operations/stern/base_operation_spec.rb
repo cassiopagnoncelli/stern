@@ -572,6 +572,22 @@ module Stern
           expect { mismatched.call(transaction: false, idem_key: key) }
             .to raise_error(/different parameters/)
         end
+
+        # Regression: `Operation.params` is a json column. After storage, a Symbol
+        # value comes back as a String, so a naive `op.params == operation_params`
+        # would falsely reject the replay. `find_existing_operation` must compare
+        # against the JSON-normalized projection of the live params.
+        it "matches a replay whose live inputs include a Symbol that JSON-coerces to a String" do
+          sym_class = Class.new(described_class) do
+            inputs :tag
+            def perform(_); end
+          end
+          stub_const("Stern::SymOp", sym_class)
+
+          first_id = sym_class.new(tag: :pending).call(transaction: false, idem_key: key)
+          replay   = sym_class.new(tag: :pending)
+          expect(replay.call(transaction: false, idem_key: key)).to eq(first_id)
+        end
       end
     end
   end

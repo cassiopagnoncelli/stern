@@ -328,14 +328,26 @@ module Stern
     # Looks up an Operation by idem_key. Returns the matching Operation if params also
     # match, nil if no Operation with that key exists, and raises if one exists with
     # different params (attempted replay with changed inputs).
+    #
+    # Comparison goes through `json_normalized_params` so live Ruby values (Symbols,
+    # Times, BigDecimals, …) compare equal to the JSON-roundtripped shape that
+    # `Operation.params` returns from its `json` column. Without this, replaying an
+    # op whose inputs include any non-Integer/String/Bool would falsely diverge from
+    # its stored row.
     def find_existing_operation(idem_key)
       return nil if idem_key.nil?
 
       op = Operation.find_by(idem_key:)
       return nil if op.nil?
-      return op if op.name == operation_name && op.params == operation_params
+      return op if op.name == operation_name && op.params == json_normalized_params
 
       raise "Operation with idem_key #{idem_key} already exists with different parameters"
+    end
+
+    # `operation_params` projected through JSON's type system, so the result has the
+    # same shape as `Operation.params` after a round-trip through the `json` column.
+    def json_normalized_params
+      JSON.parse(operation_params.to_json)
     end
   end
 end
