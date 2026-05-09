@@ -29,6 +29,26 @@ module Stern
       new(**kwargs).call
     end
 
+    # Returns the per-status counts that a `call` *would* delete right now,
+    # without performing any deletes. Used by the admin pruner page so an
+    # operator can see the impact before committing to a run. Skipped statuses
+    # (nil retention) report 0.
+    def self.preview(success_days:, failed_days:, pending_days:, clock: -> { Time.current })
+      now = clock.call
+      { success: success_days, failed: failed_days, pending: pending_days }.to_h do |status, days|
+        count =
+          if days.nil?
+            0
+          else
+            OperationAttempt
+              .where(status: OperationAttempt.statuses.fetch(status.to_s))
+              .where("attempted_at < ?", now - days.days)
+              .count
+          end
+        [ status, count ]
+      end
+    end
+
     def initialize(
       success_days:,
       failed_days:,
@@ -36,6 +56,7 @@ module Stern
       batch_size: DEFAULT_BATCH_SIZE,
       max_batches: nil,
       sleep_between: DEFAULT_SLEEP_BETWEEN,
+      triggered_by: "unknown",
       logger: Rails.logger,
       clock: -> { Time.current }
     )
@@ -51,6 +72,7 @@ module Stern
       @batch_size = batch_size
       @max_batches = max_batches
       @sleep_between = sleep_between
+      @triggered_by = triggered_by
       @logger = logger
       @clock = clock
     end
@@ -113,7 +135,8 @@ module Stern
       @logger.info(
         "[Stern::OperationAttemptPruner] pruned " \
         "success=#{result.success} failed=#{result.failed} pending=#{result.pending} " \
-        "elapsed=#{(result.finished_at - result.started_at).round(2)}s"
+        "elapsed=#{(result.finished_at - result.started_at).round(2)}s " \
+        "triggered_by=#{@triggered_by}"
       )
     end
   end

@@ -1,0 +1,77 @@
+<% content_for :title, "Pruner" %>
+
+<%
+  retention_label = ->(days) { days.nil? ? "default" : "#{days}d" }
+  status_row_classes = "grid grid-cols-[8rem_4rem_1fr_8rem] items-center gap-3 py-2"
+  status_badge_classes = lambda do |status|
+    case status
+    when :success then "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200"
+    when :failed  then "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200"
+    when :pending then "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200"
+    end
+  end
+%>
+
+<div class="max-w-3xl mx-auto p-6 space-y-6">
+  <div class="flex items-baseline justify-between">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Operation Attempt Pruner</h1>
+    <%= link_to "Back to Attempts", admin_attempts_path, class: "text-sm text-blue-600 dark:text-blue-400 hover:underline" %>
+  </div>
+
+  <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-6 space-y-4">
+    <div class="flex items-baseline justify-between">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Configured retention</h2>
+      <span class="text-xs text-gray-500 dark:text-gray-400">From <code>STERN_PRUNE_*_DAYS</code></span>
+    </div>
+    <dl class="text-sm text-gray-700 dark:text-gray-300 grid grid-cols-3 gap-4">
+      <div>
+        <dt class="text-xs uppercase text-gray-500 dark:text-gray-400">Success</dt>
+        <dd class="mt-1 font-mono"><%= retention_label.call(@retention[:success_days]) %></dd>
+      </div>
+      <div>
+        <dt class="text-xs uppercase text-gray-500 dark:text-gray-400">Failed</dt>
+        <dd class="mt-1 font-mono"><%= retention_label.call(@retention[:failed_days]) %></dd>
+      </div>
+      <div>
+        <dt class="text-xs uppercase text-gray-500 dark:text-gray-400">Pending</dt>
+        <dd class="mt-1 font-mono"><%= retention_label.call(@retention[:pending_days]) %></dd>
+      </div>
+    </dl>
+    <p class="text-xs text-gray-500 dark:text-gray-400">
+      Defaults when unset: success=14d, failed=90d, pending=7d.
+    </p>
+  </section>
+
+  <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-6 space-y-4">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Run a prune</h2>
+    <p class="text-sm text-gray-600 dark:text-gray-400">
+      Override retention for this run only. Leave a field blank to use the configured value.
+      The web run is bounded to <%= Stern::Admin::PrunerController::MAX_BATCHES_PER_WEB_RUN %>
+      batches (≈<%= Stern::Admin::PrunerController::MAX_BATCHES_PER_WEB_RUN * Stern::OperationAttemptPruner::DEFAULT_BATCH_SIZE %> rows).
+      For larger backlogs use <code>rake stern:operation_attempts:prune</code>.
+    </p>
+
+    <%= form_with url: admin_run_pruner_path, method: :post, local: true, html: { class: "space-y-4", data: { turbo_confirm: "Run the pruner now? This permanently deletes attempts past the cutoff." } } do |form| %>
+      <div class="space-y-2">
+        <% [ [ :success, :success_days ], [ :failed, :failed_days ], [ :pending, :pending_days ] ].each do |status, key| %>
+          <div class="<%= status_row_classes %>">
+            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium w-fit <%= status_badge_classes.call(status) %>">
+              <%= status.to_s.titleize %>
+            </span>
+            <%= form.number_field key,
+                placeholder: @effective[key].to_s,
+                min: 0,
+                class: "rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2 py-1 text-sm w-20" %>
+            <span class="text-xs text-gray-500 dark:text-gray-400">days; would delete now:</span>
+            <span class="font-mono text-sm text-gray-900 dark:text-gray-100 text-right"><%= number_with_delimiter(@preview[status]) %></span>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+        <%= form.submit "Run prune",
+            class: "inline-flex items-center justify-center rounded-md shadow-sm text-white bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-indigo-400" %>
+      </div>
+    <% end %>
+  </section>
+</div>

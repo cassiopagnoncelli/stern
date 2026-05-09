@@ -203,6 +203,7 @@ module Stern
           success_days: @prune_success_days,
           failed_days:  @prune_failed_days,
           pending_days: @prune_pending_days,
+          triggered_by: "worker",
           logger: @logger,
         )
         @last_prune_at = now

@@ -60,26 +60,26 @@ module Stern
       end
 
       it "batches deletes when there are more rows than batch_size" do
-        5.times { make_attempt(status: :success, attempted_at: now - 30.days) }
+        ids = Array.new(5) { make_attempt(status: :success, attempted_at: now - 30.days).id }
 
         result = described_class.call(
           success_days: 14, failed_days: 90, pending_days: 7,
           batch_size: 2, sleep_between: 0, clock: clock,
         )
 
-        expect(OperationAttempt.where(status: :success).count).to eq(0)
+        expect(OperationAttempt.where(id: ids)).to be_empty
         expect(result.success).to eq(5)
       end
 
       it "honours max_batches as an upper bound on a single run" do
-        5.times { make_attempt(status: :success, attempted_at: now - 30.days) }
+        ids = Array.new(5) { make_attempt(status: :success, attempted_at: now - 30.days).id }
 
         result = described_class.call(
           success_days: 14, failed_days: 90, pending_days: 7,
           batch_size: 2, max_batches: 1, sleep_between: 0, clock: clock,
         )
 
-        expect(OperationAttempt.where(status: :success).count).to eq(3)
+        expect(OperationAttempt.where(id: ids).count).to eq(3)
         expect(result.success).to eq(2)
       end
 

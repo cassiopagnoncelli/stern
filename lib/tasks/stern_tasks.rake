@@ -29,6 +29,7 @@ namespace :stern do
         pending_days: ENV.fetch("STERN_PRUNE_PENDING_DAYS",  "7").to_i,
         batch_size:   ENV.fetch("STERN_PRUNE_BATCH_SIZE", Stern::OperationAttemptPruner::DEFAULT_BATCH_SIZE.to_s).to_i,
         sleep_between: ENV.fetch("STERN_PRUNE_SLEEP", Stern::OperationAttemptPruner::DEFAULT_SLEEP_BETWEEN.to_s).to_f,
+        triggered_by: "rake",
       )
     end
   end

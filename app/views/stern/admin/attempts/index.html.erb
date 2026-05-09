@@ -10,7 +10,7 @@
     success=<%= retention_label.call(@retention_summary[:success]) %>,
     failed=<%= retention_label.call(@retention_summary[:failed]) %>,
     pending=<%= retention_label.call(@retention_summary[:pending]) %>.
-    Older attempts are pruned.
+    <%= link_to "Older attempts are pruned.", admin_pruner_path, class: "underline hover:text-gray-700 dark:hover:text-gray-300" %>
   </p>
   <%= render "stern/admin/shared/paginated_table",
       title: "Operation Attempts",
