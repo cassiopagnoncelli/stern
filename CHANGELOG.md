@@ -20,6 +20,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   same `EntryPair.add_*` calls and same `Stern::InsufficientFunds` messages,
   so existing callers and specs are unaffected. Multi-pair / two-stakeholder
   ops (`TransferBalance`, `ReintegratePayment`, fee ops) are unchanged.
+- **`Stern::Divest` now raises `Stern::InsufficientFunds`** when the
+  per-investment `customer_investment` balance is negative and
+  `allow_overdraft` is false. Previously the op silently no-op'd while still
+  recording an `Operation` audit row, leaving callers with no signal that the
+  divestment hadn't happened. The balance read and check now run in
+  `runtime_check`, so a raise rolls back the audit row alongside any entries.
+  A zero balance is still treated as a no-op (idempotent re-divest).
 
 ## [1.8.0] — 2026-05-09
 

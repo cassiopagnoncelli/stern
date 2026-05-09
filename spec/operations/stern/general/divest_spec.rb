@@ -94,14 +94,27 @@ module Stern
         }.not_to change { EntryPair.where(code: "investment_trade_operation").count }
       end
 
-      it "skips the divestment when allow_overdraft is false and balance is negative" do
+      it "raises InsufficientFunds when allow_overdraft is false and balance is negative" do
         seed_invested(amount: -500)
 
         expect {
           described_class.new(**valid_inputs).call
-        }.not_to change { EntryPair.where(code: "investment_trade_operation").count }
+        }.to raise_error(::Stern::InsufficientFunds, /negative customer_investment balance -500/)
 
         expect(::Stern.balance(investment_id, :customer_investment, :BRL)).to eq(-500)
+      end
+
+      it "rolls back the Operation row when the runtime check raises" do
+        seed_invested(amount: -500)
+        operations_before = Operation.where(name: "Divest").count
+        entries_before = Entry.count
+
+        expect {
+          described_class.new(**valid_inputs).call
+        }.to raise_error(::Stern::InsufficientFunds)
+
+        expect(Operation.where(name: "Divest").count).to eq(operations_before)
+        expect(Entry.count).to eq(entries_before)
       end
 
       it "settles a negative investment balance when allow_overdraft is true" do
