@@ -5,7 +5,7 @@ All notable changes to Stern are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.8.0] — 2026-05-09
 
 Withdrawal-flow rework. The lifecycle now exposes explicit forward operations
 for every transition out of `wdw_*_locked` / `wdw_*_confirmed`, with intent
@@ -41,6 +41,9 @@ shape is now extended to `lock_*_balance` via `UnlockBalance` and to
   companion, so a single inverse pair suffices. Pre-check raises
   `Stern::InsufficientFunds` when the release exceeds the current
   withheld balance.
+- **`Stern::CancelRefund`.** Operation class for the `cancel_refund_*`
+  books introduced in 1.5.0. Pre-check raises `Stern::InsufficientFunds`
+  when the cancel exceeds the current locked refund balance.
 - **`allow_overdraft` flag on `LockWithdrawal`, `LockBalance`, `Divest`,
   and `TransferBalance`.** Defaults to `false` (the safe path); set `true`
   to authorize a write that would otherwise be rejected. Replaces the
@@ -99,6 +102,232 @@ per-gid available balance will need to update. `LockBalance` callers
 that intentionally overdraft can pass `allow_overdraft: true`. The
 chart-level `non_negative` additions take effect on the next
 `db/seeds/books.rb` run (test suite seeds in `before(:suite)`).
+
+## [1.7.0] — 2026-05-09
+
+Audit trail and idempotency hardening. Operations now record every
+invocation in a queryable attempts table, and the idempotency layer
+rejects param-mismatch with a typed exception instead of silently
+returning a stale result.
+
+### Added
+
+- **`Stern::OperationAttempt`.** Append-only audit log for every
+  operation invocation: operation name, params (JSON), `idem_key`,
+  status (`pending` / `succeeded` / `failed`), timing. Migrated by
+  `db/migrate/20260509000000_add_stern_operation_attempts.rb`.
+- **Admin attempts search.** `/stern/admin/attempts` — filter by
+  operation name, status, `idem_key`, and date range. Date filter uses
+  the IDP passport zone via `AuthenticatedController`. Backed by
+  `Stern::OperationAttemptsQuery` with paginated results
+  (5 / 25 / 100 / 500 per page).
+- **`Stern::IdempotencyConflict`.** Typed exception raised when a
+  retried request reuses an `idem_key` with different params. The
+  previous behavior — silent acceptance of the prior result — masked
+  caller bugs.
+- **Tuple-level locking when applying credits.** `ApplyCredit` now
+  acquires per-tuple advisory locks like other balance-mutating ops,
+  closing a concurrent-credit race.
+- **Fail-fast documentation** in the README covering
+  `Stern::IdempotencyConflict` semantics and recommended retry
+  patterns.
+
+### Changed
+
+- **`find_existing_operation` deep-compares params as JSON** rather
+  than by Ruby hash equality, eliminating false-positive idempotency
+  conflicts caused by key ordering or symbol-vs-string differences.
+- **Race-loser path validates winner params** before returning, so a
+  losing thread on an `idem_key` race can't return a
+  partially-mismatched success.
+- **`non_negative` constraint name** promoted to a single Ruby
+  constant, used by the PL/pgSQL trigger and the Ruby exception
+  translator.
+- **`BaseOperation` display layer dropped** in favor of letting
+  callers format attempts as needed.
+
+### Migration notes
+
+Hosts must run `bundle exec rake db:migrate` to create the
+`stern_operation_attempts` table. Code that catches idempotency
+conflicts can keep its existing rescue, but should narrow to
+`Stern::IdempotencyConflict` for clearer intent.
+
+## [1.6.0] — 2026-05-08
+
+Balance and withdrawal operations, the investment family, and admin
+UX polish. Stern now has a complete forward-only operation set
+covering held / withheld / locked balances and the investment
+lifecycle, plus a balance sheet with named presets and zone-correct
+date picking.
+
+### Added
+
+- **Balance ops.** `LockBalance`, `WithholdBalance`, `SettleBalance`,
+  `AdjustBalance`, `TransferBalance`, `Deposit`, `AddCredit`,
+  `ApplyCredit`. Each declares `target_tuples` for per-tuple advisory
+  locking.
+- **Withdrawal forward ops.** `LockWithdrawal`, `ConfirmWithdrawal`,
+  `ChargeWithdrawalFee`. Introduces the `capped:` flag (renamed to
+  `allow_overdraft:` in 1.8.0).
+- **Investment family.** `Invest`, `Divest`, `Trade`. Books for
+  `investment_invest`, `investment_trade`, `investment_trade_operation`,
+  `investment_trade_fee`. Trade has a per-operation protection cap.
+- **Balance entry pairs** in `config/charts/general.yaml` covering the
+  new `*_locked`, `*_withheld`, `*_available`, `*_settled` transitions.
+- **Balance sheet presets** at `config/balance_sheet_presets.yml` —
+  named windows (today, 7d, 30d, MTD, YTD) selectable from the date
+  range picker.
+- **Prefix-grouped balance sheet headers.** Book prefixes (`charge`,
+  `refund`, `chargeback`, `wdw`, `investment`, etc.) map to display
+  groups in `app/controllers/stern/admin/ledger_controller.rb`.
+- **Luxon-based date picker** at `app/assets/builds/luxon.min.js`. JS
+  presets respect the IDP passport zone (`Time.zone.tzinfo.name`),
+  not the browser zone.
+
+### Changed
+
+- **`TransferBalance` rejects self-transfer** (same source and
+  destination gid) at construction time.
+- **All operations** raise on invalid currency at construction rather
+  than at execution.
+- **Uniqueness on entry pairs removed.** Same `(book_id, gid, pair)`
+  can now appear repeatedly; uniqueness is enforced at the operation
+  layer via `idem_key` instead.
+- **`Provision` → `Invest`** rename across operations and books. The
+  old `Allocate` / `Deallocate` drafts collapsed into `Trade`.
+- **`generate_uid` removed.** Operation-level idempotency keys
+  replace the previous entry-level uid generator.
+- **Balance sheet headers** redesigned to surface stakeholder type,
+  currency, and grouping prefix as columns.
+
+### Migration notes
+
+New books seed on the next `db/seeds/books.rb` run. Hosts using the
+`Provision` operation must rename calls to `Invest` (and corresponding
+`Deprovision` calls to `Divest`). Hosts mounting the admin must serve
+the luxon asset; it ships in the gem under `app/assets/builds`.
+
+## [1.5.0] — 2026-05-08
+
+Operations catalog, part one: charge, refund, chargeback,
+reintegrate. Introduces the stakeholder model
+(merchant / partner / customer) that all subsequent operations key
+off of.
+
+### Added
+
+- **Stakeholder model.** Merchant / partner / customer; threaded
+  through every operation as `stakeholder_type`. Runtime helper
+  resolves per-stakeholder books from the chart.
+- **Charge family.** `ChargePayment`, `ChargePaymentFee`, `ChargePix`,
+  `ChargePixFee`. Books cover `charge_bank_transfer`,
+  `charge_credit_card`, `charge_debit_card`, `charge_wallet`,
+  `charge_pix`, and `*_fee_<stakeholder>` variants.
+- **Refund family.** `Refund`, `RefundLock`, `ChargeRefundFee`. Books
+  for `lock_refund_<stakeholder>`, `cancel_refund_<stakeholder>`,
+  `confirm_refund`, `settle_refund`,
+  `charge_refund_fee_<stakeholder>`. (The `CancelRefund` operation
+  class lands in 1.8.0; the books exist here so the chart is
+  forward-compatible.)
+- **Chargeback family.** `Chargeback`, `ChargeChargebackFee`. Books
+  for `lock_chargeback_<stakeholder>`, `confirm_chargeback`,
+  `charge_chargeback_fee_<stakeholder>`.
+- **`ReintegratePayment`.** Reverses a previously settled payment
+  back into stakeholder balances.
+- **`SplitPayment`.** Distributes a payment across merchant and
+  partner books.
+- **`settle_merchant`** book and matching settlement flow, including
+  a merchant payment fee.
+
+### Changed
+
+- **`tuples_for_pair(pair_name, gid_a, gid_b, currency)`** accepts
+  two distinct gids (was one). Single-gid callers pass the same gid
+  twice.
+- **`method` → `payment_method`** rename on charge operations to
+  avoid Ruby-keyword shadowing.
+- **Validators tightened.** `greater_than: 0` on amount fields where
+  appropriate; positive-only enforcement at construction.
+- **Chart simplified and reorganised** through several consolidation
+  passes before final shape settled.
+
+### Migration notes
+
+Pure addition on top of 1.4.0. New books seed on next
+`db/seeds/books.rb` run. Hosts that called `tuples_for_pair` with a
+single gid argument must pass it twice (the single-gid form is
+removed).
+
+## [1.4.0] — 2026-04-27
+
+Mountable Rails engine. Adds the admin scaffolding, IdP/OIDC auth,
+and gem packaging needed to mount Stern as a backoffice in a host
+app. No new operations — the library API surface is unchanged from
+1.3.x.
+
+### Added
+
+- **Tailwind admin UI** with light/dark theme — dashboard, ledger,
+  balance sheet, frontend tables. Mounted under `/stern`.
+- **`AuthenticatedController`.** Wraps every admin request in
+  `Time.use_zone(passport_time_zone)`, resolved from the IDP user's
+  `time_zone` claim (UTC fallback). Subclassing is enough; the
+  `around_action` does the work. See `CLAUDE.md` for the time-zone
+  conventions admin views must follow.
+- **IdP / OIDC auth.** OmniAuth + OpenID Connect integration via the
+  new `idp-jwt`, `omniauth_openid_connect`, and
+  `omniauth-rails_csrf_protection` deps. Callback at
+  `app/controllers/stern/auth/callbacks_controller.rb`.
+- **Branded error pages** (4xx / 5xx).
+- **Date-range picker** initial component at
+  `app/views/stern/admin/shared/_date_range_picker.html.erb` (the
+  luxon-driven, zone-correct preset logic lands in 1.6.0).
+- **Books-modal** UI for inspecting individual book entries.
+- **Currencies catalog list view** under the admin.
+- **`tuples_for_pair`** signature accepts two distinct gids (also
+  reused by 1.5.0's stakeholder-keyed pairs).
+- **`credits` book class** in the chart.
+
+### Changed
+
+- **Balance-sheet query** enforces deterministic ordering by book id,
+  gid, currency; gains spec coverage.
+- **Stress test renamed to benchmark** for clarity about intent
+  (regression measurement, not pass/fail).
+
+### Dependencies
+
+- Adds `propshaft >= 1.0`.
+- Adds `cssbundling-rails >= 1.4`.
+- Adds `idp-jwt`.
+- Adds `omniauth_openid_connect ~> 0.8`.
+- Adds `omniauth-rails_csrf_protection`.
+
+### Migration notes
+
+`bundle install` pulls the new deps. Hosts mounting the admin must
+configure IdP env vars (see README). Hosts that don't mount the
+admin are unaffected — the engine's library API surface is unchanged
+from 1.3.x.
+
+## [1.3.1] — 2026-04-23
+
+SOP pipeline hardening. Bugfix release on top of 1.3.0's
+scheduled-operations infrastructure. No public API changes.
+
+### Added
+
+- **Dead-letter queue (DLQ) for scheduled operations.** Terminally
+  failed SOPs (max retries exceeded) land in a queryable DLQ instead
+  of being silently dropped, preserving last-error context for
+  triage.
+- **Edge-case spec coverage** — two rounds covering stuck-pending
+  recovery, double-pickup prevention, notify-storm behavior, and
+  janitor cadence under persistent failure.
+- **TCP-listen reconnection spec** verifying the LISTEN/NOTIFY
+  thread recovers from connection drops with capped exponential
+  backoff.
 
 ## [1.3.0] — 2026-04-23
 
