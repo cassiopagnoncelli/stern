@@ -304,6 +304,10 @@ entry_pairs:
     book_sub: partner_available
     book_add: chargeback_locked
   
+  confirm_chargeback:
+    book_sub: chargeback_locked
+    book_add: chargeback_confirmed
+  
   # Chargeback fees
   charge_chargeback_fee_merchant:
     book_sub: merchant_available
