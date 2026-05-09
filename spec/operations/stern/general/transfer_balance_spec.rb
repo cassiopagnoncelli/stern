@@ -112,13 +112,37 @@ module Stern
 
         expect {
           described_class.new(**valid_inputs(amount: 300)).call
-        }.to raise_error(ArgumentError, /larger than available balance/)
+        }.to raise_error(::Stern::InsufficientFunds, /exceeds available balance/)
       end
 
       it "rejects when the sender's available balance is zero" do
         expect {
           described_class.new(**valid_inputs(amount: 100)).call
-        }.to raise_error(ArgumentError, /no available balance/)
+        }.to raise_error(::Stern::InsufficientFunds, /no available balance/)
+      end
+
+      context "when allow_overdraft is true" do
+        it "moves the explicit amount even when sender's balance is zero, driving it negative" do
+          described_class.new(**valid_inputs(amount: 300, allow_overdraft: true)).call
+
+          expect(::Stern.balance(from_merchant, :merchant_available, :BRL)).to eq(-300)
+          expect(::Stern.balance(to_merchant,   :merchant_available, :BRL)).to eq(300)
+        end
+
+        it "moves an amount that exceeds available balance, driving sender negative" do
+          deposit({ merchant_id: from_merchant }, amount: 100)
+
+          described_class.new(**valid_inputs(amount: 300, allow_overdraft: true)).call
+
+          expect(::Stern.balance(from_merchant, :merchant_available, :BRL)).to eq(-200)
+          expect(::Stern.balance(to_merchant,   :merchant_available, :BRL)).to eq(300)
+        end
+
+        it "rejects nil amount (drain semantics incompatible with overdraft)" do
+          op = described_class.new(**valid_inputs(amount: nil, allow_overdraft: true))
+          expect(op).not_to be_valid
+          expect(op.errors[:amount]).to be_present
+        end
       end
 
       it "moves money cross-type (customer → partner)" do

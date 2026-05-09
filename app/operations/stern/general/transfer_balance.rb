@@ -2,7 +2,7 @@
 
 module Stern
   class TransferBalance < BaseOperation
-    inputs :from_merchant_id, :from_customer_id, :from_partner_id, :to_merchant_id, :to_customer_id, :to_partner_id, :amount, :currency
+    inputs :from_merchant_id, :from_customer_id, :from_partner_id, :to_merchant_id, :to_customer_id, :to_partner_id, :amount, :currency, :allow_overdraft
 
     validates :from_merchant_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :from_customer_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
@@ -20,6 +20,17 @@ module Stern
     end
     validates :amount, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :currency, presence: true, allow_blank: false, allow_nil: false
+    validates :allow_overdraft, inclusion: { in: [ true, false ] }
+    # The drain semantics (`amount: nil` → use the sender's full available
+    # balance) depend on a balance read; with `allow_overdraft: true` there's
+    # nothing meaningful to drain, so the combination is rejected upfront.
+    validate do
+      errors.add(:amount, "must be set when allow_overdraft is true") if allow_overdraft && amount.nil?
+    end
+
+    def normalize_inputs
+      self.allow_overdraft = false if allow_overdraft.nil?
+    end
 
     def target_tuples
       from_id, from_type = stakeholder_for("from_")
@@ -35,15 +46,20 @@ module Stern
       from_id, from_type = stakeholder_for("from_")
       balance = available_balance(from_id, from_type)
 
-      if balance <= 0
-        errors.add(:base, "no available balance to transfer")
+      if allow_overdraft
         return
+      end
+
+      if balance <= 0
+        raise ::Stern::InsufficientFunds,
+          "transfer_balance has no available balance to transfer (balance #{balance})"
       end
 
       if amount.nil?
         self.amount = balance
       elsif amount > balance
-        errors.add(:amount, "is larger than available balance")
+        raise ::Stern::InsufficientFunds,
+          "transfer_balance amount #{amount} exceeds available balance #{balance}"
       end
     end
 
