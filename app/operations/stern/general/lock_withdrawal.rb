@@ -10,6 +10,9 @@ module Stern
     validates_exactly_one_of :merchant_id, :customer_id, :partner_id
     validates :amount, presence: true, numericality: { other_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
+    # capped defaults to true via normalize_inputs (runs in the constructor);
+    # this inclusion check is for type-guarding non-boolean inputs like "yes",
+    # not for enforcing the default.
     validates :capped, inclusion: { in: [ true, false ] }
 
     def normalize_inputs
