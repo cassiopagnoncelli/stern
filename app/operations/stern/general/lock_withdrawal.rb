@@ -19,17 +19,18 @@ module Stern
     def target_tuples
       stakeholder_id, stakeholder_type = stakeholder
 
-      tuples_for_pair("withdraw_lock_withdrawal_#{stakeholder_type}".to_sym, stakeholder_id, stakeholder_id, currency)
+      tuples_for_pair("lock_withdrawal_#{stakeholder_type}".to_sym, stakeholder_id, stakeholder_id, currency)
     end
 
     def perform(operation_id)
       stakeholder_id, stakeholder_type = stakeholder
 
-      available_balance = BalanceQuery.new(gid: stakeholder_id, book_id: "#{stakeholder_type}_available".to_sym, currency:, timestamp: Time.current).call
-      return if capped && available_balance < amount
+      if capped && amount > available_balance
+        raise ArgumentError, "amount is larger than available balance"
+      end
 
       EntryPair.public_send(
-        "add_withdraw_lock_withdrawal_#{stakeholder_type}".to_sym,
+        "withdraw_lock_withdrawal_#{stakeholder_type}".to_sym,
         stakeholder_id,
         stakeholder_id,
         amount,
@@ -39,6 +40,15 @@ module Stern
     end
 
     private
+
+    def available_balance
+      BalanceQuery.new(
+        gid: stakeholder_id,
+        book_id: "#{stakeholder_type}_available".to_sym,
+        currency:,
+        timestamp: Time.current
+      ).call
+    end
 
     def stakeholder
       return [ merchant_id, :merchant ] if merchant_id.present?

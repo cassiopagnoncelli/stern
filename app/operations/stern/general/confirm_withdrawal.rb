@@ -14,14 +14,14 @@ module Stern
     def target_tuples
       stakeholder_id, stakeholder_type = stakeholder
 
-      tuples_for_pair("withdraw_confirm_withdrawal_#{stakeholder_type}".to_sym, stakeholder_id, stakeholder_id, currency)
+      tuples_for_pair("confirm_withdrawal_#{stakeholder_type}".to_sym, stakeholder_id, stakeholder_id, currency)
     end
 
     def perform(operation_id)
       stakeholder_id, stakeholder_type = stakeholder
 
       EntryPair.public_send(
-        "add_withdraw_confirm_withdrawal_#{stakeholder_type}".to_sym,
+        "add_confirm_withdrawal_#{stakeholder_type}".to_sym,
         stakeholder_id,
         stakeholder_id,
         amount,

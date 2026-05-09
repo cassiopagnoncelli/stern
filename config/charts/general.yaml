@@ -151,24 +151,24 @@ entry_pairs:
     book_add: customer_available
   
   # Withdrawals
-  withdraw_lock_withdrawal_merchant:
+  lock_withdrawal_merchant:
     book_sub: merchant_available
     book_add: wdw_merchant_locked
-  withdraw_confirm_withdrawal_merchant:
+  confirm_withdrawal_merchant:
     book_sub: wdw_merchant_locked
     book_add: wdw_merchant_confirmed
 
-  withdraw_lock_withdrawal_partner:
+  lock_withdrawal_partner:
     book_sub: partner_available
     book_add: wdw_partner_locked
-  withdraw_confirm_withdrawal_partner:
+  confirm_withdrawal_partner:
     book_sub: wdw_partner_locked
     book_add: wdw_partner_confirmed
 
-  withdraw_lock_withdrawal_customer:
+  lock_withdrawal_customer:
     book_sub: customer_available
     book_add: wdw_customer_locked
-  withdraw_confirm_withdrawal_customer:
+  confirm_withdrawal_customer:
     book_sub: wdw_customer_locked
     book_add: wdw_customer_confirmed
   
