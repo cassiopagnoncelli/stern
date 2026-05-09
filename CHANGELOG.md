@@ -69,6 +69,22 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   in non-UTC tenants. Replaced with `Time.current`, which respects the
   per-request `Time.use_zone(...)` set by `AuthenticatedController`.
 
+### Documentation
+
+- **`AdjustBalance` is admin-only.** Added a class docstring marking it as
+  the wildcard "manual correction" tool. Neither `*_adjusted` nor
+  `*_available` is `non_negative` and the op has no `runtime_check`, so
+  both directions run unconditionally — including ones that drive
+  `*_available` negative. Callers should invoke it only from admin
+  contexts; downstream ops that drain `*_available` will refuse until any
+  resulting deficit is restored.
+- **`ApplyCredit` overdraft asymmetry.** Extended the docstring to flag
+  that the two directions have different backstops: positive amounts are
+  refused at the DB layer via `*_credit non_negative` (raises
+  `BalanceNonNegativeViolation`), but negative amounts drain `*_available`
+  with no protection at all. No behavior change; callers needing a
+  friendly pre-check must gate at the call site for now.
+
 ## [1.8.0] — 2026-05-09
 
 Withdrawal-flow rework. The lifecycle now exposes explicit forward operations

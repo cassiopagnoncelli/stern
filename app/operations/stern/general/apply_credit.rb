@@ -11,6 +11,20 @@ module Stern
   # (grant from outside the ledger), while negative `ApplyCredit` debits
   # `_available` (move from the stakeholder's own funds). Choose by which
   # counterparty reflects reality.
+  #
+  # Overdraft semantics. `ApplyCredit` has no `runtime_check`; the two
+  # directions have asymmetric backstops:
+  #
+  # - Positive amount drains `*_credit`. `*_credit` is `non_negative`, so an
+  #   over-debit is refused at the DB layer as `BalanceNonNegativeViolation`
+  #   (no friendly `InsufficientFunds` wrapper).
+  # - Negative amount drains `*_available`. `*_available` is **not**
+  #   `non_negative` — an over-debit is silent and the caller is
+  #   responsible for ensuring the stakeholder can fund the move.
+  #
+  # If you need a friendly pre-check on either direction, gate the call at
+  # the caller (read the relevant book first) until this op grows an
+  # `allow_overdraft` flag of its own.
   class ApplyCredit < BaseOperation
     inputs :merchant_id, :customer_id, :partner_id, :amount, :currency
 
