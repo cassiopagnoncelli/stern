@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Stern
-  class Dinvest < BaseOperation
+  class Divest < BaseOperation
     inputs :investment_id, :customer_id, :currency, :capped
 
     validates :investment_id, numericality: { greater_than: 0, only_integer: true }

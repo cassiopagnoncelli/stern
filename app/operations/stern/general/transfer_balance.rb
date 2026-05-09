@@ -45,14 +45,13 @@ module Stern
 
     def perform(operation_id)
       stakeholder_id, stakeholder_type = from_stakeholder
-      
-      self.amount = BalanceQuery.new(
-        gid: stakeholder_id,
-        book_id: "#{stakeholder_type}_available".to_sym,
-        currency:,
-        timestamp: Time.current
-      ).call
-      return unless amount.positive?
+
+      balance = available_balance
+      if amount.nil?
+        amount = balance
+      elsif amount > balance
+        raise ArgumentError, "amount is larger than available balance"
+      end
 
       if from_merchant_id.present?
         EntryPair.add_merchant_available(from_merchant_id, from_merchant_id, -amount, currency, operation_id:)
@@ -72,6 +71,15 @@ module Stern
     end
 
     private
+
+    def available_balance
+      BalanceQuery.new(
+        gid: stakeholder_id,
+        book_id: "#{stakeholder_type}_available".to_sym,
+        currency:,
+        timestamp: Time.current
+      ).call
+    end
 
     def from_stakeholder
       return [ from_merchant_id, :merchant ] if from_merchant_id.present?

@@ -4,7 +4,7 @@ module Stern
   # Refund requires underlying payment to be reintegrated, that is, charge beneficiaries
   # back on the proportion of their splits before the refund is processed.
   class Refund < BaseOperation
-    inputs :customer_id, :refund_id, :currency
+    inputs :customer_id, :refund_id, :amount, :currency
 
     validates :customer_id, numericality: { greater_than: 0, only_integer: true }
     validates :refund_id, numericality: { greater_than: 0, only_integer: true }

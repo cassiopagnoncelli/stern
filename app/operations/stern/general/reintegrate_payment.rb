@@ -25,7 +25,7 @@ module Stern
       target_id, target_type = target
 
       EntryPair.public_send(
-        "lock_#{target_type}_#{stakeholder_type}",
+        "add_lock_#{target_type}_#{stakeholder_type}",
         stakeholder_id,
         target_id,
         amount,

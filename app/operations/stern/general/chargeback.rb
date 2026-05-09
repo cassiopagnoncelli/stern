@@ -4,7 +4,7 @@ module Stern
   # Chargeback requires underlying payment to be reintegrated, that is, charge beneficiaries
   # back on the proportion of their splits before the chargeback is processed.
   class Chargeback < BaseOperation
-    inputs :customer_id, :chargeback_id, :currency
+    inputs :customer_id, :chargeback_id, :amount, :currency
 
     validates :customer_id, numericality: { greater_than: 0, only_integer: true }
     validates :chargeback_id, numericality: { greater_than: 0, only_integer: true }
