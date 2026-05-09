@@ -22,6 +22,9 @@ module Stern
       tuples_for_pair("lock_withdrawal_#{stakeholder_type}".to_sym, stakeholder_id, stakeholder_id, currency)
     end
 
+    # A negative `amount` represents an unlock (the inverse pair direction):
+    # available is credited and wdw_*_locked is debited. The capped check
+    # only applies to forward locks, so we skip it for amount <= 0.
     def runtime_check
       return unless capped && amount.positive?
 
