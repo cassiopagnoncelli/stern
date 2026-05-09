@@ -62,7 +62,7 @@ module Stern
             timestamp: e.timestamp,
             amount: e.amount,
             expected_ending_balance: expected,
-            actual_ending_balance: e.ending_balance,
+            actual_ending_balance: e.ending_balance
           }
         end
 

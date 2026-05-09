@@ -63,7 +63,7 @@ module Stern
       @retention = {
         success: validate_days!(:success_days, success_days),
         failed:  validate_days!(:failed_days,  failed_days),
-        pending: validate_days!(:pending_days, pending_days),
+        pending: validate_days!(:pending_days, pending_days)
       }
       raise ArgumentError, "batch_size must be > 0" unless batch_size.is_a?(Integer) && batch_size.positive?
       raise ArgumentError, "max_batches must be > 0 or nil" if max_batches && !(max_batches.is_a?(Integer) && max_batches.positive?)

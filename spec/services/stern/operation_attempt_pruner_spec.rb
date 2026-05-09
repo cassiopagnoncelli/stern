@@ -28,8 +28,8 @@ module Stern
           sleep_between: 0, clock: clock,
         )
 
-        expect(OperationAttempt.where(id: [keep_success.id, keep_failed.id, keep_pending.id]).count).to eq(3)
-        expect(OperationAttempt.where(id: [drop_success.id, drop_failed.id, drop_pending.id])).to be_empty
+        expect(OperationAttempt.where(id: [ keep_success.id, keep_failed.id, keep_pending.id ]).count).to eq(3)
+        expect(OperationAttempt.where(id: [ drop_success.id, drop_failed.id, drop_pending.id ])).to be_empty
         expect(result.success).to eq(1)
         expect(result.failed).to eq(1)
         expect(result.pending).to eq(1)

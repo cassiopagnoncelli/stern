@@ -45,14 +45,14 @@ module Stern
         {
           success_days: ENV["STERN_PRUNE_SUCCESS_DAYS"]&.to_i,
           failed_days:  ENV["STERN_PRUNE_FAILED_DAYS"]&.to_i,
-          pending_days: ENV["STERN_PRUNE_PENDING_DAYS"]&.to_i,
+          pending_days: ENV["STERN_PRUNE_PENDING_DAYS"]&.to_i
         }
       end
 
       DEFAULT_RETENTION = {
         success_days: 14,
         failed_days:  90,
-        pending_days: 7,
+        pending_days: 7
       }.freeze
 
       def effective_retention(values)

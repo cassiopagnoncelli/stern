@@ -75,7 +75,7 @@ module Stern
           [ 50, 150 ],
           [ 25, 175 ],
           [ -30, 145 ],
-          [ 200, 345 ],
+          [ 200, 345 ]
         ])
         expect(Doctor.ending_balance_consistent?(book_id:, gid:, currency:)).to be(true)
       end
@@ -99,7 +99,7 @@ module Stern
           [ 50, 150 ],
           [ -10, 140 ],
           [ -30, 110 ],
-          [ 200, 310 ],
+          [ 200, 310 ]
         ])
         expect(Doctor.ending_balance_consistent?(book_id:, gid:, currency:)).to be(true)
       end

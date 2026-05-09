@@ -59,7 +59,7 @@ module Stern
         {
           success: ENV["STERN_PRUNE_SUCCESS_DAYS"]&.to_i,
           failed:  ENV["STERN_PRUNE_FAILED_DAYS"]&.to_i,
-          pending: ENV["STERN_PRUNE_PENDING_DAYS"]&.to_i,
+          pending: ENV["STERN_PRUNE_PENDING_DAYS"]&.to_i
         }
       end
     end
