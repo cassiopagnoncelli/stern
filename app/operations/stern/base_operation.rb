@@ -14,6 +14,37 @@ module Stern
   #   )
   # > sop.save!
   #
+  # ## Per-cause gid partitioning
+  #
+  # `EntryPair.add_<pair>(uid, gid, amount, …)` writes both legs of the pair at
+  # the single `gid` the caller passes. That `gid` is **the cause of the entry**,
+  # not the owner of the book. So a single `merchant_available` book can carry
+  # entries keyed by the merchant (deposits, credit applications), by a payment
+  # (fee charges), by a withdrawal (locks), etc. — each subset captures one
+  # cause's contribution to the merchant's balance.
+  #
+  # Two consequences worth knowing:
+  #
+  #   1. **Per-gid balance reads are partial.** `BalanceQuery(gid: merchant_id,
+  #      book_id: :merchant_available)` returns only the slice written at
+  #      `gid = merchant_id` — credits, deposits, transfers — not fee charges
+  #      keyed by `payment_id` or withdrawal locks keyed by `withdrawal_id`. The
+  #      stakeholder's *true* available balance is the sum across all gids on
+  #      that book. Treat per-gid reads as cause-scoped, not owner-scoped.
+  #
+  #   2. **Lock keys diverge from entry keys, by design.** `tuples_for_pair`
+  #      returns the lock granularity ("the natural sharding entity for the
+  #      operation"), which doesn't have to match the gid the entries are
+  #      written at. `ChargePaymentFee` locks `(merchant_available, merchant_id)`
+  #      to serialize against other merchant-level ops, but writes the fee
+  #      entries at `gid = payment_id` so per-payment fee balances are
+  #      retrievable. `target_tuples` decides who *blocks*; `add_<pair>(…, gid,
+  #      …)` decides where the entries *land*.
+  #
+  # Where multiple ops touch the same book at the same logical entity, the
+  # advisory locks serialize them. Where they touch the same book at different
+  # logical entities (e.g. two fee charges on different payments to the same
+  # merchant), they don't — by design — so unrelated work runs in parallel.
   class BaseOperation
     include ActiveModel::Validations
 

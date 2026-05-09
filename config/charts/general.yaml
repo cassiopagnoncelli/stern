@@ -74,14 +74,16 @@ books:
   - payment_fee_pix
 
   # Refunds
-  - refund_locked
+  - refund_locked:
+      non_negative: true
   - refund_confirmed
 
   - refund_fee_merchant
   - refund_fee_partner
 
   # Chargebacks
-  - chargeback_locked
+  - chargeback_locked:
+      non_negative: true
   - chargeback_loss
 
   - chargeback_fee_merchant

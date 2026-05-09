@@ -94,6 +94,28 @@ module Stern
       end
     end
 
+    # ## The `_0` companion book
+    #
+    # Every declared book gets an implicit `<name>_0` counterpart book and an
+    # implicit same-name entry pair `<name>` whose `book_add = <name>` and
+    # `book_sub = <name>_0`. The companion is the abstract "other side" that
+    # makes a single-book entry double-entry-balanced without forcing every
+    # caller to name a partner book in the chart.
+    #
+    # Why it exists: cross-account ops like `TransferBalance` write both legs
+    # of a transfer against the same pair name (`merchant_available`). With a
+    # companion book on the sub side, a debit on `merchant_available` at the
+    # sender's gid is balanced by a credit on `merchant_available_0` at the
+    # same gid; the receiver writes the inverse at *their* gid. Each side's
+    # `(real + companion)` balance sums to zero, so each owner's books mass-
+    # balance on their own. The system-wide invariant is each book's per-gid
+    # `entries.sum(:amount) + entries.sum(:amount on _0) == 0` summed across
+    # all gids.
+    #
+    # Operationally the companion is invisible — no operation references
+    # `_0` books directly, no balance query exposes them, and they cannot be
+    # flagged `non_negative` (that would break the bookkeeping contract).
+    # They only surface in the chart loader and in the `entries` table.
     def build_books(normalized_books)
       explicit = normalized_books.to_h do |entry|
         name = entry[:name]
@@ -113,6 +135,11 @@ module Stern
       explicit.merge(implicit).freeze
     end
 
+    # Builds the entry pair table. Each declared book gets an implicit same-
+    # name pair (`book_add = <name>`, `book_sub = <name>_0`) so callers can
+    # write `EntryPair.add_<book>` for cross-account moves; explicit pairs
+    # from the chart YAML override or extend that set with named transitions
+    # between two real books. See `build_books` for the `_0` companion.
     def build_entry_pairs(book_names, explicit_pairs)
       shadowed = explicit_pairs.keys.map(&:to_s) & book_names
       unless shadowed.empty?
