@@ -15,9 +15,11 @@ Gem::Specification.new do |spec|
 
   spec.required_ruby_version = ">= 3.4"
 
-  # Prevent pushing this gem to RubyGems.org. To allow pushes either set the "allowed_push_host"
-  # to allow pushing to a single host or delete this section to allow pushing to any host.
-  # spec.metadata["allowed_push_host"] = "TODO: Set to 'http://mygemserver.com'"
+  # Block accidental public publishing. `gem push` refuses to push anywhere
+  # other than this host, and `.invalid` is a reserved TLD that never resolves
+  # (RFC 2606), so any attempt fails fast. Stern is a private gem — distribute
+  # via the GitHub repo as a Bundler `:git` source, not RubyGems.
+  spec.metadata["allowed_push_host"] = "https://rubygems.invalid"
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://www.github.com/cassiopagnoncelli/stern.git"
