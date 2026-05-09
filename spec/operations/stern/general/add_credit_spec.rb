@@ -68,7 +68,7 @@ module Stern
     end
 
     describe "#call" do
-      before { Repair.clear }
+      before { Repair.clear(confirm: true) }
 
       it "records an Operation row with normalized currency" do
         described_class.new(**valid_inputs).call

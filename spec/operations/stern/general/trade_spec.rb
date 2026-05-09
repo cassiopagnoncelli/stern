@@ -81,7 +81,7 @@ module Stern
     end
 
     describe "#call" do
-      before { Repair.clear }
+      before { Repair.clear(confirm: true) }
 
       it "writes investment_trade and investment_trade_fee pairs" do
         expect {

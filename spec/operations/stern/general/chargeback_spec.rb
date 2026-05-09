@@ -49,7 +49,7 @@ module Stern
     end
 
     describe "#call" do
-      before { Repair.clear }
+      before { Repair.clear(confirm: true) }
 
       it "drains chargeback_locked at chargeback_id and recognizes loss" do
         lock_chargeback(amount: 500)

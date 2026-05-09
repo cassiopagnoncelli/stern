@@ -14,9 +14,9 @@ module Stern
       # `after` block runs FIRST. Runner shutdown has to happen before
       # `Repair.clear` — otherwise the runner's worker threads still hold DB
       # connections and `Repair.clear` times out waiting for a connection.
-      before { Repair.clear }
+      before { Repair.clear(confirm: true) }
       before { @runners = [] }
-      after { Repair.clear }
+      after { Repair.clear(confirm: true) }
       after { @runners.each { |r| r.shutdown!(timeout: 5) } }
 
       def make_runner(**kwargs)

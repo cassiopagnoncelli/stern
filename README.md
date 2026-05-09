@@ -357,7 +357,7 @@ Repairs (destructive, never in production unless you're certain):
 Stern::Repair.rebuild_book_gid_balance(book_id, gid, currency)
 Stern::Repair.rebuild_gid_balance(gid, currency)   # every book for this gid
 Stern::Repair.rebuild_balances(confirm: true)       # every tuple in the ledger
-Stern::Repair.clear                                 # wipes the ledger; non-production only
+Stern::Repair.clear(confirm: true)                  # wipes the ledger; non-production only
 ```
 
 ## Running the scheduled-operation worker

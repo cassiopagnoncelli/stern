@@ -14,8 +14,8 @@ module Stern
     # `let` (lazy) rather than `let!` so the record is created after `before` clears.
     let(:operation) { Operation.create!(name: "race_test_op", params: {}) }
 
-    before { Repair.clear }
-    after { Repair.clear }
+    before { Repair.clear(confirm: true) }
+    after { Repair.clear(confirm: true) }
 
     def seed_prior(amount:)
       seed_pair = EntryPair.create!(code: pair_code, uid: 1, amount:, currency:, operation_id: operation.id)

@@ -98,7 +98,7 @@ module Stern
     end
 
     describe "#call" do
-      before { Repair.clear }
+      before { Repair.clear(confirm: true) }
 
       it "moves balance from wdw_merchant_locked to wdw_merchant_confirmed" do
         seed_locked_withdrawal({ merchant_id: }, amount: 5000)

@@ -79,7 +79,7 @@ module Stern
     end
 
     describe "#call" do
-      before { Repair.clear }
+      before { Repair.clear(confirm: true) }
 
       it "moves balance from wdw_merchant_confirmed back to merchant_available" do
         seed_confirmed({ merchant_id: }, amount: 5000)

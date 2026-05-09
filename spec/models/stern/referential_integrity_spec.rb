@@ -15,8 +15,8 @@ module Stern
     let(:brl) { ::Stern.cur("BRL") }
     let(:merchant_id) { 980_001 }
 
-    before { Repair.clear }
-    after { Repair.clear }
+    before { Repair.clear(confirm: true) }
+    after { Repair.clear(confirm: true) }
 
     def seed_one_pair(gid: merchant_id, amount: 500, op_name: "invariant_seed", op_params: {})
       op = Operation.create!(name: op_name, params: op_params)

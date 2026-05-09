@@ -87,7 +87,7 @@ module Stern
     end
 
     describe "#call" do
-      before { Repair.clear }
+      before { Repair.clear(confirm: true) }
 
       it "moves balance from merchant_credit to merchant_available on a positive amount" do
         AddCredit.new(merchant_id:, amount: 500, currency: "BRL").call

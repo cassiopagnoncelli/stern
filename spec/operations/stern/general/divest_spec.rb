@@ -64,7 +64,7 @@ module Stern
     end
 
     describe "#call" do
-      before { Repair.clear }
+      before { Repair.clear(confirm: true) }
 
       it "drains the full customer_investment balance back into customer_available" do
         seed_invested(amount: 1000)

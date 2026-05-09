@@ -57,7 +57,7 @@ module Stern
     end
 
     describe "#call" do
-      before { Repair.clear }
+      before { Repair.clear(confirm: true) }
 
       it "drains refund_locked at refund_id back to zero after confirm + settle" do
         lock_refund(amount: 700)

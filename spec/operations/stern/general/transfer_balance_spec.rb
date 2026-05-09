@@ -87,7 +87,7 @@ module Stern
     end
 
     describe "#call" do
-      before { Repair.clear }
+      before { Repair.clear(confirm: true) }
 
       it "moves an explicit amount from sender to receiver" do
         deposit({ merchant_id: from_merchant }, amount: 1000)

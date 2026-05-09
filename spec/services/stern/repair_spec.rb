@@ -79,8 +79,12 @@ module Stern
     describe ".clear" do
       before { seed_entries }
 
-      it "wipes entries, pairs, operations, and scheduled operations" do
-        described_class.clear
+      it "raises ArgumentError when not confirmed" do
+        expect { described_class.clear }.to raise_error(ArgumentError)
+      end
+
+      it "wipes entries, pairs, operations, and scheduled operations when confirmed" do
+        described_class.clear(confirm: true)
         expect(Entry.count).to eq(0)
         expect(EntryPair.count).to eq(0)
         expect(Operation.count).to eq(0)
@@ -89,7 +93,7 @@ module Stern
 
       it "raises in production environment" do
         allow(Rails.env).to receive(:production?).and_return(true)
-        expect { described_class.clear }.to raise_error(StandardError, /production/)
+        expect { described_class.clear(confirm: true) }.to raise_error(StandardError, /production/)
       end
     end
   end

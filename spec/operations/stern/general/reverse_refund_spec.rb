@@ -100,7 +100,7 @@ module Stern
     end
 
     describe "#call" do
-      before { Repair.clear }
+      before { Repair.clear(confirm: true) }
 
       it "credits merchant_available at gid=merchant_id (funder slot)" do
         settle_refund({ merchant_id: }, amount: 700)

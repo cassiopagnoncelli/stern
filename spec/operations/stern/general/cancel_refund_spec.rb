@@ -71,7 +71,7 @@ module Stern
     end
 
     describe "#call" do
-      before { Repair.clear }
+      before { Repair.clear(confirm: true) }
 
       it "drains refund_locked at refund_id back to zero" do
         ReintegratePayment.new(merchant_id:, refund_id:, amount: 700, currency: "BRL").call

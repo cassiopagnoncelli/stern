@@ -72,7 +72,7 @@ module Stern
     end
 
     describe "#call" do
-      before { Repair.clear }
+      before { Repair.clear(confirm: true) }
 
       it "debits merchant_available and credits chargeback_fee_merchant by amount" do
         described_class.new(**valid_inputs(amount: 100)).call
