@@ -18,7 +18,7 @@ module Stern
 
     scope :last_entry, lambda { |book_id, gid, currency, timestamp|
       where(book_id:, gid:, currency:)
-        .where("timestamp <= ?", timestamp || DateTime.current)
+        .where("timestamp <= ?", timestamp || Time.current)
         .order(:timestamp, :id)
         .last(1)
     }

@@ -14,7 +14,7 @@ module Stern
     private
 
     def no_future_timestamp
-      return unless timestamp.present? && timestamp > DateTime.current
+      return unless timestamp.present? && timestamp > Time.current
 
       errors.add(:timestamp, "cannot be in the future")
     end

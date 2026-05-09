@@ -25,11 +25,11 @@ module Stern
     @in_progress_timeout_seconds || ENV.fetch("STERN_IN_PROGRESS_TIMEOUT_SECONDS", 600).to_i
   end
 
-  def self.outstanding_balance(book_id, currency, timestamp = DateTime.current)
+  def self.outstanding_balance(book_id, currency, timestamp = Time.current)
     OutstandingBalanceQuery.new(book_id:, currency:, timestamp:).call
   end
 
-  def self.balance(gid, book_id, currency, timestamp = DateTime.current)
+  def self.balance(gid, book_id, currency, timestamp = Time.current)
     BalanceQuery.new(gid:, book_id:, currency:, timestamp:).call
   end
 

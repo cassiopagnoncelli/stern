@@ -5,7 +5,19 @@ All notable changes to Stern are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [Unreleased]
+
+### Fixed
+
+- **Time-zone correctness in query defaults.** `BalanceQuery`,
+  `BalanceSheetQuery`, `EntriesQuery`, `SumEntriesQuery`,
+  `OutstandingBalanceQuery`, `BookBalancesQuery`, `Entry.last_entry`,
+  `NoFutureTimestamp`, and the `Stern.balance` / `Stern.outstanding_balance`
+  module helpers all defaulted their `timestamp` parameter to
+  `DateTime.current`, which ignores `Time.zone`. Admin callers that omitted
+  the parameter got a non-zone-aware "now" — silently wrong for time-windowing
+  in non-UTC tenants. Replaced with `Time.current`, which respects the
+  per-request `Time.use_zone(...)` set by `AuthenticatedController`.
 
 ### Changed
 
@@ -27,6 +39,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   divestment hadn't happened. The balance read and check now run in
   `runtime_check`, so a raise rolls back the audit row alongside any entries.
   A zero balance is still treated as a no-op (idempotent re-divest).
+- **Lint guard against `DateTime`.** Enabled `Style/DateTime` in
+  `.rubocop.yml` (excluding `spec/` and the SOP files) to keep new
+  `DateTime.current` / `DateTime.parse` usages from creeping back in.
 
 ## [1.8.0] — 2026-05-09
 

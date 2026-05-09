@@ -83,8 +83,8 @@ __END__
 EntriesQuery.new(
   book_id: :customer_balance_available_usd,
   currency: :USD,
-  start_date: DateTime.current.yesterday,
-  end_date: DateTime.current + 1.minute,
+  start_date: Time.current.yesterday,
+  end_date: Time.current + 1.minute,
   gid: 1,
   code_format: %i[titleize drop_first_word]
 ).call
