@@ -4,12 +4,33 @@ module Stern
   # Read-only audits of ledger consistency. Every method here is side-effect-free.
   # For destructive repair operations see Stern::Repair.
   class Doctor
-    def self.consistent?
-      amount_consistent?
-    end
-
     def self.amount_consistent?
       amount_inconsistency.nil?
+    end
+
+    # Full ledger health check. Returns `nil` when both invariants hold:
+    #   1. global `sum(amount) == 0`
+    #   2. every `(book_id, gid, currency)` cascade's `ending_balance`
+    #      matches the running sum of `amount`
+    # On failure returns a tagged detail hash so callers know exactly what
+    # broke without re-running the audit:
+    #   { kind: :amount_sum, sum: <non-zero> }
+    #   { kind: :ending_balance, book_id:, gid:, currency:,
+    #     entry_id:, timestamp:, amount:,
+    #     expected_ending_balance:, actual_ending_balance: }
+    #
+    # Cost: O(n_entries) — one full table sum plus one ordered walk per
+    # distinct `(book_id, gid, currency)` tuple. Do not call on hot paths.
+    def self.first_inconsistency
+      amount = amount_inconsistency
+      return amount.merge(kind: :amount_sum) if amount
+
+      Entry.distinct.pluck(:book_id, :gid, :currency).each do |book_id, gid, currency|
+        detail = first_ending_balance_inconsistency(book_id:, gid:, currency:)
+        return detail.merge(kind: :ending_balance, book_id:, gid:, currency:) if detail
+      end
+
+      nil
     end
 
     # Detail companion to `amount_consistent?`. Returns `nil` when the global
