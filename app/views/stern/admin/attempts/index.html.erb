@@ -1,0 +1,43 @@
+<% content_for :title, "Attempts" %>
+
+<div class="max-w-7xl mx-auto p-6">
+  <%= render "stern/admin/shared/paginated_table",
+      title: "Operation Attempts",
+      subtitle: "Every BaseOperation#call invocation, including failures whose Operation row was rolled back.",
+      has_records: @attempts.any?,
+      pagination: true,
+      start_record: @start_record,
+      end_record: @end_record,
+      total_count: @total_attempts,
+      page: @page,
+      total_pages: @total_pages,
+      record_name: "attempt",
+      per_page: @per_page,
+      path_helper: :admin_attempts_path,
+      params_to_preserve: {
+        name: @name,
+        status: @status,
+        idem_key: @idem_key,
+        start_date: @start_date_filter_value,
+        end_date: @end_date_filter_value
+      },
+      filters_url: admin_attempts_path,
+      filters_form_id: "attempts-filters-form",
+      filters_form_class: "flex w-full flex-wrap items-end gap-2 justify-end",
+      filters_hidden_fields: {
+        page: 1,
+        per_page: @per_page
+      },
+      filters_partial: "stern/admin/attempts/filters",
+      filters_locals: {
+        name: @name,
+        status: @status,
+        idem_key: @idem_key,
+        operation_names: @operation_names,
+        statuses: @statuses,
+        start_date: @start_date_filter_value,
+        end_date: @end_date_filter_value
+      },
+      body_content: render("stern/admin/attempts/table", attempts: @attempts),
+      empty_state_text: "No attempts match your current filters for the selected time period." %>
+</div>

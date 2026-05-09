@@ -13,6 +13,8 @@ Stern::Engine.routes.draw do
     get "ledger",               to: "ledger#index"
     get "ledger/entries",       to: "ledger#entries",       as: :ledger_entries
     get "ledger/balance_sheet", to: "ledger#balance_sheet", as: :ledger_balance_sheet
+
+    get "attempts", to: "attempts#index", as: :attempts
   end
 
   root to: "admin/dashboard#show"
