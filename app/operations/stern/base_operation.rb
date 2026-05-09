@@ -349,7 +349,12 @@ module Stern
       return nil if op.nil?
       return op if op.name == operation_name && op.params == json_normalized_params
 
-      raise "Operation with idem_key #{idem_key} already exists with different parameters"
+      raise ::Stern::IdempotencyConflict.new(
+        idem_key: idem_key,
+        existing: op,
+        attempted_name: operation_name,
+        attempted_params: operation_params,
+      )
     end
 
     # `operation_params` projected through JSON's type system, so the result has the

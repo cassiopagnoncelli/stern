@@ -157,8 +157,8 @@ module Stern
         "Expected exactly one winner and one mismatch raise, got: #{outcomes.inspect}"
 
       err = outcomes.find { |o| o.first == :err }
-      expect(err[3]).to match(/different parameters/),
-        "Expected the loser to raise on param mismatch, got: #{err.inspect}"
+      expect(err[2]).to eq("Stern::IdempotencyConflict"),
+        "Expected the loser to raise IdempotencyConflict, got: #{err.inspect}"
 
       expect(Operation.where(idem_key: key).count).to eq(1)
     end

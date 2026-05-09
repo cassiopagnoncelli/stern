@@ -566,11 +566,17 @@ module Stern
           expect(replay.perform_calls).to be_nil
         end
 
-        it "raises when an operation with that key exists with different params" do
-          op.call(transaction: false, idem_key: key)
+        it "raises IdempotencyConflict when an operation with that key exists with different params" do
+          first_id = op.call(transaction: false, idem_key: key)
           mismatched = test_class.new(a: 1, b: 999)
+
           expect { mismatched.call(transaction: false, idem_key: key) }
-            .to raise_error(/different parameters/)
+            .to raise_error(::Stern::IdempotencyConflict) do |err|
+              expect(err.idem_key).to eq(key)
+              expect(err.existing_operation_id).to eq(first_id)
+              expect(err.expected_params).to eq("a" => 1, "b" => 2)
+              expect(err.actual_params).to eq("a" => 1, "b" => 999)
+            end
         end
 
         # Regression: `Operation.params` is a json column. After storage, a Symbol
