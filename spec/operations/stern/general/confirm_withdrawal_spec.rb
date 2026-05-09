@@ -52,6 +52,18 @@ module Stern
         expect(described_class.new(**valid_inputs(amount: nil))).not_to be_valid
       end
 
+      it "rejects a zero amount" do
+        op = described_class.new(**valid_inputs(amount: 0))
+        expect(op).not_to be_valid
+        expect(op.errors[:amount].join).to match(/greater than 0/)
+      end
+
+      it "rejects a negative amount" do
+        op = described_class.new(**valid_inputs(amount: -1))
+        expect(op).not_to be_valid
+        expect(op.errors[:amount].join).to match(/greater than 0/)
+      end
+
       it "treats an unknown currency as invalid" do
         op = described_class.new(**valid_inputs(currency: "ZZZ"))
         expect(op).not_to be_valid

@@ -39,6 +39,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Lint guard against `DateTime`.** Enabled `Style/DateTime` in
   `.rubocop.yml` (excluding `spec/` and the SOP files) to keep new
   `DateTime.current` / `DateTime.parse` usages from creeping back in.
+- **`ConfirmWithdrawal#amount` must be positive** — the validator is now
+  `greater_than: 0` (was `only_integer: true` with no positivity check).
+  Aligns with `LockWithdrawal`, `CancelWithdrawal`, and `ReverseWithdrawal`;
+  prevents zero-amount no-op writes and negative-amount corruption of the
+  locked-vs-confirmed accounting.
 
 ### Removed
 
