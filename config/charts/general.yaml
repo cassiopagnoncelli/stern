@@ -154,9 +154,6 @@ entry_pairs:
   withdraw_confirm_withdrawal_merchant:
     book_sub: wdw_merchant_locked
     book_add: wdw_merchant_confirmed
-  charge_withdrawal_fee_merchant:
-    book_sub: merchant_available
-    book_add: wdw_merchant_fee
 
   withdraw_lock_withdrawal_partner:
     book_sub: partner_available
@@ -164,9 +161,6 @@ entry_pairs:
   withdraw_confirm_withdrawal_partner:
     book_sub: wdw_partner_locked
     book_add: wdw_partner_confirmed
-  charge_withdrawal_fee_partner:
-    book_sub: partner_available
-    book_add: wdw_partner_fee
 
   withdraw_lock_withdrawal_customer:
     book_sub: customer_available
@@ -174,6 +168,14 @@ entry_pairs:
   withdraw_confirm_withdrawal_customer:
     book_sub: wdw_customer_locked
     book_add: wdw_customer_confirmed
+  
+  # Withdrawal fees
+  charge_withdrawal_fee_merchant:
+    book_sub: merchant_available
+    book_add: wdw_merchant_fee
+  charge_withdrawal_fee_partner:
+    book_sub: partner_available
+    book_add: wdw_partner_fee
   charge_withdrawal_fee_customer:
     book_sub: customer_available
     book_add: wdw_customer_fee
@@ -267,13 +269,20 @@ entry_pairs:
     book_sub: payment
     book_add: partner_pending
   
-  # Refund
+  # Refunds
   lock_refund_merchant:
     book_sub: merchant_available
     book_add: refund_locked
   lock_refund_partner:
     book_sub: partner_available
     book_add: refund_locked
+
+  confirm_refund:
+    book_sub: refund_locked
+    book_add: refund_confirmed
+  settle_refund:
+    book_sub: refund_confirmed
+    book_add: customer_available
   
   # Refund fees
   charge_refund_fee_merchant:
@@ -284,7 +293,7 @@ entry_pairs:
     book_sub: partner_available
     book_add: refund_fee_partner
   
-  # Chargeback
+  # Chargebacks
   lock_chargeback_merchant:
     book_sub: merchant_available
     book_add: chargeback_locked
@@ -292,7 +301,7 @@ entry_pairs:
     book_sub: partner_available
     book_add: chargeback_locked
 
-  # Trade Operation
+  # Investments
   investment_invest:
     book_sub: customer_available
     book_add: customer_investment
