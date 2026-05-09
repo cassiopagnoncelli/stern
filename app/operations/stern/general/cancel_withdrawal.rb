@@ -1,8 +1,12 @@
 # frozen_string_literal: true
 
 module Stern
-  class LockWithdrawal < BaseOperation
-    inputs :merchant_id, :partner_id, :customer_id, :amount, :currency, :capped
+  # Releases an in-flight withdrawal lock back to the stakeholder's available
+  # balance. Inverse of `LockWithdrawal` (forward direction:
+  # `wdw_*_locked → *_available`). Use only before `ConfirmWithdrawal`; once
+  # confirmed, use `ReverseWithdrawal` instead.
+  class CancelWithdrawal < BaseOperation
+    inputs :merchant_id, :partner_id, :customer_id, :amount, :currency
 
     validates :merchant_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
     validates :customer_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
@@ -10,37 +14,32 @@ module Stern
     validates_exactly_one_of :merchant_id, :customer_id, :partner_id
     validates :amount, presence: true, numericality: { greater_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
-    # capped defaults to true via normalize_inputs (runs in the constructor);
-    # this inclusion check is for type-guarding non-boolean inputs like "yes",
-    # not for enforcing the default.
-    validates :capped, inclusion: { in: [ true, false ] }
-
-    def normalize_inputs
-      self.capped = true if capped.nil?
-    end
 
     def target_tuples
       stakeholder_id, stakeholder_type = stakeholder_for
 
-      tuples_for_pair("lock_withdrawal_#{stakeholder_type}".to_sym, stakeholder_id, stakeholder_id, currency)
+      tuples_for_pair("cancel_withdrawal_#{stakeholder_type}".to_sym, stakeholder_id, stakeholder_id, currency)
     end
 
+    # Friendly pre-check that runs under the advisory lock. The DB-level
+    # backstop on `wdw_*_locked` (when flagged `non_negative`) would translate
+    # the same condition into `BalanceNonNegativeViolation`; we raise the
+    # parent `InsufficientFunds` here so callers can rescue both layers
+    # uniformly.
     def runtime_check
-      return unless capped
-
       stakeholder_id, stakeholder_type = stakeholder_for
-      available = available_balance(stakeholder_id, stakeholder_type)
-      return if amount <= available
+      locked = locked_balance(stakeholder_id, stakeholder_type)
+      return if amount <= locked
 
       raise ::Stern::InsufficientFunds,
-        "lock_withdrawal amount #{amount} exceeds available balance #{available}"
+        "cancel_withdrawal amount #{amount} exceeds locked balance #{locked}"
     end
 
     def perform(operation_id)
       stakeholder_id, stakeholder_type = stakeholder_for
 
       EntryPair.public_send(
-        "add_lock_withdrawal_#{stakeholder_type}".to_sym,
+        "add_cancel_withdrawal_#{stakeholder_type}".to_sym,
         stakeholder_id,
         stakeholder_id,
         amount,
@@ -51,10 +50,10 @@ module Stern
 
     private
 
-    def available_balance(stakeholder_id, stakeholder_type)
+    def locked_balance(stakeholder_id, stakeholder_type)
       BalanceQuery.new(
         gid: stakeholder_id,
-        book_id: "#{stakeholder_type}_available".to_sym,
+        book_id: "wdw_#{stakeholder_type}_locked".to_sym,
         currency:,
         timestamp: Time.current
       ).call

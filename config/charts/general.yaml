@@ -152,26 +152,53 @@ entry_pairs:
     book_add: customer_available
   
   # Withdrawals
+  #
+  # Lifecycle per stakeholder type:
+  #   *_available -> wdw_*_locked       (LockWithdrawal)
+  #   wdw_*_locked -> *_available       (CancelWithdrawal, before settlement)
+  #   wdw_*_locked -> wdw_*_confirmed   (ConfirmWithdrawal, on settlement)
+  #   wdw_*_confirmed -> *_available    (ReverseWithdrawal, post-settlement reject)
+  #
+  # `wdw_*_locked` carries in-flight withdrawals; `wdw_*_confirmed` accumulates
+  # settled ones (reversible only via ReverseWithdrawal).
   lock_withdrawal_merchant:
     book_sub: merchant_available
     book_add: wdw_merchant_locked
+  cancel_withdrawal_merchant:
+    book_sub: wdw_merchant_locked
+    book_add: merchant_available
   confirm_withdrawal_merchant:
     book_sub: wdw_merchant_locked
     book_add: wdw_merchant_confirmed
+  reverse_withdrawal_merchant:
+    book_sub: wdw_merchant_confirmed
+    book_add: merchant_available
 
   lock_withdrawal_partner:
     book_sub: partner_available
     book_add: wdw_partner_locked
+  cancel_withdrawal_partner:
+    book_sub: wdw_partner_locked
+    book_add: partner_available
   confirm_withdrawal_partner:
     book_sub: wdw_partner_locked
     book_add: wdw_partner_confirmed
+  reverse_withdrawal_partner:
+    book_sub: wdw_partner_confirmed
+    book_add: partner_available
 
   lock_withdrawal_customer:
     book_sub: customer_available
     book_add: wdw_customer_locked
+  cancel_withdrawal_customer:
+    book_sub: wdw_customer_locked
+    book_add: customer_available
   confirm_withdrawal_customer:
     book_sub: wdw_customer_locked
     book_add: wdw_customer_confirmed
+  reverse_withdrawal_customer:
+    book_sub: wdw_customer_confirmed
+    book_add: customer_available
   
   # Withdrawal fees
   charge_withdrawal_fee_merchant:

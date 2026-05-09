@@ -51,6 +51,12 @@ module Stern
         expect(op.errors[:amount]).to be_present
       end
 
+      it "rejects a negative amount" do
+        op = described_class.new(**valid_inputs(amount: -5000))
+        expect(op).not_to be_valid
+        expect(op.errors[:amount]).to be_present
+      end
+
       it "treats an unknown currency as invalid" do
         op = described_class.new(**valid_inputs(currency: "ZZZ"))
         expect(op).not_to be_valid
@@ -130,12 +136,12 @@ module Stern
       end
 
       context "when capped (default)" do
-        it "raises when amount exceeds available balance" do
+        it "raises InsufficientFunds when amount exceeds available balance" do
           seed_available({ merchant_id: }, amount: 1000)
 
           expect {
             described_class.new(**valid_inputs(amount: 5000)).call
-          }.to raise_error(ArgumentError, /larger than available balance/)
+          }.to raise_error(::Stern::InsufficientFunds, /exceeds available balance/)
         end
 
         it "does not write any entry pair when the runtime check fails" do
@@ -144,7 +150,7 @@ module Stern
           expect {
             begin
               described_class.new(**valid_inputs(amount: 5000)).call
-            rescue ArgumentError
+            rescue ::Stern::InsufficientFunds
               # expected
             end
           }.not_to change { EntryPair.where(code: "lock_withdrawal_merchant").count }
@@ -156,7 +162,7 @@ module Stern
           expect {
             begin
               described_class.new(**valid_inputs(amount: 5000)).call
-            rescue ArgumentError
+            rescue ::Stern::InsufficientFunds
               # expected
             end
           }.not_to change { Operation.where(name: "LockWithdrawal").count }
@@ -180,26 +186,6 @@ module Stern
 
           expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(-4000)
           expect(::Stern.balance(merchant_id, :wdw_merchant_locked, :BRL)).to eq(5000)
-        end
-      end
-
-      context "with negative amount (unlock)" do
-        it "credits available and debits wdw_*_locked, even when capped" do
-          seed_available({ merchant_id: }, amount: 10_000)
-          described_class.new(**valid_inputs(amount: 5000)).call
-
-          described_class.new(**valid_inputs(amount: -2000)).call
-
-          expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(7000)
-          expect(::Stern.balance(merchant_id, :wdw_merchant_locked, :BRL)).to eq(3000)
-        end
-
-        it "skips the capped check (no error even with zero locked balance)" do
-          seed_available({ merchant_id: }, amount: 10_000)
-
-          expect {
-            described_class.new(**valid_inputs(amount: -2000)).call
-          }.not_to raise_error
         end
       end
     end
