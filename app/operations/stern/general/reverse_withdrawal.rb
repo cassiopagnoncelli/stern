@@ -3,9 +3,13 @@
 module Stern
   # Reverses a previously confirmed withdrawal back to the stakeholder's
   # available balance (forward direction: `wdw_*_confirmed → *_available`).
-  # Used for post-settlement rejects (e.g. bank-side bounce) where the
-  # withdrawal had already cleared `ConfirmWithdrawal`. For pre-settlement
-  # cancellation use `CancelWithdrawal`.
+  # Terminal step of the lock → cancel | confirm → reverse state machine
+  # (canonical lifecycle: see the entry-pairs block in
+  # `config/charts/general.yaml`). Used for post-settlement rejects; for
+  # pre-settlement cancellation use `CancelWithdrawal`. Intentionally has
+  # no `allow_overdraft` input (unlike `LockWithdrawal`): `wdw_*_confirmed`
+  # non-negativity is the only safe rule for post-settlement reversals —
+  # you cannot reverse more than was confirmed.
   class ReverseWithdrawal < BaseOperation
     inputs :merchant_id, :partner_id, :customer_id, :amount, :currency
 
