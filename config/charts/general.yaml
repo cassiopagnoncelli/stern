@@ -14,10 +14,15 @@ operations: general
 #
 books:
   # Merchant
+  #
+  # `*_locked` is non_negative so UnlockBalance cannot over-debit a
+  # stakeholder's locked slice (DB-level backstop behind the op's
+  # friendly pre-check).
   - merchant_available
   - merchant_withheld
   - merchant_pending
-  - merchant_locked
+  - merchant_locked:
+      non_negative: true
   - merchant_adjusted
   - merchant_credit:
       non_negative: true
@@ -26,7 +31,8 @@ books:
   - partner_available
   - partner_withheld
   - partner_pending
-  - partner_locked
+  - partner_locked:
+      non_negative: true
   - partner_adjusted
   - partner_credit:
       non_negative: true
@@ -35,7 +41,8 @@ books:
   - customer_available
   - customer_withheld
   - customer_pending
-  - customer_locked
+  - customer_locked:
+      non_negative: true
   - customer_adjusted
   - customer_credit:
       non_negative: true
@@ -112,6 +119,10 @@ books:
 #
 entry_pairs:
   # Balances
+  #
+  # `lock_*_balance` / `unlock_*_balance` form a two-state lifecycle
+  # `*_available <-> *_locked`. Unlike withdrawals, there's no `confirmed`
+  # companion, so a single inverse pair (UnlockBalance) suffices.
   withhold_merchant_balance:
     book_sub: merchant_available
     book_add: merchant_withheld
@@ -121,6 +132,9 @@ entry_pairs:
   lock_merchant_balance:
     book_sub: merchant_available
     book_add: merchant_locked
+  unlock_merchant_balance:
+    book_sub: merchant_locked
+    book_add: merchant_available
   adjust_merchant_balance:
     book_sub: merchant_adjusted
     book_add: merchant_available
@@ -137,6 +151,9 @@ entry_pairs:
   lock_partner_balance:
     book_sub: partner_available
     book_add: partner_locked
+  unlock_partner_balance:
+    book_sub: partner_locked
+    book_add: partner_available
   adjust_partner_balance:
     book_sub: partner_adjusted
     book_add: partner_available
@@ -153,6 +170,9 @@ entry_pairs:
   lock_customer_balance:
     book_sub: customer_available
     book_add: customer_locked
+  unlock_customer_balance:
+    book_sub: customer_locked
+    book_add: customer_available
   adjust_customer_balance:
     book_sub: customer_adjusted
     book_add: customer_available
