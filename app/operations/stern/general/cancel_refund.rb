@@ -30,17 +30,15 @@ module Stern
       tuples_for_pair("cancel_refund_#{stakeholder_type}".to_sym, refund_id, stakeholder_id, currency)
     end
 
-    # Friendly pre-check that runs under the advisory lock. The DB-level
-    # backstop on `refund_locked` (flagged `non_negative`) would translate
-    # the same condition into `BalanceNonNegativeViolation`; we raise the
-    # parent `InsufficientFunds` here so callers can rescue both layers
-    # uniformly.
     def runtime_check
-      locked = locked_balance
-      return if amount <= locked
-
-      raise ::Stern::InsufficientFunds,
-        "cancel_refund amount #{amount} exceeds locked balance #{locked}"
+      require_sufficient_balance!(
+        book_id: :refund_locked,
+        gid: refund_id,
+        currency:,
+        amount:,
+        op_label: "cancel_refund",
+        balance_label: "locked balance",
+      )
     end
 
     def perform(operation_id)
@@ -54,17 +52,6 @@ module Stern
         currency,
         operation_id:,
       )
-    end
-
-    private
-
-    def locked_balance
-      BalanceQuery.new(
-        gid: refund_id,
-        book_id: :refund_locked,
-        currency:,
-        timestamp: Time.current
-      ).call
     end
   end
 end
