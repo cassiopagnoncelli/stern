@@ -48,7 +48,7 @@ module Stern
       cause = err.cause
       return false unless defined?(PG::CheckViolation) && cause.is_a?(PG::CheckViolation)
 
-      cause.result&.error_field(PG::Result::PG_DIAG_CONSTRAINT_NAME) == "stern_books_non_negative"
+      cause.result&.error_field(PG::Result::PG_DIAG_CONSTRAINT_NAME) == ::Stern::Book::NON_NEGATIVE_CONSTRAINT
     end
 
     def self.sanitized_sql(book_id:, gid:, entry_pair_id:, amount:, currency:, timestamp:)
