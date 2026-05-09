@@ -16,20 +16,22 @@ module Stern
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
-      stakeholder_id, type = stakeholder
+      stakeholder_id, stakeholder_type = stakeholder
       return [] if stakeholder_id.nil?
 
-      tuples_for_pair("charge_#{payment_method}_fee_#{type}".to_sym, stakeholder_id, payment_id, currency) +
-        tuples_for_pair("apply_#{type}_credit".to_sym, stakeholder_id, stakeholder_id, currency)
+      tuples = []
+      tuples += tuples_for_pair("charge_#{payment_method}_fee_#{stakeholder_type}".to_sym, stakeholder_id, payment_id, currency)
+      tuples += tuples_for_pair("apply_#{stakeholder_type}_credit".to_sym, stakeholder_id, stakeholder_id, currency)
+      tuples
     end
 
     def perform(operation_id)
-      stakeholder_id, type = stakeholder
+      stakeholder_id, stakeholder_type = stakeholder
 
-      apply_available_credit(stakeholder_id, type, operation_id)
+      apply_available_credit(stakeholder_id, stakeholder_type, operation_id)
 
       EntryPair.public_send(
-        "add_charge_#{payment_method}_fee_#{type}".to_sym,
+        "add_charge_#{payment_method}_fee_#{stakeholder_type}".to_sym,
         stakeholder_id,
         payment_id,
         amount,
@@ -44,15 +46,15 @@ module Stern
     # it into *_available before the fee is charged in full. The full `amount`
     # is then debited from *_available, so the stakeholder's net out-of-pocket
     # is `amount - credit_used`. No-op for non-positive amounts.
-    def apply_available_credit(stakeholder_id, type, operation_id)
+    def apply_available_credit(stakeholder_id, stakeholder_type, operation_id)
       return unless amount.positive?
 
-      credit_balance = ::Stern.balance(stakeholder_id, "#{type}_credit".to_sym, currency)
+      credit_balance = ::Stern.balance(stakeholder_id, "#{stakeholder_type}_credit".to_sym, currency)
       credit_to_apply = [ credit_balance, amount ].min
       return unless credit_to_apply.positive?
 
       EntryPair.public_send(
-        "add_apply_#{type}_credit".to_sym,
+        "add_apply_#{stakeholder_type}_credit".to_sym,
         stakeholder_id, stakeholder_id, credit_to_apply, currency, operation_id:,
       )
     end

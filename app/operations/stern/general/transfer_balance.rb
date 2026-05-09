@@ -44,10 +44,14 @@ module Stern
     end
 
     def perform(operation_id)
-      stakeholder_id, type = from_stakeholder
+      stakeholder_id, stakeholder_type = from_stakeholder
       
-      self.amount = BalanceQuery.new(gid: stakeholder_id, book_id: "#{type}_available".to_sym, currency:, timestamp: Time.current).call
-
+      self.amount = BalanceQuery.new(
+        gid: stakeholder_id,
+        book_id: "#{stakeholder_type}_available".to_sym,
+        currency:,
+        timestamp: Time.current
+      ).call
       return unless amount.positive?
 
       if from_merchant_id.present?

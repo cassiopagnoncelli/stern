@@ -12,17 +12,17 @@ module Stern
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
-      stakeholder_id, type = stakeholder
+      stakeholder_id, stakeholder_type = stakeholder
       return [] if stakeholder_id.nil?
 
-      tuples_for_pair("withdraw_confirm_withdrawal_#{type}".to_sym, stakeholder_id, stakeholder_id, currency)
+      tuples_for_pair("withdraw_confirm_withdrawal_#{stakeholder_type}".to_sym, stakeholder_id, stakeholder_id, currency)
     end
 
     def perform(operation_id)
-      stakeholder_id, type = stakeholder
+      stakeholder_id, stakeholder_type = stakeholder
 
       EntryPair.public_send(
-        "add_withdraw_confirm_withdrawal_#{type}".to_sym,
+        "add_withdraw_confirm_withdrawal_#{stakeholder_type}".to_sym,
         stakeholder_id,
         stakeholder_id,
         amount,
