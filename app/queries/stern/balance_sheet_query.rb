@@ -89,8 +89,8 @@ __END__
 # Examples:
 
 BalanceSheetQuery.new(
-  start_date: DateTime.current.yesterday,
-  end_date: DateTime.current + 1.minute,
+  start_date: Time.current.yesterday,
+  end_date: Time.current + 1.minute,
   currency: :USD,
   book_ids: %i[customer_balance_available_usd bops_pl_usd],
   book_format: %i[titleize]

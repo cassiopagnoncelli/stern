@@ -67,6 +67,6 @@ SumEntriesQuery.new(
   book_id: :boleto,
   currency: :BRL,
   time_grouping: :hourly,
-  start_date: DateTime.current.last_month.beginning_of_month,
-  end_date: DateTime.current
+  start_date: Time.current.last_month.beginning_of_month,
+  end_date: Time.current
 ).call

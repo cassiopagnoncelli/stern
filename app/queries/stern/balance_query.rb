@@ -43,5 +43,5 @@ BalanceQuery.new(
   gid: 1101,
   book_id: :merchant_balance,
   currency: :BRL,
-  timestamp: DateTime.current
+  timestamp: Time.current
 ).call

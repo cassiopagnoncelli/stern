@@ -11,3 +11,17 @@ AllCops:
 # # Use `[a, [b, c]]` not `[ a, [ b, c ] ]`
 # Layout/SpaceInsideArrayLiteralBrackets:
 #   Enabled: false
+
+# Forbid `DateTime` (incl. `DateTime.current` / `DateTime.parse`) in app/ and lib/.
+# `AuthenticatedController` wraps requests in `Time.use_zone(...)`, but DateTime
+# ignores Time.zone — silently wrong for non-UTC tenants. Use Time.current /
+# Time.zone.parse instead. See CLAUDE.md for the full rule.
+# Excluded: spec/ (test code), and the SOP files which intentionally store
+# `.utc` instants where the zone is irrelevant.
+Style/DateTime:
+  Enabled: true
+  AllowCoercion: true
+  Exclude:
+    - 'spec/**/*'
+    - 'app/models/stern/scheduled_operation.rb'
+    - 'app/services/stern/scheduled_operation_service.rb'

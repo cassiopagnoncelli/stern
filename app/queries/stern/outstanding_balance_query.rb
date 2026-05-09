@@ -14,7 +14,7 @@ module Stern
     # @param book_id [Bignum] book, eg. merchant balance
     # @param currency [String, Symbol, Integer] currency name or index
     # @param timestamp [Date, Time, DateTime] balance at the given time
-    def initialize(book_id:, currency:, timestamp: DateTime.current)
+    def initialize(book_id:, currency:, timestamp: Time.current)
       unless timestamp.is_a?(Date) || timestamp.is_a?(Time) || timestamp.is_a?(DateTime)
         raise ArgumentError, "should be Date, Time, or DateTime"
       end
