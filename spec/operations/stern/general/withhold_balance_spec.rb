@@ -62,6 +62,14 @@ module Stern
         expect(op).not_to be_valid
         expect(op.errors[:currency]).to include(/not a recognized currency/)
       end
+
+      it "defaults allow_overdraft to false when omitted" do
+        expect(described_class.new(**valid_inputs).allow_overdraft).to eq(false)
+      end
+
+      it "rejects a non-boolean allow_overdraft" do
+        expect(described_class.new(**valid_inputs(allow_overdraft: "yes"))).not_to be_valid
+      end
     end
 
     describe "#target_tuples" do
@@ -127,28 +135,73 @@ module Stern
         expect(EntryPair.last.code).to eq("withhold_partner_balance")
       end
 
-      it "succeeds when amount equals available balance" do
-        seed_available({ merchant_id: }, amount: 5000)
-
-        described_class.new(**valid_inputs(amount: 5000)).call
-
-        expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(0)
-        expect(::Stern.balance(merchant_id, :merchant_withheld, :BRL)).to eq(5000)
-      end
-
-      it "drives available negative when no balance has been seeded (no overdraft guard)" do
-        described_class.new(**valid_inputs(amount: 5000)).call
-
-        expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(-5000)
-        expect(::Stern.balance(merchant_id, :merchant_withheld, :BRL)).to eq(5000)
-      end
-
       it "stamps every entry with the operation's currency" do
         seed_available({ merchant_id: }, amount: 10_000)
         described_class.new(**valid_inputs(amount: 5000)).call
 
         currencies = Entry.where(entry_pair_id: EntryPair.last.id).pluck(:currency).uniq
         expect(currencies).to eq([ ::Stern.cur("BRL") ])
+      end
+
+      context "when overdraft disallowed (default)" do
+        it "raises InsufficientFunds when amount exceeds available balance" do
+          seed_available({ merchant_id: }, amount: 1000)
+
+          expect {
+            described_class.new(**valid_inputs(amount: 5000)).call
+          }.to raise_error(::Stern::InsufficientFunds, /withhold_balance amount 5000 exceeds available balance 1000/)
+        end
+
+        it "does not write any entry pair when the runtime check fails" do
+          seed_available({ merchant_id: }, amount: 1000)
+
+          expect {
+            begin
+              described_class.new(**valid_inputs(amount: 5000)).call
+            rescue ::Stern::InsufficientFunds
+              # expected
+            end
+          }.not_to change { EntryPair.where(code: "withhold_merchant_balance").count }
+        end
+
+        it "does not commit an Operation row when the runtime check fails" do
+          seed_available({ merchant_id: }, amount: 1000)
+
+          expect {
+            begin
+              described_class.new(**valid_inputs(amount: 5000)).call
+            rescue ::Stern::InsufficientFunds
+              # expected
+            end
+          }.not_to change { Operation.where(name: "WithholdBalance").count }
+        end
+
+        it "succeeds when amount equals available balance" do
+          seed_available({ merchant_id: }, amount: 5000)
+
+          described_class.new(**valid_inputs(amount: 5000)).call
+
+          expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(0)
+          expect(::Stern.balance(merchant_id, :merchant_withheld, :BRL)).to eq(5000)
+        end
+      end
+
+      context "when allow_overdraft is true" do
+        it "allows amount > available_balance and drives available negative" do
+          seed_available({ merchant_id: }, amount: 1000)
+
+          described_class.new(**valid_inputs(amount: 5000, allow_overdraft: true)).call
+
+          expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(-4000)
+          expect(::Stern.balance(merchant_id, :merchant_withheld, :BRL)).to eq(5000)
+        end
+
+        it "skips the runtime check entirely with no available balance seeded" do
+          described_class.new(**valid_inputs(amount: 5000, allow_overdraft: true)).call
+
+          expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(-5000)
+          expect(::Stern.balance(merchant_id, :merchant_withheld, :BRL)).to eq(5000)
+        end
       end
     end
   end

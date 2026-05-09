@@ -15,6 +15,18 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`{ kind: :amount_sum, ... }` or `{ kind: :ending_balance, book_id:,
   gid:, currency:, ... }`) identifying the first break. O(n_entries) —
   not for hot paths.
+- **`allow_overdraft` flag on `WithholdBalance`.** Defaults to `false`
+  (the safe path); set `true` to authorize a withhold that would otherwise
+  be rejected. Gates a new pre-check that raises `Stern::InsufficientFunds`
+  when the withhold would exceed the stakeholder's per-gid available
+  balance. Brings `WithholdBalance` in line with the `LockBalance` guard
+  shipped in 1.8 — the destination book (`*_withheld`) is `non_negative`,
+  but the source `*_available` is not, so the operation could previously
+  silently overdraw available into a negative balance. **Breaking:**
+  callers passing an amount exceeding the per-gid available balance will
+  now raise `Stern::InsufficientFunds` instead of writing a negative
+  available balance; intentional overdrafts must opt in with
+  `allow_overdraft: true`.
 
 ### Changed
 
