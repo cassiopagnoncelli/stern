@@ -5,6 +5,58 @@ All notable changes to Stern are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Withdrawal-flow rework. The lifecycle now exposes explicit forward operations
+for every transition out of `wdw_*_locked` / `wdw_*_confirmed`, with intent
+preserved in the audit trail instead of inferred from a sign flip.
+
+### Added
+
+- **`Stern::CancelWithdrawal`.** Releases an in-flight lock back to
+  `*_available` (`wdw_*_locked → *_available`). Use before settlement; the
+  pre-check raises `Stern::InsufficientFunds` when the cancel exceeds the
+  current locked balance.
+- **`Stern::ReverseWithdrawal`.** Reverses a confirmed withdrawal back to
+  `*_available` (`wdw_*_confirmed → *_available`), for post-settlement
+  rejects (e.g. bank-side bounce). Same exception shape as Cancel.
+- **`allow_overdraft` flag on `LockWithdrawal`, `Divest`, and
+  `TransferBalance`.** Defaults to `false` (the safe path); set `true` to
+  authorize a write that would otherwise be rejected. Replaces the prior
+  `capped` flag on `LockWithdrawal` and `Divest` (polarity flipped).
+- **DB-level backstop on `wdw_*_locked` / `wdw_*_confirmed`.** Both books
+  are now `non_negative: true`, mirroring `refund_locked` and
+  `chargeback_locked`. Translates an over-debit (concurrent or otherwise)
+  into `Stern::BalanceNonNegativeViolation`.
+
+### Changed
+
+- **`LockWithdrawal` raises `Stern::InsufficientFunds`** (was a generic
+  `ArgumentError` with `"larger than available balance"`) when the cap is
+  hit. Aligns with the existing `BalanceNonNegativeViolation` taxonomy.
+- **`TransferBalance` raises `Stern::InsufficientFunds`** for the same
+  reason. The drain semantic (`amount: nil`) is now rejected upfront when
+  combined with `allow_overdraft: true`.
+- **`LockWithdrawal#amount` must be positive** — the validator is now
+  `greater_than: 0` (was `other_than: 0`).
+
+### Removed
+
+- **Negative-amount unlock path on `LockWithdrawal`.** Use
+  `CancelWithdrawal` for pre-settlement release, `ReverseWithdrawal` for
+  post-settlement reversal.
+- **`capped` flag on `LockWithdrawal` and `Divest`.** Renamed to
+  `allow_overdraft`; default behavior is unchanged
+  (`capped: true` ↔ `allow_overdraft: false`).
+
+### Migration notes
+
+Hosts that pass `capped:` to `LockWithdrawal` or `Divest`, rescue
+`ArgumentError` from `LockWithdrawal` / `TransferBalance` for funds-shortage
+errors, or rely on `LockWithdrawal.new(amount: -X)` to unlock will need to
+update. The chart-level non_negative additions take effect on the next
+`db/seeds/books.rb` run (test suite seeds in `before(:suite)`).
+
 ## [1.3.0] — 2026-04-23
 
 A large consolidation release. The ledger is now currency-aware, concurrency

@@ -40,17 +40,26 @@ books:
   - customer_credit:
       non_negative: true
   
-  # Withdrawals
-  - wdw_merchant_locked
-  - wdw_merchant_confirmed
+  # Withdrawals.
+  # `*_locked` and `*_confirmed` are non_negative so the Cancel/Reverse ops
+  # cannot over-debit a withdrawal stage (DB-level backstop behind each op's
+  # friendly pre-check).
+  - wdw_merchant_locked:
+      non_negative: true
+  - wdw_merchant_confirmed:
+      non_negative: true
   - wdw_merchant_fee
-  
-  - wdw_partner_locked
-  - wdw_partner_confirmed
+
+  - wdw_partner_locked:
+      non_negative: true
+  - wdw_partner_confirmed:
+      non_negative: true
   - wdw_partner_fee
 
-  - wdw_customer_locked
-  - wdw_customer_confirmed
+  - wdw_customer_locked:
+      non_negative: true
+  - wdw_customer_confirmed:
+      non_negative: true
   - wdw_customer_fee
 
   # Deposits
