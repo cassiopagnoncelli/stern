@@ -14,7 +14,7 @@ module Benchmark
       def setup
         return unless opts[:reset]
 
-        ::Stern::Repair.clear
+        ::Stern::Repair.clear(confirm: true)
       end
 
       def run_once(iter_idx, thread_idx)

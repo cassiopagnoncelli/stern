@@ -8,7 +8,7 @@ module Stern
     let(:usd) { ::Stern.cur("USD") }
     let(:operation) { create(:operation) }
 
-    before { Repair.clear }
+    before { Repair.clear(confirm: true) }
 
     def seed(uid, amount, currency)
       EntryPair.add_merchant_available(uid, gid, amount, currency, operation_id: operation.id)

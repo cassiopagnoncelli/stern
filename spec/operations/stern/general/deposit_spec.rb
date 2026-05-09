@@ -61,7 +61,7 @@ module Stern
     end
 
     describe "#call" do
-      before { Repair.clear }
+      before { Repair.clear(confirm: true) }
 
       it "writes the confirm_deposit_merchant entry pair keyed by merchant_id" do
         described_class.new(**valid_inputs).call

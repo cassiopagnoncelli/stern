@@ -13,8 +13,8 @@ module Stern
     let(:currency) { ::Stern.cur("BRL") }
     let(:book_id) { ::Stern.chart.book_code(:merchant_available) }
 
-    before { Repair.clear }
-    after { Repair.clear }
+    before { Repair.clear(confirm: true) }
+    after { Repair.clear(confirm: true) }
 
     # SQL fragment that matches the key `BaseOperation#acquire_advisory_locks` and
     # `create_entry` v03 use for this tuple. If Repair acquires the same key, a

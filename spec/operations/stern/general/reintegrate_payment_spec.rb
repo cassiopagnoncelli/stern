@@ -76,7 +76,7 @@ module Stern
     end
 
     describe "#call" do
-      before { Repair.clear }
+      before { Repair.clear(confirm: true) }
 
       it "credits refund_locked at refund_id and debits merchant_available at refund_id" do
         described_class.new(**valid_inputs).call

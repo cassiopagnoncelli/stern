@@ -37,7 +37,7 @@ module Stern
 
     before do
       stub_const("Stern::WithdrawMatrix", withdraw_op_class)
-      Repair.clear
+      Repair.clear(confirm: true)
     end
 
     # Structural invariants run before Repair.clear (LIFO) — every cross-actor
@@ -46,7 +46,7 @@ module Stern
       assert_entry_pairs_structurally_sound!
       assert_operations_integral!
     end
-    after { Repair.clear }
+    after { Repair.clear(confirm: true) }
 
     def seed(gid:, amount:)
       op = Operation.create!(name: "matrix_seed", params: {})

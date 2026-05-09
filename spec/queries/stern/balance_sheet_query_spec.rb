@@ -8,7 +8,7 @@ module Stern
     let(:start_date) { 1.day.ago.to_datetime }
     let(:end_date) { 1.day.from_now.to_datetime }
 
-    before { Repair.clear }
+    before { Repair.clear(confirm: true) }
 
     def seed(uid, gid, amount, currency)
       EntryPair.add_merchant_available(uid, gid, amount, currency, operation_id: operation.id)

@@ -138,8 +138,8 @@ module Stern
 
     describe "end-to-end integration via ScheduledOperationService" do
       before { described_class.install_subscribers! }
-      before { Repair.clear }
-      after { Repair.clear }
+      before { Repair.clear(confirm: true) }
+      after { Repair.clear(confirm: true) }
 
       it "records enqueue + terminal events when processing a real SOP" do
         sop = ScheduledOperation.create!(

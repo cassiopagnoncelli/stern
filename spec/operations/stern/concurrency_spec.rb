@@ -40,14 +40,14 @@ module Stern
     let(:currency) { ::Stern.cur("BRL") }
     let(:book_id) { ::Stern.chart.book_code(:merchant_available) }
 
-    before { Repair.clear }
+    before { Repair.clear(confirm: true) }
     # Structural invariants run before Repair.clear (LIFO) — every concurrency
     # test validates record-graph shape too.
     after do
       assert_entry_pairs_structurally_sound!
       assert_operations_integral!
     end
-    after { Repair.clear }
+    after { Repair.clear(confirm: true) }
 
     # Seeds `amount` into the merchant's balance via a deposit-shaped entry pair.
     def seed_balance(amount:)

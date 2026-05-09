@@ -5,7 +5,7 @@ module Stern
     let(:currency) { ::Stern.cur("BRL") }
 
     def gen_entry(amount: 100, timestamp: nil)
-      Repair.clear
+      Repair.clear(confirm: true)
       described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 1, amount:, currency:, timestamp:)
     end
 
@@ -122,7 +122,7 @@ module Stern
     describe "running balance" do
       let(:usd) { ::Stern.cur("USD") }
 
-      before { Repair.clear }
+      before { Repair.clear(confirm: true) }
 
       it "starts each currency's ending_balance from zero" do
         described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 1, amount: 100, currency:)

@@ -13,8 +13,8 @@ module Stern
     let(:brl) { ::Stern.cur("BRL") }
     let(:flagged_book_id) { ::Stern.chart.book_code(:merchant_credit) }
 
-    before { Repair.clear }
-    after { Repair.clear }
+    before { Repair.clear(confirm: true) }
+    after { Repair.clear(confirm: true) }
 
     def new_op
       Operation.create!(name: "nn_test", params: {})

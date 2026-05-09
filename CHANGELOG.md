@@ -44,6 +44,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Aligns with `LockWithdrawal`, `CancelWithdrawal`, and `ReverseWithdrawal`;
   prevents zero-amount no-op writes and negative-amount corruption of the
   locked-vs-confirmed accounting.
+- **`Stern::Repair.clear` now requires `confirm: true`.** Previously a bare
+  `Repair.clear` from a Rails console would wipe the entire ledger in any
+  non-`production` env (staging, demo, sandbox). Brings the safeguard in line
+  with `rebuild_balances`. **Breaking:** host apps and scripts calling
+  `Repair.clear` must pass `confirm: true`.
 
 ### Removed
 

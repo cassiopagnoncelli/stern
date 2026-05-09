@@ -59,10 +59,10 @@ module Stern
     before do
       stub_const("Stern::TrivialTestOp", trivial_class)
       BaseOperation.prepend(IdemKeyRaceBarrier) unless BaseOperation.include?(IdemKeyRaceBarrier)
-      Repair.clear
+      Repair.clear(confirm: true)
     end
 
-    after { Repair.clear }
+    after { Repair.clear(confirm: true) }
 
     it "two concurrent callers with the same idem_key both resolve to the same Operation id" do
       key = "race-key-#{SecureRandom.hex(4)}"

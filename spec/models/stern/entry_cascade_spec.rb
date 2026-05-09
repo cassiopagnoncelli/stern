@@ -12,7 +12,7 @@ module Stern
     let(:gid) { 1101 }
     let(:base_time) { Time.current.beginning_of_minute - 1.hour }
 
-    before { Repair.clear }
+    before { Repair.clear(confirm: true) }
 
     def create_entry!(amount:, timestamp:, entry_pair_id:)
       Entry.create!(book_id:, gid:, entry_pair_id:, amount:, currency:, timestamp:)

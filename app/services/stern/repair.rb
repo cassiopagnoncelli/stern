@@ -80,7 +80,9 @@ module Stern
       end
     end
 
-    def self.clear
+    def self.clear(confirm: false)
+      raise ArgumentError, "You must confirm the operation" unless confirm
+
       if Rails.env.production?
         raise StandardError, "cannot perform in production for security reasons"
       end
