@@ -7,7 +7,7 @@ module Stern
     inputs :chargeback_id, :amount, :currency
 
     validates :chargeback_id, numericality: { greater_than: 0, only_integer: true }
-    validates :amount, presence: true, numericality: { other_than: 0, only_integer: true }
+    validates :amount, presence: true, numericality: { greater_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples

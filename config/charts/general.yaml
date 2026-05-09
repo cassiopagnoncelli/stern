@@ -101,9 +101,13 @@ books:
   - refund_fee_partner
 
   # Chargebacks
+  # `chargeback_loss` is non_negative so ReverseChargeback cannot drain more
+  # than was confirmed at a given chargeback_id (DB-level backstop behind the
+  # op's friendly pre-check).
   - chargeback_locked:
       non_negative: true
-  - chargeback_loss
+  - chargeback_loss:
+      non_negative: true
 
   - chargeback_fee_merchant
   - chargeback_fee_partner
@@ -378,6 +382,19 @@ entry_pairs:
     book_sub: refund_confirmed
     book_add: customer_available
   
+  # Post-settlement refund reversal. Mirrors ReverseWithdrawal's "terminal
+  # state back to available" idiom: drains directly from customer_available
+  # to the funder's available book without retracing through refund_confirmed
+  # / refund_locked. Funder identity is consumed at lock_refund_*, drained
+  # into the fungible refund_confirmed, and lost — so the caller must
+  # re-supply it (merchant vs partner) on reversal.
+  reverse_refund_merchant:
+    book_sub: customer_available
+    book_add: merchant_available
+  reverse_refund_partner:
+    book_sub: customer_available
+    book_add: partner_available
+
   # Refund fees
   charge_refund_fee_merchant:
     book_sub: merchant_available
@@ -397,14 +414,26 @@ entry_pairs:
   
   # Chargeback is loss recognition, not a liability transfer: chargeback_loss
   # is a terminal P&L sink (parallel to chargeback_fee_*), since the issuing
-  # bank has already paid the cardholder externally. There is no settle step,
-  # and no reversal pair — if dispute reversals ever become a real flow, add
-  # explicit reverse_* pairs keyed by funder; do not call Chargeback with a
-  # negative amount.
+  # bank has already paid the cardholder externally. There is no settle step.
+  # Dispute reversals route through reverse_chargeback_merchant /
+  # reverse_chargeback_partner below — never call Chargeback with a negative
+  # amount.
   confirm_chargeback:
     book_sub: chargeback_locked
     book_add: chargeback_loss
-  
+
+  # Post-settlement chargeback reversal (issuer overturned the dispute).
+  # Recovers the loss directly to the funder's available book; chargeback_loss
+  # is non_negative so the cumulative reversal cannot exceed the original
+  # confirmed amount per chargeback_id. Funder identity was consumed at
+  # lock_chargeback_*, so the caller must re-supply it (merchant vs partner).
+  reverse_chargeback_merchant:
+    book_sub: chargeback_loss
+    book_add: merchant_available
+  reverse_chargeback_partner:
+    book_sub: chargeback_loss
+    book_add: partner_available
+
   # Chargeback fees
   charge_chargeback_fee_merchant:
     book_sub: merchant_available

@@ -6,7 +6,8 @@ module Stern
   # `refund_locked → <funder>_available`). Used when the gateway declines a
   # refund between `ReintegratePayment` and `Refund` (confirm + settle). Once
   # `Refund` has run, `refund_locked` for that refund has drained into
-  # `refund_confirmed` and this op no longer applies.
+  # `refund_confirmed` and this op no longer applies — use `ReverseRefund`
+  # for post-settlement reversals.
   #
   # Funder identity (merchant vs partner) must match the side that locked the
   # refund — `cancel_refund_merchant` undoes `lock_refund_merchant`,
