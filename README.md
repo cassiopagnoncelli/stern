@@ -77,7 +77,65 @@ seeds the books defined by the active chart.
 | **EntryPair** | A balanced pair of entries (amount + / amount -). The atomic unit of a transaction. |
 | **Operation** | A high-level, idempotent action recorded in `stern_operations`. Produces one or more EntryPairs. |
 | **ScheduledOperation** | An operation queued for future execution via a background job. |
-| **gid** | "Group id" — the account/entity an entry belongs to (e.g. merchant id). |
+| **gid** | "Group id" — the *cause* an entry is keyed by. See [The `gid` parameter](#the-gid-parameter). |
+
+## The `gid` parameter
+
+Every entry is written at a `(book_id, gid, currency)` tuple. The `gid`
+("group id") is **the cause of the entry, not the owner of the balance**.
+Both legs of an `EntryPair.add_<pair>(uid, gid, …)` land at the single gid
+the caller passes — that gid identifies *what the entry is for* (a specific
+payment, withdrawal, refund, …), not necessarily the stakeholder whose
+balance moves.
+
+### Worked example: `ChargePaymentFee`
+
+When a payment fee is debited from a merchant, both legs land at `gid =
+payment_id`:
+
+```ruby
+# app/operations/stern/general/charge_payment_fee.rb (paraphrased)
+EntryPair.add_charge_pix_fee_merchant(
+  merchant_id,   # uid — joins the entry pair to its cause
+  payment_id,    # gid — the cause these entries are keyed by
+  amount, currency, operation_id:,
+)
+# => Entry(book: merchant_available,  gid: payment_id, amount: -fee)
+# => Entry(book: payment_fee_pix,     gid: payment_id, amount: +fee)
+```
+
+The same `merchant_available` book also carries entries written at `gid =
+merchant_id` (deposits, credit applications, transfers) and at other causes
+(withdrawal locks, refund locks). Each subset captures one cause's
+contribution to the merchant's available balance.
+
+`target_tuples` is independent of where entries land. `ChargePaymentFee`
+returns `(merchant_available, merchant_id, currency)` plus
+`(payment_fee_pix, payment_id, currency)`, so two fee charges on the **same**
+merchant serialize while charges on different merchants run in parallel. The
+lock key is the stakeholder; the entry's gid is the cause — they diverge by
+design.
+
+### Invariant: per-gid reads are partial
+
+`Stern.balance(gid, book_id, currency)` (and `BalanceQuery`) returns only the
+slice of `(book_id, currency)` written at that single gid:
+
+```ruby
+# Just the slice at gid = merchant_id (deposits, credits, transfers).
+# NOT the sum of every entry that affects this merchant's availability.
+Stern.balance(merchant_id, :merchant_available, :BRL)
+```
+
+The full balance of `(book_id, currency)` is the sum across every gid:
+
+```ruby
+Stern.outstanding_balance(:merchant_available, :BRL)             # book-wide total
+Stern::BookBalancesQuery.new(book_id: :merchant_available,       # per-gid breakdown
+                             currency: :BRL).call
+```
+
+Treat per-gid reads as **cause-scoped**, not **owner-scoped**.
 
 ## The chart
 
@@ -222,6 +280,31 @@ inputs for audit. The `inputs` DSL generates attr accessors and drives the
 params hash — no scraping of stray instance variables, no custom `initialize`.
 `currency` is auto-normalized from its string name to its integer code before
 `target_tuples` or `perform` runs.
+
+### Checklist
+
+When adding an operation:
+
+1. **Declare `inputs`** — every kwarg you accept. Drives the audit-log params
+   hash. Use `validates_exactly_one_of` for stakeholder-pick ops.
+2. **Pick the entry's `gid` deliberately** — see [The `gid` parameter](#the-gid-parameter).
+   Choose the cause you want to slice the book by later: payment id for
+   per-payment fees, withdrawal id for per-withdrawal accounting, stakeholder
+   id when the cause *is* the stakeholder (deposits, transfers, credits).
+   Different ops on the same book may choose different gid kinds — that's
+   intentional, not a smell.
+3. **Declare `target_tuples`** — every `(book, gid, currency)` the op reads
+   or writes, typically via `tuples_for_pair(pair_name, book_sub_gid,
+   book_add_gid, currency)`. The two lock gids may differ from each other
+   *and* from the gid the entries are written at; they're the lock
+   granularity, not the entry key. Declaring extras is harmless; declaring
+   too few is a correctness bug.
+4. **Implement `perform(operation_id)`** — runs inside a transaction with
+   advisory locks already held. Use `EntryPair.add_<pair>(uid, gid, …)` for
+   ledger writes; use `runtime_check` for state-dependent preconditions
+   (e.g. balance pre-checks via `require_sufficient_balance!`).
+5. **Add a concurrency spec** if `perform` reads-then-writes — see
+   [AGENTS.md](AGENTS.md#testing-a-new-operation).
 
 See [AGENTS.md](AGENTS.md) for the full operation-writing contract.
 

@@ -13,6 +13,12 @@ OpenAI Codex will review your output once you are done. Make your best.
 Operations are the public API. They extend `Stern::BaseOperation`, live under
 `app/operations/stern/<operations_module>/`, and follow a strict shape.
 
+> **Read first:** [The `gid` parameter](README.md#the-gid-parameter) in the
+> README. Choosing the entry's gid (the *cause* the entry is keyed by) and
+> `target_tuples`'s lock gids (the *natural sharding entity* per side) is the
+> most error-prone part of authoring a new operation; they are deliberately
+> allowed to differ. The README has the worked example and invariants.
+
 ### Required elements
 
 1. **Declare inputs with the `inputs` DSL.** Lists the kwargs the operation
