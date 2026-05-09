@@ -3,7 +3,8 @@
 <div class="max-w-7xl mx-auto p-6">
   <%= render "stern/admin/shared/paginated_table",
       title: "Operation Attempts",
-      subtitle: "Every BaseOperation#call invocation, including failures whose Operation row was rolled back.",
+      subtitle: "Every call invocation.",
+      title_wrapper_class: "min-w-0 md:w-48 md:flex-shrink-0",
       has_records: @attempts.any?,
       pagination: true,
       start_record: @start_record,
@@ -23,7 +24,7 @@
       },
       filters_url: admin_attempts_path,
       filters_form_id: "attempts-filters-form",
-      filters_form_class: "flex w-full flex-wrap items-end gap-2 justify-end",
+      filters_form_class: "flex w-full flex-nowrap items-end gap-2 justify-end",
       filters_hidden_fields: {
         page: 1,
         per_page: @per_page
