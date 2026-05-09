@@ -19,38 +19,7 @@ module Stern
       self.allow_overdraft = false if allow_overdraft.nil?
     end
 
-    def target_tuples
-      stakeholder_id, stakeholder_type = stakeholder_for
-
-      tuples_for_pair("lock_withdrawal_#{stakeholder_type}".to_sym, stakeholder_id, stakeholder_id, currency)
-    end
-
-    def runtime_check
-      return if allow_overdraft
-
-      stakeholder_id, stakeholder_type = stakeholder_for
-
-      require_sufficient_balance!(
-        book_id: "#{stakeholder_type}_available".to_sym,
-        gid: stakeholder_id,
-        currency:,
-        amount:,
-        op_label: "lock_withdrawal",
-        balance_label: "available balance",
-      )
-    end
-
-    def perform(operation_id)
-      stakeholder_id, stakeholder_type = stakeholder_for
-
-      EntryPair.public_send(
-        "add_lock_withdrawal_#{stakeholder_type}".to_sym,
-        stakeholder_id,
-        stakeholder_id,
-        amount,
-        currency,
-        operation_id:,
-      )
-    end
+    performs_stakeholder_pair "lock_withdrawal_%{type}",
+      requires_balance: { book: "%{type}_available", label: "available balance", bypass_when: :allow_overdraft }
   end
 end

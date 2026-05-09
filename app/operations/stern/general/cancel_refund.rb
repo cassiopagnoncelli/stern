@@ -25,34 +25,11 @@ module Stern
     validates :amount, presence: true, numericality: { greater_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
-    def target_tuples
-      stakeholder_id, stakeholder_type = stakeholder_for
-
-      tuples_for_pair("cancel_refund_#{stakeholder_type}".to_sym, refund_id, stakeholder_id, currency)
-    end
-
-    def runtime_check
-      require_sufficient_balance!(
-        book_id: :refund_locked,
-        gid: refund_id,
-        currency:,
-        amount:,
-        op_label: "cancel_refund",
-        balance_label: "locked balance",
-      )
-    end
-
-    def perform(operation_id)
-      stakeholder_id, stakeholder_type = stakeholder_for
-
-      EntryPair.public_send(
-        "add_cancel_refund_#{stakeholder_type}".to_sym,
-        stakeholder_id,
-        refund_id,
-        amount,
-        currency,
-        operation_id:,
-      )
-    end
+    performs_stakeholder_pair "cancel_refund_%{type}",
+      sub_gid: :refund_id,
+      add_gid: :resolved,
+      entry_uid: :resolved,
+      entry_gid: :refund_id,
+      requires_balance: { book: :refund_locked, label: "locked balance", gid: :refund_id }
   end
 end

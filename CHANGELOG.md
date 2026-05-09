@@ -5,6 +5,22 @@ All notable changes to Stern are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Changed
+
+- **Stakeholder-pair operations now use a class-level `performs_stakeholder_pair`
+  macro** instead of hand-written `target_tuples` / `perform` / `runtime_check`
+  triplets. Seventeen ops collapsed from ~25 lines of dispatch boilerplate to a
+  single declaration: `AdjustBalance`, `SettleBalance`, `WithholdBalance`,
+  `ApplyCredit`, `AddCredit`, `Deposit`, `ConfirmWithdrawal`,
+  `ReverseChargeback`, `UnlockBalance`, `ReleaseWithheldBalance`,
+  `ReverseWithdrawal`, `LockBalance`, `LockWithdrawal`, `CancelWithdrawal`,
+  `SplitPayment`, `CancelRefund`, `ReverseRefund`. Pure refactor — emits the
+  same `EntryPair.add_*` calls and same `Stern::InsufficientFunds` messages,
+  so existing callers and specs are unaffected. Multi-pair / two-stakeholder
+  ops (`TransferBalance`, `ReintegratePayment`, fee ops) are unchanged.
+
 ## [1.8.0] — 2026-05-09
 
 Withdrawal-flow rework. The lifecycle now exposes explicit forward operations

@@ -20,36 +20,7 @@ module Stern
     validates :amount, presence: true, numericality: { greater_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
-    def target_tuples
-      stakeholder_id, stakeholder_type = stakeholder_for
-
-      tuples_for_pair("reverse_withdrawal_#{stakeholder_type}".to_sym, stakeholder_id, stakeholder_id, currency)
-    end
-
-    def runtime_check
-      stakeholder_id, stakeholder_type = stakeholder_for
-
-      require_sufficient_balance!(
-        book_id: "wdw_#{stakeholder_type}_confirmed".to_sym,
-        gid: stakeholder_id,
-        currency:,
-        amount:,
-        op_label: "reverse_withdrawal",
-        balance_label: "confirmed balance",
-      )
-    end
-
-    def perform(operation_id)
-      stakeholder_id, stakeholder_type = stakeholder_for
-
-      EntryPair.public_send(
-        "add_reverse_withdrawal_#{stakeholder_type}".to_sym,
-        stakeholder_id,
-        stakeholder_id,
-        amount,
-        currency,
-        operation_id:,
-      )
-    end
+    performs_stakeholder_pair "reverse_withdrawal_%{type}",
+      requires_balance: { book: "wdw_%{type}_confirmed", label: "confirmed balance" }
   end
 end

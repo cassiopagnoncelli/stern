@@ -31,36 +31,11 @@ module Stern
       self.allow_overdraft = false if allow_overdraft.nil?
     end
 
-    def target_tuples
-      funder_id, funder_type = funder_for
-
-      tuples_for_pair("reverse_refund_#{funder_type}".to_sym, customer_id, funder_id, currency)
-    end
-
-    def runtime_check
-      return if allow_overdraft
-
-      require_sufficient_balance!(
-        book_id: :customer_available,
-        gid: customer_id,
-        currency:,
-        amount:,
-        op_label: "reverse_refund",
-        balance_label: "available balance",
-      )
-    end
-
-    def perform(operation_id)
-      funder_id, funder_type = funder_for
-
-      EntryPair.public_send(
-        "add_reverse_refund_#{funder_type}".to_sym,
-        refund_id,
-        funder_id,
-        amount,
-        currency,
-        operation_id:,
-      )
-    end
+    performs_stakeholder_pair "reverse_refund_%{type}",
+      using: :funder_for,
+      sub_gid: :customer_id,
+      add_gid: :resolved,
+      entry_uid: :refund_id,
+      requires_balance: { book: :customer_available, label: "available balance", bypass_when: :allow_overdraft }
   end
 end

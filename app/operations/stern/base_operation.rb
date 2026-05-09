@@ -132,6 +132,97 @@ module Stern
       def resolved_retry_policy
         @retry_policy || DEFAULT_RETRY_POLICY
       end
+
+      # Generates `target_tuples`, `perform`, and (optionally) `runtime_check`
+      # for the dominant single-pair shape: an op picks a stakeholder/funder via
+      # `stakeholder_for` / `funder_for`, formats one entry-pair name from the
+      # type, locks the pair's two `(book, gid, currency)` tuples, then writes
+      # `EntryPair.add_<pair>(uid, gid, amount, currency, operation_id:)`.
+      #
+      # `pair_template` is a printf-style string with `%{type}` interpolated
+      # from the helper's returned type symbol, e.g. `"unlock_%{type}_balance"`,
+      # `"%{type}_credit"`, `"reverse_withdrawal_%{type}"`.
+      #
+      # `using:` picks the polymorphism helper. `:stakeholder_for` (default)
+      # scans `merchant`/`customer`/`partner`; `:funder_for` scans
+      # `merchant`/`partner` only — for ops where `customer_id` is a recipient,
+      # not a stakeholder candidate (see `ReverseRefund`).
+      #
+      # `sub_gid:` / `add_gid:` choose the gid passed to `tuples_for_pair` for
+      # each side, and (by default) the matching arg to `EntryPair.add_<pair>`.
+      # Pass `:resolved` (default) for the id returned by the configured
+      # helper, or any input symbol (e.g. `:payment_id`, `:refund_id`).
+      #
+      # `entry_uid:` / `entry_gid:` override the args to `EntryPair.add_<pair>`
+      # (entry uid / cause-of-entry, and the gid both legs land at) for the
+      # rare cases where the lock-side gids and the entry-side gids diverge —
+      # `ReverseRefund` writes the entry at `(uid: refund_id, gid: funder_id)`
+      # while locking on `customer_id`/`funder_id`; `CancelRefund` writes at
+      # `(uid: stakeholder_id, gid: refund_id)` while locking on
+      # `refund_id`/`stakeholder_id`. Default to `sub_gid` / `add_gid`.
+      #
+      # `requires_balance:` declares a friendly pre-check via
+      # `require_sufficient_balance!`. Keys:
+      #   * `book:`        — Symbol (literal book) or String (interpolated with `%{type}`)
+      #   * `label:`       — `balance_label:` for the error message
+      #   * `gid:`         — slot for the balance read; defaults to `sub_gid`
+      #   * `bypass_when:` — method/attr that, when truthy, skips the check
+      #
+      # `op_label` for the error message is always
+      # `name.demodulize.underscore`. Subclasses may override any generated
+      # method to extend the behavior.
+      def performs_stakeholder_pair(pair_template,
+                                    using: :stakeholder_for,
+                                    sub_gid: :resolved,
+                                    add_gid: :resolved,
+                                    entry_uid: nil,
+                                    entry_gid: nil,
+                                    requires_balance: nil)
+        helper      = using
+        uid_slot    = entry_uid || sub_gid
+        gid_slot    = entry_gid || add_gid
+        balance_cfg = requires_balance
+
+        define_method(:target_tuples) do
+          rid, type = public_send(helper)
+          pair = (pair_template % { type: type }).to_sym
+          tuples_for_pair(pair,
+            gid_for_slot(sub_gid, rid),
+            gid_for_slot(add_gid, rid),
+            currency)
+        end
+
+        define_method(:perform) do |operation_id|
+          rid, type = public_send(helper)
+          pair = "add_#{pair_template % { type: type }}".to_sym
+          EntryPair.public_send(pair,
+            gid_for_slot(uid_slot, rid),
+            gid_for_slot(gid_slot, rid),
+            amount, currency, operation_id:)
+        end
+
+        return unless balance_cfg
+
+        bal_book    = balance_cfg.fetch(:book)
+        bal_label   = balance_cfg.fetch(:label)
+        bal_gid     = balance_cfg.fetch(:gid, sub_gid)
+        bypass_when = balance_cfg[:bypass_when]
+
+        define_method(:runtime_check) do
+          next if bypass_when && public_send(bypass_when)
+
+          rid, type = public_send(helper)
+          book = bal_book.is_a?(Symbol) ? bal_book : (bal_book % { type: type }).to_sym
+          require_sufficient_balance!(
+            book_id:       book,
+            gid:           gid_for_slot(bal_gid, rid),
+            currency:,
+            amount:,
+            op_label:      self.class.name.demodulize.underscore,
+            balance_label: bal_label,
+          )
+        end
+      end
     end
 
     validate :currency_must_be_known
@@ -213,6 +304,14 @@ module Stern
       end
 
       [ nil, nil ]
+    end
+
+    # Resolves a gid slot used by `performs_stakeholder_pair`. The sentinel
+    # `:resolved` returns the id from the configured polymorphism helper
+    # (`stakeholder_for` / `funder_for`); any other Symbol is treated as an
+    # input name and read via `public_send`.
+    def gid_for_slot(slot, resolved_id)
+      slot == :resolved ? resolved_id : public_send(slot)
     end
 
     # Runs the operation. Returns the Operation id (either a new one or, when `idem_key`
