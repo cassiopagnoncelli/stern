@@ -1,6 +1,14 @@
 # frozen_string_literal: true
 
 module Stern
+  # Issues new credit to a stakeholder. Counterparty is the implicit
+  # `<stakeholder>_credit_0` sink, representing a grant from outside the
+  # stakeholder's own ledger (e.g. promotional credit, goodwill, system top-up).
+  #
+  # Note: `ApplyCredit` with a negative amount also increases the credit book,
+  # but its counterparty is `<stakeholder>_available` — i.e. credit funded by
+  # the stakeholder's own balance, not by an external grant. Pick the operation
+  # that matches the real-world counterparty; the audit trail depends on it.
   class AddCredit < BaseOperation
     inputs :merchant_id, :customer_id, :partner_id, :amount, :currency
 

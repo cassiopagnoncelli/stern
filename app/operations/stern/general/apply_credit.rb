@@ -1,6 +1,16 @@
 # frozen_string_literal: true
 
 module Stern
+  # Redeems credit into the stakeholder's available balance
+  # (`<stakeholder>_credit` → `<stakeholder>_available`). A negative amount
+  # reverses the move and increases the credit book against the available
+  # balance — semantically "add credit funded by the stakeholder's own cash."
+  #
+  # That overlaps with `AddCredit` in effect on the credit book, but the
+  # counterparties differ: `AddCredit` debits the external `_credit_0` sink
+  # (grant from outside the ledger), while negative `ApplyCredit` debits
+  # `_available` (move from the stakeholder's own funds). Choose by which
+  # counterparty reflects reality.
   class ApplyCredit < BaseOperation
     inputs :merchant_id, :customer_id, :partner_id, :amount, :currency
 
