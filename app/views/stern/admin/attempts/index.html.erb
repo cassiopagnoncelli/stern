@@ -1,6 +1,17 @@
 <% content_for :title, "Attempts" %>
 
+<%
+  retention_label = ->(days) { days.nil? ? "default" : "#{days}d" }
+%>
+
 <div class="max-w-7xl mx-auto p-6">
+  <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+    Retention:
+    success=<%= retention_label.call(@retention_summary[:success]) %>,
+    failed=<%= retention_label.call(@retention_summary[:failed]) %>,
+    pending=<%= retention_label.call(@retention_summary[:pending]) %>.
+    Older attempts are pruned.
+  </p>
   <%= render "stern/admin/shared/paginated_table",
       title: "Operation Attempts",
       subtitle: "Every call invocation.",

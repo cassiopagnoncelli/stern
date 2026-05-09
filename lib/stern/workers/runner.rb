@@ -21,6 +21,15 @@ module Stern
       DEFAULT_CONCURRENCY = 1
       DEFAULT_POLL_INTERVAL = 5.0
       DEFAULT_JANITOR_INTERVAL = 60.0
+      # In-process prune is opt-in: 0 disables it. Most deployments invoke
+      # `rake stern:operation_attempts:prune` from cron / a k8s CronJob; this
+      # path exists for embedded single-process setups.
+      DEFAULT_PRUNE_INTERVAL = 0.0
+      # Defaults applied when the Runner-level prune is enabled but the
+      # corresponding *_days kwarg is nil. Mirrors the rake task defaults.
+      DEFAULT_PRUNE_SUCCESS_DAYS = 14
+      DEFAULT_PRUNE_FAILED_DAYS = 90
+      DEFAULT_PRUNE_PENDING_DAYS = 7
       SHUTDOWN_TIMEOUT = 30.0
 
       # Postgres channel the `stern_sop_notify_trigger` NOTIFYs on when a SOP
@@ -32,6 +41,10 @@ module Stern
         concurrency: DEFAULT_CONCURRENCY,
         poll_interval: DEFAULT_POLL_INTERVAL,
         janitor_interval: DEFAULT_JANITOR_INTERVAL,
+        prune_interval: DEFAULT_PRUNE_INTERVAL,
+        prune_success_days: nil,
+        prune_failed_days: nil,
+        prune_pending_days: nil,
         logger: Rails.logger,
         install_signal_handlers: true,
         listen_for_notifications: true
@@ -41,12 +54,17 @@ module Stern
 
         @poll_interval = Float(poll_interval)
         @janitor_interval = Float(janitor_interval)
+        @prune_interval = Float(prune_interval)
+        @prune_success_days = prune_success_days || DEFAULT_PRUNE_SUCCESS_DAYS
+        @prune_failed_days  = prune_failed_days  || DEFAULT_PRUNE_FAILED_DAYS
+        @prune_pending_days = prune_pending_days || DEFAULT_PRUNE_PENDING_DAYS
         @logger = logger
         @install_signal_handlers = install_signal_handlers
         @listen_for_notifications = listen_for_notifications
         @stop = Concurrent::AtomicBoolean.new(false)
         @in_flight = Concurrent::AtomicFixnum.new(0)
         @last_janitor_at = nil
+        @last_prune_at = nil
         @wake_event = Concurrent::Event.new
         @listen_thread = nil
       end
@@ -57,6 +75,7 @@ module Stern
         start_listen_thread if @listen_for_notifications
         @logger.info(log_prefix + "starting " \
           "concurrency=#{@concurrency} poll=#{@poll_interval}s janitor=#{@janitor_interval}s " \
+          "prune=#{@prune_interval.positive? ? "#{@prune_interval}s" : "off"} " \
           "listen=#{@listen_for_notifications}")
 
         until stopping?
@@ -88,6 +107,7 @@ module Stern
       def run_once
         process_batch
         maybe_run_janitor
+        maybe_run_pruner
         refresh_gauges
       rescue StandardError => e
         @logger.error(log_prefix + "tick error: #{e.class}: #{e.message}")
@@ -168,6 +188,27 @@ module Stern
         # needs operator intervention either way.
         @last_janitor_at = now
         @logger.error(log_prefix + "janitor error: #{e.class}: #{e.message}")
+      end
+
+      # Opt-in periodic prune of `OperationAttempt`. Disabled when
+      # `@prune_interval <= 0`. Same "set last_run on failure too" pattern as
+      # `maybe_run_janitor` so a chronically broken pruner does not flood logs.
+      def maybe_run_pruner
+        return unless @prune_interval.positive?
+
+        now = Time.now.utc
+        return if @last_prune_at && (now - @last_prune_at) < @prune_interval
+
+        ::Stern::OperationAttemptPruner.call(
+          success_days: @prune_success_days,
+          failed_days:  @prune_failed_days,
+          pending_days: @prune_pending_days,
+          logger: @logger,
+        )
+        @last_prune_at = now
+      rescue StandardError => e
+        @last_prune_at = now
+        @logger.error(log_prefix + "pruner error: #{e.class}: #{e.message}")
       end
 
       def refresh_gauges

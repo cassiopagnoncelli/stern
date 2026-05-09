@@ -423,6 +423,52 @@ state that LISTEN registers is discarded at the next checkout. Opt out with
 `listen_for_notifications: false`; the runner falls back to polling alone
 (still correct, just less responsive). Session-mode PgBouncer is fine.
 
+## Pruning operation attempts
+
+`Stern::OperationAttempt` is an append-only audit log: every
+`BaseOperation#call` invocation writes one row, including the failed retries
+that pile up under a flapping external API. The table grows without bound
+unless host apps prune it. There's no upstream FK from `stern_operations`,
+so attempts can be deleted independently.
+
+Run from cron / a k8s CronJob (typically once a day, off-peak):
+
+```sh
+bundle exec rake stern:operation_attempts:prune
+```
+
+Per-status retention windows (defaults shown):
+
+```sh
+STERN_PRUNE_SUCCESS_DAYS=14   # successful attempts (op survived; the row is duplicative of stern_operations)
+STERN_PRUNE_FAILED_DAYS=90    # failed attempts (the only forensic trail for a rolled-back op)
+STERN_PRUNE_PENDING_DAYS=7    # stale `pending` rows — itself a bug signal, but reaped to bound the table
+STERN_PRUNE_BATCH_SIZE=1000   # rows deleted per statement
+STERN_PRUNE_SLEEP=0.1         # seconds between batches; raise for gentler throughput on a large backlog
+```
+
+The first run on an installation that has been retrying for months may
+delete millions of rows. Use a smaller batch size and a longer sleep
+(`STERN_PRUNE_BATCH_SIZE=500 STERN_PRUNE_SLEEP=0.5`) for the initial
+sweep, and consider a manual `VACUUM (ANALYZE) stern_operation_attempts`
+afterwards — autovacuum will catch up on its own, but a manual run
+reclaims pages immediately.
+
+The admin attempts view surfaces the configured retention at the top of
+the page so an empty result past the cutoff isn't misread as "nothing
+happened."
+
+For embedded single-process setups, the worker can run the prune itself.
+Off by default; enable by setting a non-zero `STERN_PRUNE_INTERVAL`
+(seconds — typically 86400 for once a day):
+
+```sh
+STERN_PRUNE_INTERVAL=86400 bundle exec rake stern:worker:start
+```
+
+In every other case prefer the standalone rake task — one cron entry,
+one log line, no entanglement with worker shutdown.
+
 ## Metrics (Prometheus)
 
 Stern exposes a Prometheus registry populated from `ActiveSupport::Notifications`

@@ -10,7 +10,26 @@ namespace :stern do
         concurrency:      ENV.fetch("STERN_WORKER_CONCURRENCY", Stern::Workers::Runner::DEFAULT_CONCURRENCY.to_s).to_i,
         poll_interval:    ENV.fetch("STERN_POLL_INTERVAL",      Stern::Workers::Runner::DEFAULT_POLL_INTERVAL.to_s).to_f,
         janitor_interval: ENV.fetch("STERN_JANITOR_INTERVAL",   Stern::Workers::Runner::DEFAULT_JANITOR_INTERVAL.to_s).to_f,
+        prune_interval:   ENV.fetch("STERN_PRUNE_INTERVAL",     "0").to_f,
+        prune_success_days: ENV["STERN_PRUNE_SUCCESS_DAYS"]&.to_i,
+        prune_failed_days:  ENV["STERN_PRUNE_FAILED_DAYS"]&.to_i,
+        prune_pending_days: ENV["STERN_PRUNE_PENDING_DAYS"]&.to_i,
       ).start
+    end
+  end
+
+  namespace :operation_attempts do
+    desc "Prune Stern::OperationAttempt rows past their retention window. " \
+         "Configurable via STERN_PRUNE_{SUCCESS,FAILED,PENDING}_DAYS, " \
+         "STERN_PRUNE_BATCH_SIZE, STERN_PRUNE_SLEEP."
+    task prune: :environment do
+      Stern::OperationAttemptPruner.call(
+        success_days: ENV.fetch("STERN_PRUNE_SUCCESS_DAYS", "14").to_i,
+        failed_days:  ENV.fetch("STERN_PRUNE_FAILED_DAYS",  "90").to_i,
+        pending_days: ENV.fetch("STERN_PRUNE_PENDING_DAYS",  "7").to_i,
+        batch_size:   ENV.fetch("STERN_PRUNE_BATCH_SIZE", Stern::OperationAttemptPruner::DEFAULT_BATCH_SIZE.to_s).to_i,
+        sleep_between: ENV.fetch("STERN_PRUNE_SLEEP", Stern::OperationAttemptPruner::DEFAULT_SLEEP_BETWEEN.to_s).to_f,
+      )
     end
   end
 
