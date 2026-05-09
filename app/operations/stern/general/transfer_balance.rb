@@ -22,29 +22,18 @@ module Stern
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
+      from_stakeholder_id, from_stakeholder_type = from_stakeholder
+      to_stakeholder_id, to_stakeholder_type = to_stakeholder
+
       tuples = []
-
-      if from_merchant_id.present?
-        tuples += tuples_for_pair(:merchant_available, from_merchant_id, from_merchant_id, currency)
-      elsif from_customer_id.present?
-        tuples += tuples_for_pair(:customer_available, from_customer_id, from_customer_id, currency)
-      elsif from_partner_id.present?
-        tuples += tuples_for_pair(:partner_available, from_partner_id, from_partner_id, currency)
-      end
-
-      if to_merchant_id.present?
-        tuples += tuples_for_pair(:merchant_available, to_merchant_id, to_merchant_id, currency)
-      elsif to_customer_id.present?
-        tuples += tuples_for_pair(:customer_available, to_customer_id, to_customer_id, currency)
-      elsif to_partner_id.present?
-        tuples += tuples_for_pair(:partner_available, to_partner_id, to_partner_id, currency)
-      end
-
+      tuples += tuples_for_pair("#{from_stakeholder_type}_available".to_sym, from_stakeholder_id, from_stakeholder_id, currency)
+      tuples += tuples_for_pair("#{to_stakeholder_type}_available".to_sym, to_stakeholder_id, to_stakeholder_id, currency)
       tuples
     end
 
     def perform(operation_id)
-      stakeholder_id, stakeholder_type = from_stakeholder
+      from_stakeholder_id, from_stakeholder_type = from_stakeholder
+      to_stakeholder_id, to_stakeholder_type = to_stakeholder
 
       balance = available_balance
       if amount.nil?
@@ -53,26 +42,29 @@ module Stern
         raise ArgumentError, "amount is larger than available balance"
       end
 
-      if from_merchant_id.present?
-        EntryPair.add_merchant_available(from_merchant_id, from_merchant_id, -amount, currency, operation_id:)
-      elsif from_customer_id.present?
-        EntryPair.add_customer_available(from_customer_id, from_customer_id, -amount, currency, operation_id:)
-      elsif from_partner_id.present?
-        EntryPair.add_partner_available(from_partner_id, from_partner_id, -amount, currency, operation_id:)
-      end
-
-      if to_merchant_id.present?
-        EntryPair.add_merchant_available(to_merchant_id, to_merchant_id, amount, currency, operation_id:)
-      elsif to_customer_id.present?
-        EntryPair.add_customer_available(to_customer_id, to_customer_id, amount, currency, operation_id:)
-      elsif to_partner_id.present?
-        EntryPair.add_partner_available(to_partner_id, to_partner_id, amount, currency, operation_id:)
-      end
+      EntryPair.public_send(
+        "add_#{from_stakeholder_type}_available".to_sym,
+        from_merchant_id,
+        from_merchant_id,
+        -amount,
+        currency,
+        operation_id:
+      )
+      EntryPair.public_send(
+        "add_#{to_stakeholder_type}_available".to_sym,
+        to_merchant_id,
+        to_merchant_id,
+        -amount,
+        currency,
+        operation_id:
+      )
     end
 
     private
 
     def available_balance
+      stakeholder_id, stakeholder_type = from_stakeholder
+
       BalanceQuery.new(
         gid: stakeholder_id,
         book_id: "#{stakeholder_type}_available".to_sym,
@@ -85,6 +77,14 @@ module Stern
       return [ from_merchant_id, :merchant ] if from_merchant_id.present?
       return [ from_customer_id, :customer ] if from_customer_id.present?
       return [ from_partner_id, :partner ] if from_partner_id.present?
+
+      [ nil, nil ]
+    end
+
+    def to_stakeholder
+      return [ to_merchant_id, :merchant ] if to_merchant_id.present?
+      return [ to_customer_id, :customer ] if to_customer_id.present?
+      return [ to_partner_id, :partner ] if to_partner_id.present?
 
       [ nil, nil ]
     end
