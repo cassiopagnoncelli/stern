@@ -13,7 +13,10 @@ module Stern
     def target_tuples
       stakeholder_id, stakeholder_type = stakeholder_for
 
-      tuples_for_pair("apply_#{stakeholder_type}_credit".to_sym, stakeholder_id, stakeholder_id, currency)
+      tuples = []
+      tuples += tuples_for_pair("charge_chargeback_fee_#{stakeholder_type}".to_sym, stakeholder_id, stakeholder_id, currency)
+      tuples += tuples_for_pair("apply_#{stakeholder_type}_credit".to_sym, stakeholder_id, stakeholder_id, currency)
+      tuples
     end
 
     def perform(operation_id)
