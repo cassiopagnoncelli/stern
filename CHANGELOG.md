@@ -5,6 +5,16 @@ All notable changes to Stern are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **`ConfirmWithdrawal#amount` must be positive** — the validator is now
+  `greater_than: 0` (was `only_integer: true` with no positivity check).
+  Aligns with `LockWithdrawal`, `CancelWithdrawal`, and `ReverseWithdrawal`;
+  prevents zero-amount no-op writes and negative-amount corruption of the
+  locked-vs-confirmed accounting.
+
 ## [1.8.0] — 2026-05-09
 
 Withdrawal-flow rework. The lifecycle now exposes explicit forward operations
