@@ -22,11 +22,12 @@ module Stern
     QUEUE_ITEM_TIMEOUT_IN_SECONDS = 300
 
     # How long a SOP may sit in `:in_progress` before `clear_in_progress`
-    # considers the consumer dead and recycles it. Set longer than
-    # `QUEUE_ITEM_TIMEOUT_IN_SECONDS` because in-progress means the op is
-    # actually running — we want to give legitimate long-running ops time
-    # to finish before assuming a crash.
-    IN_PROGRESS_TIMEOUT_IN_SECONDS = 600
+    # considers the consumer dead and recycles it lives on
+    # `Stern.in_progress_timeout_seconds` (default 600s; configurable via
+    # the `STERN_IN_PROGRESS_TIMEOUT_SECONDS` env var or explicit
+    # assignment). Set longer than `QUEUE_ITEM_TIMEOUT_IN_SECONDS` because
+    # in-progress means the op is actually running — give legitimate
+    # long-running ops time to finish before assuming a crash.
 
     # Retry behavior is per-op-class. Each `Stern::BaseOperation` subclass
     # declares its own `retry_policy max_retries:, backoff:, base:`; ops
@@ -73,18 +74,19 @@ module Stern
         .each_update!(status: :pending, status_time: DateTime.current.utc)
     end
 
-    # Recovers SOPs stuck in `:in_progress` past IN_PROGRESS_TIMEOUT_IN_SECONDS
-    # — typically caused by a consumer crashing mid-op (OOM, SIGKILL, pod
-    # eviction). On recovery, the crash counts as a failed attempt:
-    # retry_count bumps, status returns to `:pending` with the same
-    # exponential backoff as the StandardError rescue, and the op gets
-    # another shot on the next picker tick. If retries are exhausted, the
-    # SOP is marked `:runtime_error` terminally so it stops recycling.
+    # Recovers SOPs stuck in `:in_progress` past
+    # `Stern.in_progress_timeout_seconds` — typically caused by a consumer
+    # crashing mid-op (OOM, SIGKILL, pod eviction). On recovery, the crash
+    # counts as a failed attempt: retry_count bumps, status returns to
+    # `:pending` with the same exponential backoff as the StandardError
+    # rescue, and the op gets another shot on the next picker tick. If
+    # retries are exhausted, the SOP is marked `:runtime_error` terminally
+    # so it stops recycling.
     #
     # Intended to run periodically (host-app janitor job, alongside
     # `clear_picked`).
     def clear_in_progress
-      threshold = IN_PROGRESS_TIMEOUT_IN_SECONDS.seconds.ago.utc
+      threshold = ::Stern.in_progress_timeout_seconds.seconds.ago.utc
       ScheduledOperation.in_progress.where("status_time < ?", threshold).find_each do |sop|
         now = DateTime.current.utc
         policy = policy_for(sop)

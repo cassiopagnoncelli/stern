@@ -10,6 +10,19 @@ require "stern/workers"
 module Stern
   class << self
     attr_accessor :chart, :currencies
+    attr_writer :in_progress_timeout_seconds
+  end
+
+  # How long a scheduled operation may sit in `:in_progress` before
+  # `ScheduledOperationService.clear_in_progress` considers the consumer dead
+  # and recycles it. Resolution order:
+  #   1. Explicit assignment (`Stern.in_progress_timeout_seconds = 1800`)
+  #   2. `STERN_IN_PROGRESS_TIMEOUT_SECONDS` env var
+  #   3. Default 600s
+  # Host apps with legitimately slow ops (external API calls, large repairs)
+  # should bump this past their longest expected op runtime.
+  def self.in_progress_timeout_seconds
+    @in_progress_timeout_seconds || ENV.fetch("STERN_IN_PROGRESS_TIMEOUT_SECONDS", 600).to_i
   end
 
   def self.outstanding_balance(book_id, currency, timestamp = DateTime.current)

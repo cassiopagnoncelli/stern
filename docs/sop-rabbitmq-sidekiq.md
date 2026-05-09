@@ -115,7 +115,9 @@ end
 Runs two recoveries. `clear_picked` resets SOPs stuck in `:picked` past
 `QUEUE_ITEM_TIMEOUT_IN_SECONDS` (300s) — published to RabbitMQ but never
 acked by a consumer, so safe to re-publish. `clear_in_progress` handles
-SOPs stuck in `:in_progress` past `IN_PROGRESS_TIMEOUT_IN_SECONDS` (600s) —
+SOPs stuck in `:in_progress` past `Stern.in_progress_timeout_seconds`
+(default 600s; configurable via `STERN_IN_PROGRESS_TIMEOUT_SECONDS` or
+explicit assignment) —
 a consumer started the op and then died (OOM, SIGKILL, pod eviction). The
 crash counts as a failed attempt, so `retry_count` bumps and the SOP goes
 back to `:pending` with the same backoff the `StandardError` rescue uses

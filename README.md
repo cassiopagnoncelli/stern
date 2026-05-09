@@ -369,10 +369,23 @@ bundle exec rake stern:worker:start
 Configurable via environment variables (defaults shown):
 
 ```sh
-STERN_WORKER_CONCURRENCY=1   # threads in the processing pool
-STERN_POLL_INTERVAL=5        # seconds between polls for ready SOPs
-STERN_JANITOR_INTERVAL=60    # seconds between clear_picked/clear_in_progress runs
+STERN_WORKER_CONCURRENCY=1            # threads in the processing pool
+STERN_POLL_INTERVAL=5                 # seconds between polls for ready SOPs
+STERN_JANITOR_INTERVAL=60             # seconds between clear_picked/clear_in_progress runs
+STERN_IN_PROGRESS_TIMEOUT_SECONDS=600 # seconds before clear_in_progress recycles a stuck :in_progress SOP
 ```
+
+Bump `STERN_IN_PROGRESS_TIMEOUT_SECONDS` past your longest expected op
+runtime when host apps run legitimately slow ops (external API calls,
+large repairs) — otherwise the janitor will treat them as crashed and
+retry them. The same value is also settable in Ruby:
+
+```ruby
+# config/initializers/stern.rb
+Stern.in_progress_timeout_seconds = 1800
+```
+
+Explicit assignment takes precedence over the env var.
 
 Embedding programmatically (e.g. inside another long-running process):
 

@@ -105,7 +105,7 @@ module Stern # rubocop:disable Metrics/ModuleLength
     # forward with the same backoff as the StandardError path) if retries
     # remain; otherwise marks the SOP `:runtime_error` terminally.
     describe ".clear_in_progress" do
-      let(:timeout) { described_class::IN_PROGRESS_TIMEOUT_IN_SECONDS }
+      let(:timeout) { ::Stern.in_progress_timeout_seconds }
 
       before do
         scheduled_op.status = :in_progress
@@ -201,11 +201,67 @@ module Stern # rubocop:disable Metrics/ModuleLength
         expect { service.clear_in_progress }.not_to change { scheduled_op.reload.status }
       end
 
+      context "when Stern.in_progress_timeout_seconds is overridden" do
+        around do |example|
+          original = ::Stern.instance_variable_get(:@in_progress_timeout_seconds)
+          example.run
+        ensure
+          ::Stern.in_progress_timeout_seconds = original
+        end
+
+        it "honors a longer configured timeout (legitimate slow op stays in_progress)" do
+          # SOP is stuck ~11 minutes; default 600s would recycle it. Bump the
+          # timeout past that and the janitor must leave it alone.
+          scheduled_op.update!(status_time: 11.minutes.ago.utc)
+          ::Stern.in_progress_timeout_seconds = 1800
+
+          expect { service.clear_in_progress }.not_to change { scheduled_op.reload.status }
+        end
+
+        it "honors a shorter configured timeout (recycles sooner)" do
+          # 2 minutes stuck — under the 600s default, but over a 60s override.
+          scheduled_op.update!(status_time: 2.minutes.ago.utc)
+          ::Stern.in_progress_timeout_seconds = 60
+
+          expect { service.clear_in_progress }.to change {
+            scheduled_op.reload.status
+          }.from("in_progress").to("pending")
+        end
+      end
+
       [ :pending, :picked, :finished, :canceled, :argument_error, :runtime_error ].each do |other|
         it "leaves #{other} SOPs alone" do
           scheduled_op.update!(status: other)
           expect { service.clear_in_progress }.not_to change { scheduled_op.reload.status }
         end
+      end
+    end
+
+    describe "Stern.in_progress_timeout_seconds" do
+      around do |example|
+        original = ::Stern.instance_variable_get(:@in_progress_timeout_seconds)
+        original_env = ENV["STERN_IN_PROGRESS_TIMEOUT_SECONDS"]
+        ::Stern.in_progress_timeout_seconds = nil
+        ENV.delete("STERN_IN_PROGRESS_TIMEOUT_SECONDS")
+        example.run
+      ensure
+        ::Stern.in_progress_timeout_seconds = original
+        ENV["STERN_IN_PROGRESS_TIMEOUT_SECONDS"] = original_env
+      end
+
+      it "defaults to 600" do
+        expect(::Stern.in_progress_timeout_seconds).to eq(600)
+      end
+
+      it "reads STERN_IN_PROGRESS_TIMEOUT_SECONDS as an integer" do
+        ENV["STERN_IN_PROGRESS_TIMEOUT_SECONDS"] = "1800"
+        expect(::Stern.in_progress_timeout_seconds).to eq(1800)
+      end
+
+      it "explicit assignment beats the env var" do
+        ENV["STERN_IN_PROGRESS_TIMEOUT_SECONDS"] = "1800"
+        ::Stern.in_progress_timeout_seconds = 90
+        expect(::Stern.in_progress_timeout_seconds).to eq(90)
       end
     end
 

@@ -15,6 +15,14 @@ shape is now extended to `lock_*_balance` via `UnlockBalance` and to
 
 ### Added
 
+- **`Stern.in_progress_timeout_seconds`.** Configurable replacement for the
+  hardcoded `IN_PROGRESS_TIMEOUT_IN_SECONDS = 600` in
+  `ScheduledOperationService.clear_in_progress`. Default is still 600s, so
+  behavior is unchanged unless overridden. Set it via the
+  `STERN_IN_PROGRESS_TIMEOUT_SECONDS` env var or explicit assignment
+  (`Stern.in_progress_timeout_seconds = 1800`); explicit assignment wins.
+  Bump past your longest expected op runtime when running legitimately slow
+  ops so the janitor doesn't treat them as crashed.
 - **`Stern::CancelWithdrawal`.** Releases an in-flight lock back to
   `*_available` (`wdw_*_locked → *_available`). Use before settlement; the
   pre-check raises `Stern::InsufficientFunds` when the cancel exceeds the
