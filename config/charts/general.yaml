@@ -85,6 +85,9 @@ books:
   - chargeback_locked
   - chargeback_confirmed
 
+  - chargeback_fee_merchant
+  - chargeback_fee_partner
+
   # Investment
   - customer_investment
   - customer_trade
@@ -300,6 +303,15 @@ entry_pairs:
   lock_chargeback_partner:
     book_sub: partner_available
     book_add: chargeback_locked
+  
+  # Chargeback fees
+  charge_chargeback_fee_merchant:
+    book_sub: merchant_available
+    book_add: chargeback_fee_merchant
+  
+  charge_chargeback_fee_partner:
+    book_sub: partner_available
+    book_add: chargeback_fee_partner
 
   # Investments
   investment_invest:

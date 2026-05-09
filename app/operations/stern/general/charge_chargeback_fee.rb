@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Stern
-  class ChargeRefundFee < BaseOperation
+  class ChargeChargebackFee < BaseOperation
     inputs :merchant_id, :partner_id, :amount, :currency
 
     validates :merchant_id, numericality: { greater_than: 0, only_integer: true }, allow_nil: true
@@ -22,7 +22,7 @@ module Stern
       apply_available_credit(stakeholder_id, stakeholder_type, operation_id)
 
       EntryPair.public_send(
-        "add_charge_refund_fee_#{stakeholder_type}".to_sym,
+        "add_charge_chargeback_fee_#{stakeholder_type}".to_sym,
         stakeholder_id,
         stakeholder_id,
         amount,
