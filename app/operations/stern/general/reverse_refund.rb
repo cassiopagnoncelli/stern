@@ -4,17 +4,17 @@ module Stern
   # Reverses a previously settled refund, returning the credit from the
   # customer's available balance to the funder's available balance (forward
   # direction: `customer_available -> *_available`). Single-pair direct
-  # unwind in the same idiom as `ReverseWithdrawal` — does not retrace
-  # through `refund_confirmed` / `refund_locked`.
+  # unwind in the same idiom as `ReverseWithdrawal`.
   #
   # Funder identity (merchant vs partner) was consumed at `lock_refund_*`
   # and drained into the fungible `refund_confirmed`, so it is not derivable
   # from `refund_id` alone — the caller must re-supply it.
   #
-  # `customer_available` is not flagged `non_negative`, so by default the op
-  # raises `InsufficientFunds` when the customer's slice would overdraw.
-  # Pass `allow_overdraft: true` when the host flow has decided the customer
-  # may go negative (mirrors `LockBalance`).
+  # Entries land at gid=funder (uid=refund_id), matching the per-stakeholder
+  # attribution of `reverse_withdrawal_*`. `customer_available` is not
+  # `non_negative`, so by default the op raises `InsufficientFunds` when
+  # `customer_available[customer_id]` would not cover the reversal; pass
+  # `allow_overdraft: true` to skip the friendly check (mirrors `LockBalance`).
   class ReverseRefund < BaseOperation
     inputs :merchant_id, :partner_id, :customer_id, :refund_id, :amount, :currency, :allow_overdraft
 
@@ -32,9 +32,9 @@ module Stern
     end
 
     def target_tuples
-      stakeholder_id, stakeholder_type = stakeholder_for
+      funder_id, funder_type = funder_for
 
-      tuples_for_pair("reverse_refund_#{stakeholder_type}".to_sym, customer_id, stakeholder_id, currency)
+      tuples_for_pair("reverse_refund_#{funder_type}".to_sym, customer_id, funder_id, currency)
     end
 
     def runtime_check
@@ -51,12 +51,12 @@ module Stern
     end
 
     def perform(operation_id)
-      stakeholder_id, stakeholder_type = stakeholder_for
+      funder_id, funder_type = funder_for
 
       EntryPair.public_send(
-        "add_reverse_refund_#{stakeholder_type}".to_sym,
-        customer_id,
-        stakeholder_id,
+        "add_reverse_refund_#{funder_type}".to_sym,
+        refund_id,
+        funder_id,
         amount,
         currency,
         operation_id:,

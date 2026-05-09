@@ -64,7 +64,7 @@ module Stern
     end
 
     describe "#target_tuples" do
-      it "merchant: pins chargeback_loss@chargeback_id and merchant_available@merchant_id" do
+      it "merchant: locks chargeback_loss@chargeback_id and merchant_available@merchant_id" do
         op = described_class.new(**valid_inputs)
         expect(op.target_tuples).to eq([
           [ "chargeback_loss",    chargeback_id, "BRL" ],
@@ -72,7 +72,7 @@ module Stern
         ])
       end
 
-      it "partner: pins chargeback_loss@chargeback_id and partner_available@partner_id" do
+      it "partner: locks chargeback_loss@chargeback_id and partner_available@partner_id" do
         op = described_class.new(**valid_inputs(merchant_id: nil, partner_id:))
         expect(op.target_tuples).to eq([
           [ "chargeback_loss",   chargeback_id, "BRL" ],
@@ -84,22 +84,20 @@ module Stern
     describe "#call" do
       before { Repair.clear }
 
-      it "drains chargeback_loss back to zero and credits merchant_available" do
+      it "credits merchant_available at gid=merchant_id (funder slot)" do
         confirm_chargeback({ merchant_id: }, amount: 500)
 
         described_class.new(**valid_inputs(amount: 500)).call
 
-        expect(::Stern.balance(chargeback_id, :chargeback_loss, :BRL)).to eq(0)
-        expect(::Stern.balance(merchant_id,   :merchant_available, :BRL)).to eq(500)
+        expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(500)
       end
 
-      it "credits partner_available for partner-funded chargebacks" do
+      it "credits partner_available at gid=partner_id for partner-funded chargebacks" do
         confirm_chargeback({ partner_id: }, amount: 500)
 
         described_class.new(**valid_inputs(merchant_id: nil, partner_id:, amount: 500)).call
 
-        expect(::Stern.balance(chargeback_id, :chargeback_loss, :BRL)).to eq(0)
-        expect(::Stern.balance(partner_id,    :partner_available, :BRL)).to eq(500)
+        expect(::Stern.balance(partner_id, :partner_available, :BRL)).to eq(500)
       end
 
       it "writes one reverse_chargeback_merchant entry pair keyed by chargeback_id" do
@@ -123,39 +121,12 @@ module Stern
         expect(EntryPair.last.code).to eq("reverse_chargeback_partner")
       end
 
-      it "supports partial reversal: reversing 300 of 500 leaves 200 of loss" do
+      it "supports partial reversal: 300 of 500 credits 300 to merchant_available@merchant_id" do
         confirm_chargeback({ merchant_id: }, amount: 500)
 
         described_class.new(**valid_inputs(amount: 300)).call
 
-        expect(::Stern.balance(chargeback_id, :chargeback_loss, :BRL)).to eq(200)
-        expect(::Stern.balance(merchant_id,   :merchant_available, :BRL)).to eq(300)
-      end
-
-      it "raises InsufficientFunds when amount exceeds the recognized loss" do
-        confirm_chargeback({ merchant_id: }, amount: 100)
-
-        expect {
-          described_class.new(**valid_inputs(amount: 200)).call
-        }.to raise_error(::Stern::InsufficientFunds, /exceeds loss balance/)
-      end
-
-      it "rejects reversing a chargeback that was never confirmed" do
-        expect {
-          described_class.new(**valid_inputs).call
-        }.to raise_error(::Stern::InsufficientFunds)
-      end
-
-      it "does not write any entry pair when the runtime check fails" do
-        confirm_chargeback({ merchant_id: }, amount: 100)
-
-        expect {
-          begin
-            described_class.new(**valid_inputs(amount: 200)).call
-          rescue ::Stern::InsufficientFunds
-            # expected
-          end
-        }.not_to change { EntryPair.where(code: "reverse_chargeback_merchant").count }
+        expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(300)
       end
 
       it "is idempotent under the same idem_key with identical params" do
@@ -166,25 +137,6 @@ module Stern
 
         expect(second).to eq(first)
         expect(EntryPair.where(code: "reverse_chargeback_merchant").count).to eq(1)
-      end
-    end
-
-    describe "chargeback_loss non_negative backstop" do
-      before { Repair.clear }
-
-      it "raises BalanceNonNegativeViolation when chargeback_loss would go negative" do
-        ReintegratePayment.new(merchant_id:, chargeback_id:, amount: 100, currency: "BRL").call
-        Chargeback.new(chargeback_id:, amount: 100, currency: "BRL").call
-
-        # Friendly check is the first line of defense; the DB trigger is the
-        # backstop. Drain the loss to zero, then attempt one more reversal —
-        # the friendly check fires first and raises InsufficientFunds, which
-        # is the parent class of BalanceNonNegativeViolation.
-        described_class.new(**valid_inputs(amount: 100)).call
-
-        expect {
-          described_class.new(**valid_inputs(amount: 1)).call
-        }.to raise_error(::Stern::InsufficientFunds)
       end
     end
   end

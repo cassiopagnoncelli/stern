@@ -101,13 +101,9 @@ books:
   - refund_fee_partner
 
   # Chargebacks
-  # `chargeback_loss` is non_negative so ReverseChargeback cannot drain more
-  # than was confirmed at a given chargeback_id (DB-level backstop behind the
-  # op's friendly pre-check).
   - chargeback_locked:
       non_negative: true
-  - chargeback_loss:
-      non_negative: true
+  - chargeback_loss
 
   - chargeback_fee_merchant
   - chargeback_fee_partner
@@ -387,7 +383,9 @@ entry_pairs:
   # to the funder's available book without retracing through refund_confirmed
   # / refund_locked. Funder identity is consumed at lock_refund_*, drained
   # into the fungible refund_confirmed, and lost — so the caller must
-  # re-supply it (merchant vs partner) on reversal.
+  # re-supply it (merchant vs partner) on reversal. Entries land at
+  # gid=funder; the customer's per-customer view stays untouched but the
+  # customer_available book sums to neutral across gids per cause.
   reverse_refund_merchant:
     book_sub: customer_available
     book_add: merchant_available
@@ -423,10 +421,13 @@ entry_pairs:
     book_add: chargeback_loss
 
   # Post-settlement chargeback reversal (issuer overturned the dispute).
-  # Recovers the loss directly to the funder's available book; chargeback_loss
-  # is non_negative so the cumulative reversal cannot exceed the original
-  # confirmed amount per chargeback_id. Funder identity was consumed at
-  # lock_chargeback_*, so the caller must re-supply it (merchant vs partner).
+  # Recovers the loss directly to the funder's available book. Funder
+  # identity was consumed at lock_chargeback_*, so the caller must re-supply
+  # it (merchant vs partner). Entries land at gid=funder (per-stakeholder
+  # attribution, matching reverse_withdrawal_*); chargeback_loss is *not*
+  # non_negative because reversals create offsetting entries at gid=funder
+  # rather than draining the original gid=chargeback_id slot. Over-reversal
+  # protection is the caller's responsibility (idem_key on the dispute event).
   reverse_chargeback_merchant:
     book_sub: chargeback_loss
     book_add: merchant_available

@@ -184,9 +184,27 @@ module Stern
     # Subclasses pair this with `validates_exactly_one_of` on the same fields
     # so exactly one branch is reachable after validation.
     STAKEHOLDER_TYPES = %i[merchant customer partner].freeze
+    FUNDER_TYPES = %i[merchant partner].freeze
 
     def stakeholder_for(prefix = "")
       STAKEHOLDER_TYPES.each do |type|
+        attr = :"#{prefix}#{type}_id"
+        next unless self.class.inputs.include?(attr)
+
+        id = public_send(attr)
+        return [ id, type ] if id.present?
+      end
+
+      [ nil, nil ]
+    end
+
+    # Returns `[id, type]` for the first present `<prefix><type>_id` input
+    # restricted to funder roles (`:merchant`, `:partner`) — distinct from
+    # `stakeholder_for`, which would return `customer_id` first when an op
+    # carries it as a recipient rather than as a stakeholder candidate
+    # (e.g. `ReverseRefund`).
+    def funder_for(prefix = "")
+      FUNDER_TYPES.each do |type|
         attr = :"#{prefix}#{type}_id"
         next unless self.class.inputs.include?(attr)
 
