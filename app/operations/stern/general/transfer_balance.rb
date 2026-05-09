@@ -36,25 +36,25 @@ module Stern
       to_stakeholder_id, to_stakeholder_type = to_stakeholder
 
       balance = available_balance
-      if amount.nil?
-        amount = balance
-      elsif amount > balance
+      if self.amount.nil?
+        self.amount = balance
+      elsif self.amount > balance
         raise ArgumentError, "amount is larger than available balance"
       end
 
       EntryPair.public_send(
         "add_#{from_stakeholder_type}_available".to_sym,
-        from_merchant_id,
-        from_merchant_id,
-        -amount,
+        from_stakeholder_id,
+        from_stakeholder_id,
+        -self.amount,
         currency,
         operation_id:
       )
       EntryPair.public_send(
         "add_#{to_stakeholder_type}_available".to_sym,
-        to_merchant_id,
-        to_merchant_id,
-        -amount,
+        to_stakeholder_id,
+        to_stakeholder_id,
+        self.amount,
         currency,
         operation_id:
       )
