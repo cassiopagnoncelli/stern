@@ -28,11 +28,15 @@ module Stern
 
     def runtime_check
       stakeholder_id, stakeholder_type = stakeholder_for
-      confirmed = confirmed_balance(stakeholder_id, stakeholder_type)
-      return if amount <= confirmed
 
-      raise ::Stern::InsufficientFunds,
-        "reverse_withdrawal amount #{amount} exceeds confirmed balance #{confirmed}"
+      require_sufficient_balance!(
+        book_id: "wdw_#{stakeholder_type}_confirmed".to_sym,
+        gid: stakeholder_id,
+        currency:,
+        amount:,
+        op_label: "reverse_withdrawal",
+        balance_label: "confirmed balance",
+      )
     end
 
     def perform(operation_id)
@@ -46,17 +50,6 @@ module Stern
         currency,
         operation_id:,
       )
-    end
-
-    private
-
-    def confirmed_balance(stakeholder_id, stakeholder_type)
-      BalanceQuery.new(
-        gid: stakeholder_id,
-        book_id: "wdw_#{stakeholder_type}_confirmed".to_sym,
-        currency:,
-        timestamp: Time.current
-      ).call
     end
   end
 end

@@ -21,18 +21,17 @@ module Stern
       tuples_for_pair("cancel_withdrawal_#{stakeholder_type}".to_sym, stakeholder_id, stakeholder_id, currency)
     end
 
-    # Friendly pre-check that runs under the advisory lock. The DB-level
-    # backstop on `wdw_*_locked` (when flagged `non_negative`) would translate
-    # the same condition into `BalanceNonNegativeViolation`; we raise the
-    # parent `InsufficientFunds` here so callers can rescue both layers
-    # uniformly.
     def runtime_check
       stakeholder_id, stakeholder_type = stakeholder_for
-      locked = locked_balance(stakeholder_id, stakeholder_type)
-      return if amount <= locked
 
-      raise ::Stern::InsufficientFunds,
-        "cancel_withdrawal amount #{amount} exceeds locked balance #{locked}"
+      require_sufficient_balance!(
+        book_id: "wdw_#{stakeholder_type}_locked".to_sym,
+        gid: stakeholder_id,
+        currency:,
+        amount:,
+        op_label: "cancel_withdrawal",
+        balance_label: "locked balance",
+      )
     end
 
     def perform(operation_id)
@@ -46,17 +45,6 @@ module Stern
         currency,
         operation_id:,
       )
-    end
-
-    private
-
-    def locked_balance(stakeholder_id, stakeholder_type)
-      BalanceQuery.new(
-        gid: stakeholder_id,
-        book_id: "wdw_#{stakeholder_type}_locked".to_sym,
-        currency:,
-        timestamp: Time.current
-      ).call
     end
   end
 end
