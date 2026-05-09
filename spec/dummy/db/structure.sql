@@ -408,6 +408,45 @@ ALTER SEQUENCE public.stern_entry_pairs_id_seq OWNED BY public.stern_entry_pairs
 
 
 --
+-- Name: stern_operation_attempts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.stern_operation_attempts (
+    id bigint NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    name character varying NOT NULL,
+    params json DEFAULT '"{}"'::json NOT NULL,
+    idem_key character varying(24),
+    operation_id bigint,
+    status integer DEFAULT 0 NOT NULL,
+    error_class character varying,
+    error_message text,
+    error_backtrace text,
+    attempted_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: stern_operation_attempts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.stern_operation_attempts_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: stern_operation_attempts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.stern_operation_attempts_id_seq OWNED BY public.stern_operation_attempts.id;
+
+
+--
 -- Name: stern_operations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -499,6 +538,13 @@ ALTER TABLE ONLY public.stern_entry_pairs ALTER COLUMN id SET DEFAULT nextval('p
 
 
 --
+-- Name: stern_operation_attempts id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stern_operation_attempts ALTER COLUMN id SET DEFAULT nextval('public.stern_operation_attempts_id_seq'::regclass);
+
+
+--
 -- Name: stern_operations id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -553,6 +599,14 @@ ALTER TABLE ONLY public.stern_entry_pairs
 
 
 --
+-- Name: stern_operation_attempts stern_operation_attempts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stern_operation_attempts
+    ADD CONSTRAINT stern_operation_attempts_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: stern_operations stern_operations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -601,6 +655,41 @@ CREATE INDEX index_stern_entry_pairs_on_code_and_currency_and_uid ON public.ster
 --
 
 CREATE INDEX index_stern_entry_pairs_on_operation_id ON public.stern_entry_pairs USING btree (operation_id);
+
+
+--
+-- Name: index_stern_operation_attempts_on_attempted_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_stern_operation_attempts_on_attempted_at ON public.stern_operation_attempts USING btree (attempted_at);
+
+
+--
+-- Name: index_stern_operation_attempts_on_idem_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_stern_operation_attempts_on_idem_key ON public.stern_operation_attempts USING btree (idem_key);
+
+
+--
+-- Name: index_stern_operation_attempts_on_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_stern_operation_attempts_on_name ON public.stern_operation_attempts USING btree (name);
+
+
+--
+-- Name: index_stern_operation_attempts_on_operation_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_stern_operation_attempts_on_operation_id ON public.stern_operation_attempts USING btree (operation_id);
+
+
+--
+-- Name: index_stern_operation_attempts_on_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_stern_operation_attempts_on_status ON public.stern_operation_attempts USING btree (status);
 
 
 --
@@ -653,6 +742,7 @@ CREATE TRIGGER stern_sop_notify_trigger AFTER INSERT OR UPDATE OF status ON publ
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260509000000'),
 ('20260427000000'),
 ('20250530090922'),
 ('20250530090921'),

@@ -220,6 +220,9 @@ module Stern
       existing = find_existing_operation(idem_key)
       return existing.id if existing
 
+      attempted_at = Time.current
+      attempt_params = json_normalized_params
+
       begin
         if transaction
           ApplicationRecord.transaction do
@@ -229,6 +232,9 @@ module Stern
         else
           record_and_perform(idem_key)
         end
+
+        record_attempt!(:success, attempted_at, attempt_params, idem_key, operation_id: operation.id)
+        operation.id
       rescue ActiveRecord::RecordNotUnique => e
         # Race-loser path: we lost an INSERT race on stern_operations.idem_key.
         # Two narrowing requirements before we can treat this as a benign replay:
@@ -241,14 +247,23 @@ module Stern
         #      one statement later through a transaction rollback. Routing
         #      through `find_existing_operation` keeps both detection paths in
         #      sync — same comparison, same raise.
-        raise e unless idem_key && Operation.idem_key_collision?(e)
+        unless idem_key && Operation.idem_key_collision?(e)
+          record_attempt!(:failed, attempted_at, attempt_params, idem_key, error: e)
+          raise e
+        end
 
         existing = find_existing_operation(idem_key)
-        raise e if existing.nil? # winner deleted between rollback and reread; treat as fault
-        return existing.id
-      end
+        if existing.nil? # winner deleted between rollback and reread; treat as fault
+          record_attempt!(:failed, attempted_at, attempt_params, idem_key, error: e)
+          raise e
+        end
 
-      operation.id
+        record_attempt!(:success, attempted_at, attempt_params, idem_key, operation_id: existing.id)
+        existing.id
+      rescue StandardError => e
+        record_attempt!(:failed, attempted_at, attempt_params, idem_key, error: e)
+        raise
+      end
     end
 
     def perform
@@ -390,6 +405,32 @@ module Stern
     # same shape as `Operation.params` after a round-trip through the `json` column.
     def json_normalized_params
       JSON.parse(operation_params.to_json)
+    end
+
+    # Writes an `OperationAttempt` row recording this call. Runs outside the
+    # operation's transaction (the rescue path observes a rolled-back state),
+    # so the attempt persists even when `perform` raises and the `Operation`
+    # row is destroyed. Defensive: failures here are logged but never re-raised
+    # — masking the caller's actual error would be worse than losing one audit
+    # entry.
+    def record_attempt!(status, attempted_at, params, idem_key, operation_id: nil, error: nil)
+      OperationAttempt.create!(
+        name: operation_name,
+        params: params,
+        idem_key: idem_key,
+        operation_id: operation_id,
+        status: status,
+        attempted_at: attempted_at,
+        error_class: error&.class&.name,
+        error_message: error&.message,
+        error_backtrace: error&.backtrace&.first(OperationAttempt::BACKTRACE_LINES)&.join("\n"),
+      )
+    rescue StandardError => attempt_error
+      Rails.logger.error(
+        "[Stern::BaseOperation] failed to record OperationAttempt " \
+        "(#{operation_name}, status=#{status}): #{attempt_error.class}: #{attempt_error.message}"
+      )
+      nil
     end
   end
 end
