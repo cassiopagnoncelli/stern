@@ -16,6 +16,7 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   gid:, currency:, ... }`) identifying the first break. O(n_entries) —
   not for hot paths.
 
+<<<<<<< HEAD
 ### Changed
 
 - **Stakeholder-pair operations now use a class-level `performs_stakeholder_pair`
@@ -45,6 +46,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   prevents zero-amount no-op writes and negative-amount corruption of the
   locked-vs-confirmed accounting.
 
+=======
+>>>>>>> bf0c54e (Drop misleading Doctor.consistent?, add first_inconsistency)
 ### Removed
 
 - **`Stern::Doctor.consistent?`.** The name implied a global health check
@@ -52,6 +55,7 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   corruption invisible. Call `amount_consistent?` for the narrow check or
   the new `first_inconsistency` for a real audit.
 
+<<<<<<< HEAD
 ### Fixed
 
 - **Time-zone correctness in query defaults.** `BalanceQuery`,
@@ -64,6 +68,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   in non-UTC tenants. Replaced with `Time.current`, which respects the
   per-request `Time.use_zone(...)` set by `AuthenticatedController`.
 
+=======
+>>>>>>> bf0c54e (Drop misleading Doctor.consistent?, add first_inconsistency)
 ## [1.8.0] — 2026-05-09
 
 Withdrawal-flow rework. The lifecycle now exposes explicit forward operations
