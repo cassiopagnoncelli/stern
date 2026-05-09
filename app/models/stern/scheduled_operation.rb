@@ -32,9 +32,17 @@ module Stern
     # Manually rehabilitate a terminally-failed SOP so it goes back through
     # the picker. Refuses non-`:runtime_error` states because :argument_error
     # means the params are bad — rescue alone won't fix it.
-    def rescue!
-      unless runtime_error?
-        raise ArgumentError, "rescue! only valid for :runtime_error SOPs (id=#{id}, status=#{status})"
+    #
+    # `force: true` extends the allowed states to include `:argument_error`,
+    # for the operator workflow where a validation bug has been fixed and
+    # deployed and the previously-rejected SOPs should now be retried.
+    # DANGER: caller must have actually fixed the underlying bug — re-running
+    # otherwise just sends the SOP back to `:argument_error` on the next pick.
+    def rescue!(force: false)
+      allowed = runtime_error? || (force && argument_error?)
+      unless allowed
+        expected = force ? ":runtime_error or :argument_error" : ":runtime_error"
+        raise ArgumentError, "rescue! only valid for #{expected} SOPs (id=#{id}, status=#{status})"
       end
 
       now = DateTime.current.utc

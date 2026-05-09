@@ -152,6 +152,55 @@ module Stern
         end
       end
 
+      describe "force: opt-in for :argument_error" do
+        let(:bad_params_sop) do
+          create(
+            :scheduled_operation,
+            status: :argument_error,
+            status_time: 1.hour.ago,
+            after_time: 1.hour.ago,
+            retry_count: 2,
+            error_message: "missing currency",
+          )
+        end
+
+        it "without force: still raises on :argument_error" do
+          expect { bad_params_sop.rescue! }.to raise_error(ArgumentError, /runtime_error/)
+        end
+
+        it "with force: false still raises on :argument_error" do
+          expect { bad_params_sop.rescue!(force: false) }.to raise_error(ArgumentError, /runtime_error/)
+        end
+
+        it "with force: true rescues an :argument_error SOP back to :pending" do
+          expect { bad_params_sop.rescue!(force: true) }
+            .to change { bad_params_sop.reload.status }.from("argument_error").to("pending")
+        end
+
+        it "with force: true resets retry_count and clears error_message" do
+          bad_params_sop.rescue!(force: true)
+          expect(bad_params_sop.reload).to have_attributes(retry_count: 0, error_message: nil)
+        end
+
+        it "with force: true still rejects clearly non-failed states (e.g. :finished)" do
+          done = create(:scheduled_operation, status: :finished)
+          expect { done.rescue!(force: true) }
+            .to raise_error(ArgumentError, /:runtime_error or :argument_error/)
+        end
+
+        it "with force: true emits stern.sop.rescued just like the runtime_error path" do
+          events = []
+          subscription = ActiveSupport::Notifications.subscribe("stern.sop.rescued") do |*args|
+            events << ActiveSupport::Notifications::Event.new(*args)
+          end
+          bad_params_sop.rescue!(force: true)
+          expect(events.size).to eq(1)
+          expect(events.first.payload).to eq(id: bad_params_sop.id, op_name: bad_params_sop.name)
+        ensure
+          ActiveSupport::Notifications.unsubscribe(subscription)
+        end
+      end
+
       describe "boundary states" do
         it "rescues a SOP whose retry_count is 0 (terminal-without-retry case)" do
           sop_no_retries = create(

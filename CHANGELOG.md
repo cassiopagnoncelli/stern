@@ -61,6 +61,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   non-`production` env (staging, demo, sandbox). Brings the safeguard in line
   with `rebuild_balances`. **Breaking:** host apps and scripts calling
   `Repair.clear` must pass `confirm: true`.
+- **`Stern::ScheduledOperation#rescue!` accepts `force: true`.** Default
+  behavior is unchanged — `rescue!` still refuses non-`:runtime_error`
+  SOPs, because `:argument_error` means the stored params can't be
+  processed and a bare retry would just re-fail. After deploying a fix to
+  the underlying validation bug, operators can now call
+  `rescue!(force: true)` to also rehabilitate `:argument_error` SOPs back
+  to `:pending` instead of editing rows by hand. `:finished`, `:canceled`,
+  and the in-flight states remain rejected even with `force: true`.
 
 ### Removed
 
