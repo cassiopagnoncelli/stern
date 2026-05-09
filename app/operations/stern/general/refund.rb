@@ -8,7 +8,7 @@ module Stern
 
     validates :customer_id, numericality: { greater_than: 0, only_integer: true }
     validates :refund_id, numericality: { greater_than: 0, only_integer: true }
-    validates :amount, presence: true, numericality: { only_integer: true }
+    validates :amount, presence: true, numericality: { other_than: 0, only_integer: true }
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
