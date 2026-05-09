@@ -62,12 +62,15 @@ module Stern
       bid = book_id_override || book_id
       entries = Entry.where(book_id: bid, gid:, currency:).order(:timestamp, :id)
 
-      # S1
-      expect(Doctor.ending_balance_consistent?(book_id: bid, gid:, currency:)).to be(true),
-        "Doctor flagged ending_balance inconsistent"
+      # S1 — failure message embeds the first offending row so tracking down a
+      # cascade race doesn't require a second query against the just-failed state.
+      first_inconsistency = Doctor.first_ending_balance_inconsistency(book_id: bid, gid:, currency:)
+      expect(first_inconsistency).to be_nil,
+        "Doctor flagged ending_balance inconsistent: #{first_inconsistency.inspect}"
       # S2
-      expect(Doctor.amount_consistent?).to be(true),
-        "Doctor flagged amount inconsistent (sum of all amounts != 0)"
+      amount_detail = Doctor.amount_inconsistency
+      expect(amount_detail).to be_nil,
+        "Doctor flagged amount inconsistent (sum of all amounts != 0): #{amount_detail.inspect}"
       # S3 (only when entries exist for that tuple)
       if entries.any?
         expect(entries.last.ending_balance).to eq(entries.sum(:amount)),

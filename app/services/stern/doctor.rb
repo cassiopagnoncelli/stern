@@ -9,18 +9,46 @@ module Stern
     end
 
     def self.amount_consistent?
-      Entry.sum(:amount).zero?
+      amount_inconsistency.nil?
+    end
+
+    # Detail companion to `amount_consistent?`. Returns `nil` when the global
+    # sum is zero, or `{ sum: <non-zero> }` so callers (specs, log lines) can
+    # surface the offending value without re-running the query.
+    def self.amount_inconsistency
+      sum = Entry.sum(:amount)
+      return nil if sum.zero?
+
+      { sum: sum }
     end
 
     def self.ending_balance_consistent?(book_id:, gid:, currency:)
+      first_ending_balance_inconsistency(book_id:, gid:, currency:).nil?
+    end
+
+    # Detail companion to `ending_balance_consistent?`. Walks the cascade and
+    # returns the first row whose `ending_balance` disagrees with the running
+    # sum, or `nil` when the cascade is intact. The walk is identical to the
+    # `?` predicate's, so callers that already need the detail on failure pay
+    # the same cost — no second pass.
+    def self.first_ending_balance_inconsistency(book_id:, gid:, currency:)
       current_ending_balance = 0
       Entry.where(book_id:, gid:, currency:).order(:timestamp).each do |e|
-        return false unless e.ending_balance == e.amount + current_ending_balance
+        expected = e.amount + current_ending_balance
+        if e.ending_balance != expected
+          return {
+            entry_id: e.id,
+            timestamp: e.timestamp,
+            amount: e.amount,
+            expected_ending_balance: expected,
+            actual_ending_balance: e.ending_balance,
+          }
+        end
 
         current_ending_balance += e.amount
       end
 
-      true
+      nil
     end
 
     def self.ending_balances_inconsistencies_across_books(gid:, currency:)

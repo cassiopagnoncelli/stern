@@ -24,6 +24,14 @@ module Stern
       it "has amount consistency" do
         expect(described_class).to be_amount_consistent
       end
+
+      it "exposes nil detail when the cascade is intact" do
+        expect(described_class.first_ending_balance_inconsistency(book_id:, gid:, currency:)).to be_nil
+      end
+
+      it "exposes nil detail when the global amount sums to zero" do
+        expect(described_class.amount_inconsistency).to be_nil
+      end
     end
 
     context "when inconsistent balance" do
@@ -40,6 +48,24 @@ module Stern
       it "has amount and ending balances inconsistent" do
         expect(described_class).not_to be_amount_consistent
         expect(described_class).not_to be_ending_balance_consistent(book_id:, gid:, currency:)
+      end
+
+      it "first_ending_balance_inconsistency returns the offending row's detail" do
+        detail = described_class.first_ending_balance_inconsistency(book_id:, gid:, currency:)
+
+        expect(detail).to include(
+          entry_id: entries.second.id,
+          amount: 50,
+          actual_ending_balance: 9999,
+          expected_ending_balance: 100 + 50,
+        )
+        expect(detail[:timestamp]).to eq(entries.second.timestamp)
+      end
+
+      it "amount_inconsistency reports the non-zero sum" do
+        # Original three entry-pairs sum to zero; corrupting one Entry's amount
+        # from 100 → 50 leaves the global sum at -50.
+        expect(described_class.amount_inconsistency).to eq(sum: -50)
       end
     end
 

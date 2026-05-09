@@ -337,10 +337,17 @@ instantiates the operation and runs it with the stored params.
 Audits (read-only, safe to call anywhere):
 
 ```ruby
-Stern::Doctor.consistent?                                    # sum(all amounts) == 0
-Stern::Doctor.ending_balance_consistent?(book_id:, gid:)     # ledger cascade is intact
-Stern::Doctor.ending_balances_inconsistencies(book_id:, gid:) # => [entry_id, ...]
+Stern::Doctor.consistent?                                              # sum(all amounts) == 0
+Stern::Doctor.amount_inconsistency                                     # nil, or { sum: <non-zero> }
+Stern::Doctor.ending_balance_consistent?(book_id:, gid:, currency:)    # ledger cascade is intact
+Stern::Doctor.first_ending_balance_inconsistency(book_id:, gid:, currency:)
+                                                                       # nil, or detail of the first bad row
+Stern::Doctor.ending_balances_inconsistencies(book_id:, gid:, currency:) # => [entry_id, ...]
 ```
+
+The `_inconsistency` / `first_*` companions return `nil` on success and a
+detail hash on failure, so a `?` predicate can be used on hot paths and the
+detail surfaced only when a spec or log line needs it.
 
 Repairs (destructive, never in production unless you're certain):
 
