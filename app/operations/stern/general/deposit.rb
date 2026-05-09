@@ -13,11 +13,11 @@ module Stern
 
     def target_tuples
       if merchant_id.present?
-        tuples_for_pair(:deposit_merchant, merchant_id, merchant_id, currency)
+        tuples_for_pair(:confirm_deposit_merchant, merchant_id, merchant_id, currency)
       elsif customer_id.present?
-        tuples_for_pair(:deposit_customer, customer_id, customer_id, currency)
+        tuples_for_pair(:confirm_deposit_customer, customer_id, customer_id, currency)
       elsif partner_id.present?
-        tuples_for_pair(:deposit_partner, partner_id, partner_id, currency)
+        tuples_for_pair(:confirm_deposit_partner, partner_id, partner_id, currency)
       else
         []
       end
@@ -25,11 +25,11 @@ module Stern
 
     def perform(operation_id)
       if merchant_id.present?
-        EntryPair.add_deposit_merchant(merchant_id, merchant_id, amount, currency, operation_id:)
+        EntryPair.add_confirm_deposit_merchant(merchant_id, merchant_id, amount, currency, operation_id:)
       elsif customer_id.present?
-        EntryPair.add_deposit_customer(customer_id, customer_id, amount, currency, operation_id:)
+        EntryPair.add_confirm_deposit_customer(customer_id, customer_id, amount, currency, operation_id:)
       elsif partner_id.present?
-        EntryPair.add_deposit_partner(partner_id, partner_id, amount, currency, operation_id:)
+        EntryPair.add_confirm_deposit_partner(partner_id, partner_id, amount, currency, operation_id:)
       end
     end
   end

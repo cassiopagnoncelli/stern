@@ -184,15 +184,15 @@ entry_pairs:
     book_add: wdw_customer_fee
   
   # Deposits
-  deposit_merchant:
+  confirm_deposit_merchant:
     book_sub: merchant_deposit
     book_add: merchant_available
 
-  deposit_partner:
+  confirm_deposit_partner:
     book_sub: partner_deposit
     book_add: partner_available
 
-  deposit_customer:
+  confirm_deposit_customer:
     book_sub: customer_deposit
     book_add: customer_available
 
