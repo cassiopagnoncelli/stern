@@ -200,6 +200,14 @@ module Stern
     # Runs the operation. Returns the Operation id (either a new one or, when `idem_key`
     # matches an existing operation with identical params, the existing one).
     #
+    # **Fail-fast.** `call` does not retry. Any exception raised from validation,
+    # advisory-lock acquisition, `runtime_check`, or `perform` propagates to the
+    # caller, and the surrounding transaction rolls back — the `Operation` audit
+    # row is destroyed with it. Retries are the responsibility of
+    # `Stern::ScheduledOperation` / `ScheduledOperationService`, which use the
+    # class-level `retry_policy` to schedule re-execution under a stable
+    # `idem_key`. Direct `call` users that want retries should schedule instead.
+    #
     # @param transaction [Boolean] wrap log + perform in a transaction with table locks.
     #   Defaults to true; set false when the caller is already managing a transaction.
     # @param idem_key [String, nil] idempotency key. If present and an Operation with this
