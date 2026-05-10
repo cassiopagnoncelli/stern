@@ -5,14 +5,17 @@ module Stern
   # rows are written *outside* the operation's transaction so they survive a
   # rollback and give post-mortem visibility into what was tried.
   #
-  # Lifecycle:
-  #   - On call, an attempt row is built with `status: :pending` (not persisted
-  #     yet) so the start time is captured.
-  #   - On success, `status` is set to `:success` and `operation_id` links to
-  #     the committed `Operation` row, then saved in a fresh transaction.
-  #   - On failure, `status` is set to `:failed` along with `error_class`,
+  # One row is written per call, after the work has resolved:
+  #   - On success, `status` is `:success` and `operation_id` links to the
+  #     committed `Operation` row.
+  #   - On failure, `status` is `:failed` along with `error_class`,
   #     `error_message`, and a truncated `error_backtrace`. `operation_id`
   #     stays nil because the `Operation` insert was rolled back.
+  #
+  # `:pending` is a reserved sentinel — no normal write path emits it. It
+  # exists so the column default (`0`) and the pruner have a recognizable
+  # "writer never finalized this row" state to sweep, e.g. if a process
+  # crashes between row build and update in some future code path.
   #
   # The `params` column holds the JSON-normalized projection of the op's live
   # inputs (same shape used for idempotency comparison), so failed attempts
