@@ -171,30 +171,47 @@ module Stern
       # `op_label` for the error message is always
       # `name.demodulize.underscore`. Subclasses may override any generated
       # method to extend the behavior.
+      #
+      # `requires_credit_application:` (default false) extends the macro to the
+      # ChargeFee shape: locks an additional `apply_<type>_credit` pair on the
+      # stakeholder, and prepends a call to `apply_available_credit` inside the
+      # generated `perform` so any standing credit drains into `*_available`
+      # before the fee is debited. Used by the four `Charge*Fee` ops.
+      #
+      # `pair_template` may also reference any input attribute via `%{name}`
+      # (e.g. `"charge_%{payment_method}_fee_%{type}"`); all declared inputs
+      # are interpolated at call time alongside the resolved `:type`.
       def performs_stakeholder_pair(pair_template,
                                     using: :stakeholder_for,
                                     sub_gid: :resolved,
                                     add_gid: :resolved,
                                     entry_uid: nil,
                                     entry_gid: nil,
-                                    requires_balance: nil)
-        helper      = using
-        uid_slot    = entry_uid || sub_gid
-        gid_slot    = entry_gid || add_gid
-        balance_cfg = requires_balance
+                                    requires_balance: nil,
+                                    requires_credit_application: false)
+        helper       = using
+        uid_slot     = entry_uid || sub_gid
+        gid_slot     = entry_gid || add_gid
+        balance_cfg  = requires_balance
+        needs_credit = requires_credit_application
 
         define_method(:target_tuples) do
           rid, type = public_send(helper)
-          pair = (pair_template % { type: type }).to_sym
-          tuples_for_pair(pair,
+          pair = pair_template_for(pair_template, type).to_sym
+          tuples = tuples_for_pair(pair,
             gid_for_slot(sub_gid, rid),
             gid_for_slot(add_gid, rid),
             currency)
+          if needs_credit
+            tuples += tuples_for_pair("apply_#{type}_credit".to_sym, rid, rid, currency)
+          end
+          tuples
         end
 
         define_method(:perform) do |operation_id|
           rid, type = public_send(helper)
-          pair = "add_#{pair_template % { type: type }}".to_sym
+          apply_available_credit(rid, type, operation_id) if needs_credit
+          pair = "add_#{pair_template_for(pair_template, type)}".to_sym
           EntryPair.public_send(pair,
             gid_for_slot(uid_slot, rid),
             gid_for_slot(gid_slot, rid),
@@ -312,6 +329,33 @@ module Stern
     # input name and read via `public_send`.
     def gid_for_slot(slot, resolved_id)
       slot == :resolved ? resolved_id : public_send(slot)
+    end
+
+    # Interpolates `pair_template` with the resolved stakeholder `type` plus
+    # every declared input attribute, so templates may reference inputs
+    # directly (e.g. `"charge_%{payment_method}_fee_%{type}"`). Extra keys are
+    # ignored by Ruby's `%` operator; missing keys raise KeyError.
+    def pair_template_for(pair_template, type)
+      args = { type: type }
+      self.class.inputs.each { |inp| args[inp] = public_send(inp) }
+      pair_template % args
+    end
+
+    # Drains standing `<type>_credit` into `<type>_available` up to `amount`
+    # before a fee is debited. Used by ops declared with
+    # `performs_stakeholder_pair ..., requires_credit_application: true`.
+    # No-op for non-positive amounts (fee reversals leave the credit alone).
+    def apply_available_credit(stakeholder_id, stakeholder_type, operation_id)
+      return unless amount.positive?
+
+      credit_balance = ::Stern.balance(stakeholder_id, "#{stakeholder_type}_credit".to_sym, currency)
+      credit_to_apply = [ credit_balance, amount ].min
+      return unless credit_to_apply.positive?
+
+      EntryPair.public_send(
+        "add_apply_#{stakeholder_type}_credit".to_sym,
+        stakeholder_id, stakeholder_id, credit_to_apply, currency, operation_id:,
+      )
     end
 
     # Runs the operation. Returns the Operation id (either a new one or, when `idem_key`

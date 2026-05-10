@@ -174,6 +174,61 @@ module Stern
       end
     end
 
+    describe "requires_credit_application: true" do
+      let(:klass) do
+        define_op(inputs: %i[merchant_id customer_id partner_id payment_id amount currency]) do
+          performs_stakeholder_pair "charge_some_fee_%{type}",
+            add_gid: :payment_id,
+            requires_credit_application: true
+        end
+      end
+
+      it "appends an apply_<type>_credit lock pair on the stakeholder" do
+        op = klass.new(merchant_id:, payment_id:, amount: 100, currency: "BRL")
+        allow(op).to receive(:tuples_for_pair).and_call_original
+        expect(op).to receive(:tuples_for_pair)
+          .with(:charge_some_fee_merchant, merchant_id, payment_id, "BRL")
+          .and_return([ :fee_lock ])
+        expect(op).to receive(:tuples_for_pair)
+          .with(:apply_merchant_credit, merchant_id, merchant_id, "BRL")
+          .and_return([ :credit_lock ])
+        expect(op.target_tuples).to eq([ :fee_lock, :credit_lock ])
+      end
+
+      it "calls apply_available_credit before EntryPair.add_<pair>" do
+        op = klass.new(partner_id:, payment_id:, amount: 100, currency: "BRL")
+        expect(op).to receive(:apply_available_credit)
+          .with(partner_id, :partner, operation_id).ordered
+        expect(EntryPair).to receive(:public_send)
+          .with(:add_charge_some_fee_partner, partner_id, payment_id, 100, "BRL", operation_id: operation_id)
+          .ordered
+        op.perform(operation_id)
+      end
+    end
+
+    describe "templates referencing input attrs" do
+      let(:klass) do
+        define_op(inputs: %i[merchant_id customer_id partner_id payment_id payment_method amount currency]) do
+          performs_stakeholder_pair "charge_%{payment_method}_fee_%{type}",
+            add_gid: :payment_id
+        end
+      end
+
+      it "interpolates %{payment_method} from the input value" do
+        op = klass.new(merchant_id:, payment_id:, payment_method: "pix", amount: 1, currency: "BRL")
+        expect(op).to receive(:tuples_for_pair)
+          .with(:charge_pix_fee_merchant, merchant_id, payment_id, "BRL")
+        op.target_tuples
+      end
+
+      it "uses the interpolated name when writing the entry pair" do
+        op = klass.new(customer_id:, payment_id:, payment_method: "credit_card", amount: 1, currency: "BRL")
+        expect(EntryPair).to receive(:public_send)
+          .with(:add_charge_credit_card_fee_customer, customer_id, payment_id, 1, "BRL", operation_id: operation_id)
+        op.perform(operation_id)
+      end
+    end
+
     describe "requires_balance: bypass_when" do
       let(:klass) do
         define_op(inputs: %i[merchant_id customer_id partner_id amount currency allow_overdraft]) do
