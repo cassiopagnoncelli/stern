@@ -164,6 +164,7 @@ module Stern
       before { described_class.install_subscribers! }
       before { OperationAttempt.delete_all }
       after  { OperationAttempt.delete_all }
+      after  { Timecop.return }
 
       let(:logger) { instance_double(Logger, warn: nil) }
 
@@ -174,15 +175,6 @@ module Stern
             attempted_at: Time.current,
           )
         end
-      end
-
-      def with_env(key, value)
-        prev_set = ENV.key?(key)
-        prev = ENV[key]
-        ENV[key] = value
-        yield
-      ensure
-        prev_set ? ENV[key] = prev : ENV.delete(key)
       end
 
       it "warns when a status sits at-or-above the threshold" do
@@ -226,10 +218,7 @@ module Stern
         create_attempts(3, status: :success)
 
         described_class.refresh_queue_gauges!(warn_threshold: 1, logger: logger)
-        # Backdate the per-status timestamp past the cooldown to simulate
-        # ATTEMPT_COUNT_WARN_INTERVAL_SECONDS having elapsed.
-        last = described_class.instance_variable_get(:@last_attempt_warn_at)
-        last["success"] = Time.now - described_class::ATTEMPT_COUNT_WARN_INTERVAL_SECONDS - 1
+        Timecop.travel(Time.now + described_class::ATTEMPT_COUNT_WARN_INTERVAL_SECONDS + 1)
         described_class.refresh_queue_gauges!(warn_threshold: 1, logger: logger)
 
         expect(logger).to have_received(:warn).twice
@@ -248,7 +237,7 @@ module Stern
       it "reads STERN_ATTEMPT_COUNT_WARN_THRESHOLD as the default" do
         create_attempts(3, status: :success)
 
-        with_env("STERN_ATTEMPT_COUNT_WARN_THRESHOLD", "2") do
+        ClimateControl.modify(STERN_ATTEMPT_COUNT_WARN_THRESHOLD: "2") do
           described_class.refresh_queue_gauges!(logger: logger)
         end
 
@@ -258,7 +247,7 @@ module Stern
       it "treats STERN_ATTEMPT_COUNT_WARN_THRESHOLD=0 as disabled" do
         create_attempts(3, status: :success)
 
-        with_env("STERN_ATTEMPT_COUNT_WARN_THRESHOLD", "0") do
+        ClimateControl.modify(STERN_ATTEMPT_COUNT_WARN_THRESHOLD: "0") do
           described_class.refresh_queue_gauges!(logger: logger)
         end
 
