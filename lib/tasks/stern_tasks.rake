@@ -59,7 +59,7 @@ namespace :stern do
     end
 
     desc "Reset every :runtime_error SOP for a given op name. " \
-         "Usage: rake stern:sop:rescue_all[ChargePix] or rake stern:sop:rescue_all[ChargePix,force] " \
+         "Usage: rake stern:sop:rescue_all[ChargePayment] or rake stern:sop:rescue_all[ChargePayment,force] " \
          "to also rescue :argument_error SOPs of that name."
     task :rescue_all, [ :name, :force ] => :environment do |_, args|
       name = args.fetch(:name, nil)
