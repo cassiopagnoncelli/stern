@@ -78,7 +78,7 @@ module Stern
         unit:       "Units",
         fiat:       "Fiat",
         stablecoin: "Stablecoins",
-        crypto:     "Crypto",
+        crypto:     "Crypto"
       }.freeze
 
       def resolve_currency(name)
