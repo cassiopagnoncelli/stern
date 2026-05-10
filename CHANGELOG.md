@@ -5,6 +5,12 @@ All notable changes to Stern are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Direct `Stern::Entry.create!` / `Entry#destroy!` callers now receive `Stern::BalanceNonNegativeViolation`** (a subclass of `Stern::InsufficientFunds`) when the PL/pgSQL `non_negative` guard fires, instead of the raw `ActiveRecord::StatementInvalid` wrapping a `PG::CheckViolation`. The translation matches structurally on the `stern_books_non_negative` constraint name (`PG_DIAG_CONSTRAINT_NAME` / `Book::NON_NEGATIVE_CONSTRAINT`), so unrelated DB errors — future-timestamp raises, duplicate-key violations, NULL-input rejections — keep propagating as `StatementInvalid` untouched. Closes the gap where callers bypassing `BaseOperation`'s `runtime_check` couldn't `rescue Stern::BalanceNonNegativeViolation` for the DB backstop case. Pinned by `spec/models/stern/entry_non_negative_translation_spec.rb`.
+
 ## [1.9.0] — 2026-05-10
 
 Operations refactor and observability polish on top of 1.8.0's withdrawal-flow
