@@ -67,10 +67,16 @@ module Stern
     end
 
     describe "chart-derived singleton methods" do
-      ::Stern.chart.entry_pairs.each_key do |pair_name|
-        it "defines .add_#{pair_name}" do
-          expect(described_class).to respond_to(:"add_#{pair_name}")
+      described_class.pair_methods.each do |method_name|
+        it "defines .#{method_name}" do
+          expect(described_class).to respond_to(method_name)
         end
+      end
+
+      it "exposes one method per chart entry pair via .pair_methods" do
+        expect(described_class.pair_methods).to match_array(
+          ::Stern.chart.entry_pair_codes.keys.map { |name| :"add_#{name}" }
+        )
       end
     end
 

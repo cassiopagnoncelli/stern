@@ -23,6 +23,15 @@ module Stern
       entries.each(&:destroy!)
     end
 
+    # Chart-derived singletons: for every entry pair declared in
+    # `config/charts/<STERN_CHART>.yaml` (and the implicit same-name pair each
+    # book gets — see Stern::Chart#build_entry_pairs), this loop defines a
+    # class method `add_<pair_name>(uid, gid, amount, currency, timestamp:, operation_id:)`
+    # that delegates to .double_entry_add with the pair's book_add/book_sub.
+    #
+    # These methods do not appear under `def add_…` anywhere — grep will miss
+    # them. The chart YAML is the source of truth; for runtime introspection,
+    # call `Stern::EntryPair.pair_methods` or read `Stern.chart.entry_pair_codes.keys`.
     ::Stern.chart.entry_pairs.each_value do |pair|
       define_singleton_method(:"add_#{pair.name}") do |uid, gid, amount, currency, timestamp: nil, operation_id: nil|
         double_entry_add(
@@ -37,6 +46,12 @@ module Stern
           operation_id,
         )
       end
+    end
+
+    # Names of the chart-derived `add_<pair_name>` singletons defined above.
+    # Stable API for tests, docs, and console introspection.
+    def self.pair_methods
+      ::Stern.chart.entry_pair_codes.keys.map { |name| :"add_#{name}" }
     end
 
     def self.double_entry_add(code, gid, uid, book_add, book_sub, amount, currency, timestamp, operation_id)
