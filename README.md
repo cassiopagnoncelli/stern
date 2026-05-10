@@ -1,5 +1,8 @@
 # Stern
 
+[![CI](https://github.com/cassiopagnoncelli/stern/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/cassiopagnoncelli/stern/actions/workflows/ci.yml)
+[![Matrix](https://github.com/cassiopagnoncelli/stern/actions/workflows/matrix.yml/badge.svg?branch=main)](https://github.com/cassiopagnoncelli/stern/actions/workflows/matrix.yml)
+
 A scalable double-entry bookkeeping Rails engine. Stern owns the ledger: it records every
 transaction as a pair of balanced entries, cascades running balances atomically in
 PostgreSQL, and exposes a small operations-based API for host apps to build on.
