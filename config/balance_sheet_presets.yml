@@ -1,7 +1,9 @@
 # Saved filters for the admin balance sheet view.
 #
-# Each preset fills the Currency, Date range, Decimal places, and Books filters
-# on /stern/admin/ledger/balance_sheet, then applies the form.
+# Each preset fills the Currency, Date range, and Books filters on
+# /stern/admin/ledger/balance_sheet, then applies the form. Decimal-place
+# formatting is read from the currency's `decimal_places` in
+# config/currencies_catalog.yaml — no override field on presets.
 #
 # Schema
 # ------
@@ -9,7 +11,6 @@
 #   label:          short human label shown in the picker
 #   description:    optional one-liner shown beneath the label
 #   currency:       currency code (must exist in config/currencies_catalog.yaml)
-#   decimal_places: optional integer 0..10 (defaults to current view value)
 #   date_range:     one of: today, yesterday, this_week, last_week,
 #                           this_month, last_month, this_quarter, last_quarter,
 #                           this_year, last_year

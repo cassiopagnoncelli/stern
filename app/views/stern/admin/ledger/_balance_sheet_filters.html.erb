@@ -6,18 +6,9 @@
     books: books %>
 
 <div class="w-full sm:w-auto">
-  <%= form.label :decimal_places, "Decimal places", class: "sr-only" %>
-  <%= form.select :decimal_places,
-      options_for_select((0..10).map { |value| [ value.to_s, value ] }, decimal_places),
-      {},
-      class: "select-menu",
-      onchange: "this.form.submit()" %>
-</div>
-
-<div class="w-full sm:w-auto">
   <%= form.label :currency, "Currency", class: "sr-only" %>
   <%= form.select :currency,
-      grouped_options_for_select(currency_groups.transform_values { |names| names.map { |n| [ n, n ] } }, currency),
+      grouped_options_for_select(currency_groups.transform_values { |names| names.map { |n| [ currency_display_label(n), n ] } }, currency),
       {},
       class: "select-menu",
       onchange: "this.form.submit()" %>

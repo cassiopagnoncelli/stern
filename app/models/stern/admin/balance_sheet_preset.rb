@@ -11,7 +11,7 @@ module Stern
         this_year last_year
       ].freeze
 
-      attr_reader :key, :label, :description, :currency, :decimal_places,
+      attr_reader :key, :label, :description, :currency,
                   :date_range, :start_date, :end_date, :book_names
 
       class << self
@@ -58,7 +58,6 @@ module Stern
         @label = a.fetch("label").to_s
         @description = a["description"].to_s
         @currency = a.fetch("currency").to_s
-        @decimal_places = a["decimal_places"]
         @date_range = a["date_range"]&.to_s
         @start_date = a["start_date"]&.to_s
         @end_date = a["end_date"]&.to_s
@@ -72,7 +71,6 @@ module Stern
           key: key,
           label: label,
           currency: currency,
-          decimal_places: decimal_places,
           date_range: date_range,
           start_date: start_date,
           end_date: end_date,
@@ -96,11 +94,6 @@ module Stern
         elsif start_date.blank? || end_date.blank?
           raise ArgumentError,
                 "preset #{key.inspect} must set date_range OR both start_date and end_date"
-        end
-
-        if decimal_places && !(0..10).cover?(decimal_places)
-          raise ArgumentError,
-                "preset #{key.inspect} decimal_places must be 0..10"
         end
       end
     end

@@ -41,7 +41,7 @@
                   <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5"><%= preset.description %></span>
                 <% end %>
                 <span class="block text-[11px] text-gray-400 dark:text-gray-500 mt-1">
-                  <%= preset.currency %> ·
+                  <%= currency_display_label(preset.currency) %> ·
                   <%= preset.date_range.presence&.tr("_", " ") || "#{preset.start_date} → #{preset.end_date}" %> ·
                   <%= preset.book_names.size %> book<%= "s" if preset.book_names.size != 1 %>
                 </span>
@@ -99,9 +99,6 @@
 
     function applyPreset(form, payload) {
       setSelectValue(form, "currency", payload.currency);
-      if (payload.decimal_places !== undefined && payload.decimal_places !== null) {
-        setSelectValue(form, "decimal_places", payload.decimal_places);
-      }
 
       var dateRoot = form.querySelector("[data-bs-date-range]");
       if (dateRoot) {

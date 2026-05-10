@@ -2,12 +2,11 @@ module Stern
   module Admin
     class LedgerController < ::Stern::AuthenticatedController
       PER_PAGE_OPTIONS = [ 5, 25, 100, 500 ].freeze
-      DECIMAL_PLACES_OPTIONS = (0..10).to_a.freeze
 
       def index
         redirect_to admin_ledger_entries_path(
           params.permit(:gid, :book_id, :currency, :start_date, :end_date,
-                        :decimal_places, :page, :per_page)
+                        :page, :per_page)
         )
       end
 
@@ -68,33 +67,31 @@ module Stern
         @end_date = parse_dt(params[:end_date]) || (Time.current + 1.minute)
         @start_date_filter_value = @start_date.in_time_zone.strftime("%Y-%m-%dT%H:%M")
         @end_date_filter_value = @end_date.in_time_zone.strftime("%Y-%m-%dT%H:%M")
-        @decimal_places = if params[:decimal_places].present?
-          dp = params[:decimal_places].to_i
-          DECIMAL_PLACES_OPTIONS.include?(dp) ? dp : 2
-        else
-          2
-        end
         @currency_groups = grouped_currencies
         @currency = resolve_currency(params[:currency])
+        @decimal_places = ::Stern.currencies.decimal_places(@currency) || 2
       end
 
       MOST_USED_CURRENCIES = %w[BRL USD USDT].freeze
 
+      KIND_GROUPS = {
+        unit:       "Units",
+        fiat:       "Fiat",
+        stablecoin: "Stablecoins",
+        crypto:     "Crypto",
+      }.freeze
+
       def resolve_currency(name)
-        names = ::Stern.currencies.names
-        return name.to_s if name.present? && names.include?(name.to_s)
-        names.include?("BRL") ? "BRL" : names.first
+        available = ::Stern.currencies.names
+        return name.to_s if name.present? && available.include?(name.to_s)
+
+        MOST_USED_CURRENCIES.find { |n| available.include?(n) } || available.first
       end
 
       def grouped_currencies
-        groups = { "Most used" => [], "Units" => [], "Fiat" => [], "Stablecoins" => [], "Crypto" => [] }
-        ::Stern.currencies.each do |name, code|
-          group = case code
-          when 800..899   then "Fiat"
-          when 1000..1999 then "Stablecoins"
-          when 2000..2999 then "Crypto"
-          else "Units"
-          end
+        groups = { "Most used" => [] }.merge(KIND_GROUPS.values.index_with { [] })
+        ::Stern.currencies.each do |name, _code|
+          group = KIND_GROUPS[::Stern.currencies.kind(name)] || "Units"
           groups[group] << name
         end
         available = ::Stern.currencies.names

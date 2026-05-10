@@ -19,8 +19,7 @@
         book_id: @book_id,
         currency: @currency,
         start_date: @start_date_filter_value,
-        end_date: @end_date_filter_value,
-        decimal_places: @decimal_places
+        end_date: @end_date_filter_value
       },
       filters_url: admin_ledger_entries_path,
       filters_form_id: "ledger-entries-filters-form",
@@ -38,8 +37,7 @@
         currency: @currency,
         currency_groups: @currency_groups,
         start_date: @start_date_filter_value,
-        end_date: @end_date_filter_value,
-        decimal_places: @decimal_places
+        end_date: @end_date_filter_value
       },
       body_content: render("stern/admin/ledger/entries_table", entries: @entries, decimal_places: @decimal_places),
       empty_state_text: @book_id.blank? ? "Please select a book ID to view ledger entries." : "No entries match your current filters for the selected time period." %>
