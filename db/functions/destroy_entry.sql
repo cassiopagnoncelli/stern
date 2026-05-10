@@ -23,7 +23,9 @@ BEGIN
   SELECT non_negative INTO nn FROM stern_books WHERE id = entry.book_id;
   nn := COALESCE(nn, FALSE);
 
-  RAISE NOTICE 'Selected row: %', format('%I', entry);
+  IF verbose_mode THEN
+    RAISE DEBUG '-- selected row: %', format('%I', entry);
+  END IF;
 
   DELETE FROM stern_entries WHERE id = in_id;
 

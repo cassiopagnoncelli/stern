@@ -265,7 +265,9 @@ BEGIN
   SELECT non_negative INTO nn FROM stern_books WHERE id = entry.book_id;
   nn := COALESCE(nn, FALSE);
 
-  RAISE NOTICE 'Selected row: %', format('%I', entry);
+  IF verbose_mode THEN
+    RAISE DEBUG '-- selected row: %', format('%I', entry);
+  END IF;
 
   DELETE FROM stern_entries WHERE id = in_id;
 
@@ -806,6 +808,7 @@ ALTER TABLE ONLY public.stern_entries
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260510000000'),
 ('20260509130000'),
 ('20260509120000'),
 ('20260509000000'),
