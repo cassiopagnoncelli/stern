@@ -7,7 +7,9 @@
 #   bundle exec ruby scripts/benchmark/run.rb --op=charge_pix [options]
 #
 # Options:
-#   --op=NAME            scenario name (required; e.g. charge_pix)
+#   --op=NAME            scenario name (required; see --list)
+#                        e.g. charge_pix, deposit, add_credit,
+#                        adjust_balance, transfer_balance
 #   --threads=N          concurrent worker threads (default: 8)
 #   --iterations=N       total ops to run after warmup (default: 2000)
 #   --warmup=N           warmup ops (not measured; default: 200)
