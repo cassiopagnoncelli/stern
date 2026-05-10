@@ -278,7 +278,10 @@ BEGIN
 
   -- This operation is not particularly fast.
   --
-  -- Only timestamps after entry should be updated (stern_entries.timestamp > entry.timestamp).
+  -- Recomputes ending_balance across the entire (book_id, gid, currency)
+  -- partition. Strictly speaking only rows at or after entry.timestamp can
+  -- change value, but recomputing all is correct and avoids drift from the
+  -- post-destroy non_negative check below (see scope rationale there).
   UPDATE stern_entries
   SET ending_balance = mirror.new_ending_balance
   FROM (
@@ -808,6 +811,7 @@ ALTER TABLE ONLY public.stern_entries
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260510000001'),
 ('20260510000000'),
 ('20260509130000'),
 ('20260509120000'),
