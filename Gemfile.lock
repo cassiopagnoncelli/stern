@@ -233,7 +233,7 @@ GEM
     pry (0.15.2)
       coderay (~> 1.1)
       method_source (~> 1.0)
-    psych (5.2.6)
+    psych (5.2.2)
       date
       stringio
     public_suffix (7.0.5)
@@ -388,6 +388,7 @@ DEPENDENCIES
   foreman
   idp-jwt!
   pry
+  psych (= 5.2.2)
   puma
   rspec-rails (~> 8.0)
   rubocop-rails-omakase

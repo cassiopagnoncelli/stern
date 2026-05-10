@@ -10,6 +10,10 @@ gemspec
 #   bundle config local.idp-jwt ../idp-jwt
 gem "idp-jwt", git: "https://github.com/cassiopagnoncelli/idp-jwt.git", branch: "main"
 
+# Pinned to the default gem version shipped with Ruby 3.4.2 to avoid
+# "ambiguous specs" warnings from coexisting installed versions.
+gem "psych", "5.2.2"
+
 group :development, :test do
   gem "pry"
   gem "dotenv-rails"
