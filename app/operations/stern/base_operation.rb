@@ -52,6 +52,7 @@ module Stern
     include InputsDsl
     include StakeholderPairing
     include AdvisoryLocking
+    include Idempotency
 
     # Public aliases of the policy constants. Defined on `RetryPolicy` (where
     # the methods that read them live) and re-exposed here so callers can
@@ -196,30 +197,6 @@ module Stern
 
     def operation_name
       self.class.name.demodulize
-    end
-
-    # Looks up an Operation by idem_key. Returns the matching Operation if params also
-    # match, nil if no Operation with that key exists, and raises if one exists with
-    # different params (attempted replay with changed inputs).
-    #
-    # Comparison goes through `json_normalized_params` so live Ruby values (Symbols,
-    # Times, BigDecimals, …) compare equal to the JSON-roundtripped shape that
-    # `Operation.params` returns from its `json` column. Without this, replaying an
-    # op whose inputs include any non-Integer/String/Bool would falsely diverge from
-    # its stored row.
-    def find_existing_operation(idem_key)
-      return nil if idem_key.nil?
-
-      op = Operation.find_by(idem_key:)
-      return nil if op.nil?
-      return op if op.name == operation_name && op.params == json_normalized_params
-
-      raise ::Stern::IdempotencyConflict.new(
-        idem_key: idem_key,
-        existing: op,
-        attempted_name: operation_name,
-        attempted_params: operation_params,
-      )
     end
 
     # Writes an `OperationAttempt` row recording this call. Runs outside the
