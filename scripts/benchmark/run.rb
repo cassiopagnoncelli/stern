@@ -109,4 +109,22 @@ if opts[:threads] > pool_size
 end
 
 scenario = klass.new(opts)
-Benchmark::Runner.new(scenario, opts).run
+metrics = Benchmark::Runner.new(scenario, opts).run
+
+# Strict mode (STERN_BENCH_STRICT=1): used by CI to surface regressions as a
+# non-zero exit. Trips on either:
+#   - any operation error during the measured window (transient infra hiccups
+#     would also count, but the benchmark is bounded so flakiness should be
+#     rare; if it isn't, the ChargePix op itself is unstable and that's worth
+#     learning).
+#   - a ledger that is not amount-consistent at the end (sum of all entry
+#     amounts != 0). This is the strongest invariant Stern offers and any
+#     violation signals a real bug, not a flake.
+if ENV["STERN_BENCH_STRICT"] == "1"
+  errors = metrics.errors.values.sum
+  consistent = Stern::Doctor.amount_consistent?
+  if errors.positive? || !consistent
+    warn "STRICT: errors=#{errors} consistent=#{consistent}"
+    exit 1
+  end
+end

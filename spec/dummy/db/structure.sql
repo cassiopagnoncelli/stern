@@ -735,6 +735,30 @@ CREATE TRIGGER stern_sop_notify_trigger AFTER INSERT OR UPDATE OF status ON publ
 
 
 --
+-- Name: stern_operation_attempts fk_rails_5a4a5cf52c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stern_operation_attempts
+    ADD CONSTRAINT fk_rails_5a4a5cf52c FOREIGN KEY (operation_id) REFERENCES public.stern_operations(id) ON DELETE SET NULL;
+
+
+--
+-- Name: stern_entry_pairs fk_rails_6f6a4b6947; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stern_entry_pairs
+    ADD CONSTRAINT fk_rails_6f6a4b6947 FOREIGN KEY (operation_id) REFERENCES public.stern_operations(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: stern_entries fk_rails_b59e6d00a0; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stern_entries
+    ADD CONSTRAINT fk_rails_b59e6d00a0 FOREIGN KEY (entry_pair_id) REFERENCES public.stern_entry_pairs(id) ON DELETE RESTRICT;
+
+
+--
 -- PostgreSQL database dump complete
 --
 
@@ -742,6 +766,7 @@ CREATE TRIGGER stern_sop_notify_trigger AFTER INSERT OR UPDATE OF status ON publ
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260509120000'),
 ('20260509000000'),
 ('20260427000000'),
 ('20250530090922'),

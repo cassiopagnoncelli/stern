@@ -19,10 +19,10 @@ module Benchmark
 
       def run_once(iter_idx, thread_idx)
         payment_id = payment_ids[(thread_idx + iter_idx) % payment_ids.size]
-        ::Stern::ChargePix.new(
+        ::Stern::ChargePayment.new(
           charge_id: next_charge_id,
           payment_id: payment_id,
-          customer_id: customer_id_for(payment_id),
+          payment_method: "pix",
           amount: opts[:amount],
           currency: opts[:currency],
         ).call
@@ -46,10 +46,6 @@ module Benchmark
           @charge_counter ||= opts[:run_id] * 10_000_000
           @charge_counter += 1
         end
-      end
-
-      def customer_id_for(payment_id)
-        payment_id + 1_000_000
       end
     end
   end

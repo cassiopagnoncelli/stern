@@ -19,9 +19,18 @@ RSpec.describe "Stern::Admin::Attempts", type: :request do
       .to receive(:authenticated?).and_return(true)
   end
 
+  # Synthetic operation_id values used in spec rows below. The FK from
+  # stern_operation_attempts.operation_id requires an existing stern_operations
+  # row (or NULL), so we seed real ones with the same ids the specs reference.
+  SPEC_OPERATION_IDS = [ 1, 2, 42 ].freeze
+
   before do
     sign_in_as(build_passport(platform_admin: true))
     Stern::OperationAttempt.delete_all
+    Stern::Repair.clear(confirm: true)
+    SPEC_OPERATION_IDS.each do |id|
+      Stern::Operation.create!(id:, name: "spec_seed_#{id}", params: {})
+    end
   end
 
   describe "GET /stern/admin/attempts" do

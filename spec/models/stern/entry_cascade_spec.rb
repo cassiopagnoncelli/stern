@@ -14,7 +14,35 @@ module Stern
 
     before { Repair.clear(confirm: true) }
 
+    # Satisfies the entries -> entry_pairs -> operations FK chain that landed
+    # alongside this spec. Each call seeds the EntryPair (and a single shared
+    # Operation) with the same id the test wants to use, so existing
+    # `find_by!(entry_pair_id: N)` assertions keep working unchanged. We don't
+    # go through EntryPair.add_* because that writes both legs of the pair,
+    # and these specs want to control the cascade with single-sided synthetic
+    # rows. Repair.clear in the `before` wipes prior pairs, so the explicit
+    # ids never collide.
+    def operation_for_test
+      @operation_for_test ||= Operation.create!(name: "cascade_spec", params: {})
+    end
+
+    # Any valid chart pair code works — we never read it back. Picking
+    # `withhold_merchant_balance` because it's the first declared and
+    # stable across charts.
+    SYNTHETIC_PAIR_CODE = :withhold_merchant_balance
+
     def create_entry!(amount:, timestamp:, entry_pair_id:)
+      # Pair timestamp uses base_time (always past) regardless of the entry's
+      # timestamp, so AR-level future-timestamp validation on EntryPair never
+      # fires here — the future-timestamp test in this file specifically
+      # asserts the PL/pgSQL function's rejection at Entry.create!, and we
+      # want that path reachable.
+      EntryPair.create!(
+        id: entry_pair_id,
+        code: SYNTHETIC_PAIR_CODE, uid: gid, amount:, currency:,
+        timestamp: base_time,
+        operation_id: operation_for_test.id,
+      )
       Entry.create!(book_id:, gid:, entry_pair_id:, amount:, currency:, timestamp:)
     end
 

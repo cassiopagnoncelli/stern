@@ -59,3 +59,22 @@ jobs:
 
       - name: Run RuboCop
         run: bundle exec rubocop
+
+      # Smoke benchmark: keeps the bench harness exercised by CI and surfaces
+      # ops/s + p50/p95/p99 in the build log. Strict mode (set via env) makes
+      # the step exit non-zero on either a recorded operation error during the
+      # measured window or a ledger that fails Stern::Doctor.amount_consistent?
+      # at the end. We deliberately do not gate on absolute latency or
+      # throughput thresholds — shared CI runners are noisy enough that
+      # absolute numbers would flap; regressions show up in the printed
+      # latency table for a human to notice in PR review.
+      - name: Benchmark smoke (ChargePix)
+        env:
+          STERN_BENCH_STRICT: "1"
+        run: |
+          bundle exec ruby scripts/benchmark/run.rb \
+            --op=charge_pix \
+            --threads=4 \
+            --iterations=200 \
+            --warmup=20 \
+            --merchants=8

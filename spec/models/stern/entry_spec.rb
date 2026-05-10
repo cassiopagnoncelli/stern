@@ -4,9 +4,33 @@ module Stern
   RSpec.describe Entry, type: :model do
     let(:currency) { ::Stern.cur("BRL") }
 
+    # Repair.clear wipes EntryPairs and Operations alongside Entries, so the
+    # FK from stern_entries.entry_pair_id has nothing to point at unless we
+    # re-seed. Helpers below allocate a pair (and the backing operation)
+    # lazily, with the synthetic `id` the test wants to reference.
+    def spec_operation
+      @spec_operation ||= Operation.create!(name: "entry_spec", params: {})
+    end
+
+    def seed_pair!(id:, currency: ::Stern.cur("BRL"))
+      EntryPair.create!(
+        id:, code: :withhold_merchant_balance, uid: 1101, amount: 1, currency:,
+        timestamp: 100.years.ago, operation_id: spec_operation.id,
+      )
+    end
+
     def gen_entry(amount: 100, timestamp: nil)
       Repair.clear(confirm: true)
+      @spec_operation = nil
+      seed_pair!(id: 1)
       described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 1, amount:, currency:, timestamp:)
+    end
+
+    # `Entry.create!` wrapper for the running-balance / last_entry blocks
+    # that exercise multiple synthetic pair_ids per test.
+    def mk_entry!(entry_pair_id:, amount:, currency: ::Stern.cur("BRL"), timestamp: nil, book_id: 1, gid: 1101)
+      seed_pair!(id: entry_pair_id, currency:) unless EntryPair.exists?(id: entry_pair_id)
+      described_class.create!(book_id:, gid:, entry_pair_id:, amount:, currency:, timestamp:)
     end
 
     describe "validations" do
@@ -102,7 +126,7 @@ module Stern
         let(:usd) { ::Stern.cur("USD") }
 
         before do
-          described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 2, amount: 200, currency: usd)
+          mk_entry!(entry_pair_id: 2, amount: 200, currency: usd)
         end
 
         it "scopes to the requested currency" do
@@ -122,21 +146,24 @@ module Stern
     describe "running balance" do
       let(:usd) { ::Stern.cur("USD") }
 
-      before { Repair.clear(confirm: true) }
+      before do
+        Repair.clear(confirm: true)
+        @spec_operation = nil
+      end
 
       it "starts each currency's ending_balance from zero" do
-        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 1, amount: 100, currency:)
-        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 2, amount: 200, currency: usd)
+        mk_entry!(entry_pair_id: 1, amount: 100, currency:)
+        mk_entry!(entry_pair_id: 2, amount: 200, currency: usd)
 
         expect(described_class.find_by!(currency:).ending_balance).to eq(100)
         expect(described_class.find_by!(currency: usd).ending_balance).to eq(200)
       end
 
       it "sums within a currency without leaking into another currency" do
-        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 1, amount: 100, currency:)
-        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 2, amount: 200, currency: usd)
-        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 3, amount: 50, currency:)
-        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 4, amount: -80, currency: usd)
+        mk_entry!(entry_pair_id: 1, amount: 100, currency:)
+        mk_entry!(entry_pair_id: 2, amount: 200, currency: usd)
+        mk_entry!(entry_pair_id: 3, amount: 50, currency:)
+        mk_entry!(entry_pair_id: 4, amount: -80, currency: usd)
 
         brl_balances = described_class.where(currency:).order(:timestamp, :id).pluck(:ending_balance)
         usd_balances = described_class.where(currency: usd).order(:timestamp, :id).pluck(:ending_balance)
@@ -146,28 +173,28 @@ module Stern
 
       it "keeps (book_id, gid) partitioned separately by currency for same-ts uniqueness" do
         ts = DateTime.current - 1.hour
-        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 1, amount: 100, currency:, timestamp: ts)
+        mk_entry!(entry_pair_id: 1, amount: 100, currency:, timestamp: ts)
         expect {
-          described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 2, amount: 200, currency: usd, timestamp: ts)
+          mk_entry!(entry_pair_id: 2, amount: 200, currency: usd, timestamp: ts)
         }.to change(described_class, :count).by(1)
       end
 
       it "rejects duplicate (book_id, gid, currency, timestamp)" do
         ts = DateTime.current - 1.hour
-        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 1, amount: 100, currency:, timestamp: ts)
+        mk_entry!(entry_pair_id: 1, amount: 100, currency:, timestamp: ts)
         expect {
-          described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 2, amount: 50, currency:, timestamp: ts)
+          mk_entry!(entry_pair_id: 2, amount: 50, currency:, timestamp: ts)
         }.to raise_error(ActiveRecord::StatementInvalid, /duplicate key/)
       end
 
       it "cascades ending_balance recalc only within the inserting currency" do
         now = DateTime.current
-        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 1, amount: 100, currency:, timestamp: now - 2.hours)
-        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 2, amount: 50, currency:, timestamp: now - 1.hour)
-        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 3, amount: 999, currency: usd, timestamp: now - 1.hour)
+        mk_entry!(entry_pair_id: 1, amount: 100, currency:, timestamp: now - 2.hours)
+        mk_entry!(entry_pair_id: 2, amount: 50, currency:, timestamp: now - 1.hour)
+        mk_entry!(entry_pair_id: 3, amount: 999, currency: usd, timestamp: now - 1.hour)
 
         # Insert a past entry in BRL — this must cascade across BRL, not USD.
-        described_class.create!(book_id: 1, gid: 1101, entry_pair_id: 4, amount: 10, currency:, timestamp: now - 3.hours)
+        mk_entry!(entry_pair_id: 4, amount: 10, currency:, timestamp: now - 3.hours)
 
         brl = described_class.where(currency:).order(:timestamp, :id).pluck(:amount, :ending_balance)
         usd_balance = described_class.find_by!(currency: usd).ending_balance
