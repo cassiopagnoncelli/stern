@@ -49,6 +49,7 @@ module Stern
     include ActiveModel::Validations
 
     extend RetryPolicy
+    include InputsDsl
 
     # Public aliases of the policy constants. Defined on `RetryPolicy` (where
     # the methods that read them live) and re-exposed here so callers can
@@ -60,27 +61,6 @@ module Stern
     attr_accessor :operation
 
     class << self
-      def inputs(*names)
-        @inputs ||= []
-        return @inputs if names.empty?
-
-        @inputs.concat(names)
-        attr_accessor(*names)
-      end
-
-      # Declares that exactly one of the given attributes must be present. Adds an
-      # error on `:base` when the count is not 1, so validation messages flow through
-      # the standard `errors.full_messages` path instead of bare `ArgumentError`s
-      # raised from `perform`.
-      def validates_exactly_one_of(*attrs)
-        validate do
-          present = attrs.count { |a| public_send(a).present? }
-          next if present == 1
-
-          errors.add(:base, "exactly one of #{attrs.join(', ')} must be set (got #{present})")
-        end
-      end
-
       # Generates `target_tuples`, `perform`, and (optionally) `runtime_check`
       # for the dominant single-pair shape: an op picks a stakeholder/funder via
       # `stakeholder_for` / `funder_for`, formats one entry-pair name from the
@@ -189,22 +169,6 @@ module Stern
         end
       end
     end
-
-    validate :currency_must_be_known
-
-    def initialize(**kwargs)
-      extra = kwargs.keys - self.class.inputs
-      raise ArgumentError, "unknown inputs for #{self.class.name}: #{extra}" if extra.any?
-
-      self.class.inputs.each { |n| public_send("#{n}=", kwargs[n]) }
-      normalize_inputs
-    end
-
-    # Hook for subclasses to coerce/transform assigned inputs. Runs at the end
-    # of `initialize`, so subclasses don't need to call `super`. Currency
-    # normalization is deferred to `call` so unknown currencies surface as
-    # validation errors rather than raising from the constructor.
-    def normalize_inputs; end
 
     # Declares the `(book, gid, currency)` tuples this operation reads from or writes
     # to. `BaseOperation#call` takes a per-tuple Postgres advisory lock on each before
@@ -393,27 +357,6 @@ module Stern
 
     private
 
-    # Validates that `currency` (when declared as an input) refers to a known
-    # currency. Runs through `Stern.cur` and translates `UnknownCurrencyError`
-    # into a regular validation error so callers see `errors.full_messages`
-    # rather than a raw raise from the constructor. Blank values fall through
-    # to the subclass's `presence` validation.
-    def currency_must_be_known
-      return unless self.class.inputs.include?(:currency)
-      return if currency.blank?
-
-      ::Stern.cur(currency, result: :index)
-    rescue ::Stern::UnknownCurrencyError
-      errors.add(:currency, "is not a recognized currency")
-    end
-
-    # Canonicalizes validated inputs (e.g. currency name → integer code). Runs
-    # in `call` after `invalid?` passes, so unknown values cannot reach this
-    # point. `Stern.cur(_, result: :index)` is idempotent for integer inputs.
-    def normalize_validated_inputs
-      self.currency = ::Stern.cur(currency, result: :index) if self.class.inputs.include?(:currency) && currency
-    end
-
     # Creates the Operation audit record and dispatches to the subclass's `perform`.
     # Mutates `self.operation` so the subclass can access it via attr_accessor.
     # Between the audit row and `perform`, runs `runtime_check` so subclasses
@@ -501,10 +444,6 @@ module Stern
       self.class.name.demodulize
     end
 
-    def operation_params
-      self.class.inputs.to_h { |n| [ n.to_s, public_send(n) ] }
-    end
-
     # Looks up an Operation by idem_key. Returns the matching Operation if params also
     # match, nil if no Operation with that key exists, and raises if one exists with
     # different params (attempted replay with changed inputs).
@@ -527,12 +466,6 @@ module Stern
         attempted_name: operation_name,
         attempted_params: operation_params,
       )
-    end
-
-    # `operation_params` projected through JSON's type system, so the result has the
-    # same shape as `Operation.params` after a round-trip through the `json` column.
-    def json_normalized_params
-      JSON.parse(operation_params.to_json)
     end
 
     # Writes an `OperationAttempt` row recording this call. Runs outside the
