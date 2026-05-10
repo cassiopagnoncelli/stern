@@ -66,7 +66,7 @@ jobs:
       # measured window or a ledger that fails Stern::Doctor.amount_consistent?
       # at the end. The --out flag emits a JSON artifact that the next two
       # steps use to compare against the latest successful main run.
-      - name: Benchmark smoke (ChargePix)
+      - name: Benchmark smoke (ChargePayment, pix)
         env:
           STERN_BENCH_STRICT: "1"
         run: |

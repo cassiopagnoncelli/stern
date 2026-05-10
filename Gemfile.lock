@@ -11,16 +11,16 @@ PATH
   remote: .
   specs:
     stern (1.9.2)
-      cssbundling-rails (>= 1.4)
-      idp-jwt
-      nokogiri (>= 1.15.6)
-      omniauth-rails_csrf_protection
+      cssbundling-rails (~> 1.4)
+      idp-jwt (~> 0.1)
+      nokogiri (~> 1.15, >= 1.15.6)
+      omniauth-rails_csrf_protection (~> 2.0)
       omniauth_openid_connect (~> 0.8)
-      pg (>= 1.4.5)
-      prometheus-client (>= 4.0)
-      propshaft (>= 1.0)
-      rails (>= 8.0)
-      xxhash (>= 0.5)
+      pg (~> 1.4, >= 1.4.5)
+      prometheus-client (~> 4.0)
+      propshaft (~> 1.0)
+      rails (~> 8.0)
+      xxhash (~> 0.5)
 
 GEM
   remote: https://rubygems.org/
@@ -382,18 +382,18 @@ PLATFORMS
 
 DEPENDENCIES
   awesome_print
-  climate_control (>= 1.2)
+  climate_control (~> 1.2)
   dotenv-rails
-  factory_bot_rails
+  factory_bot_rails (~> 6.0, >= 0)
   foreman
   idp-jwt!
   pry
   puma
-  rspec-rails
+  rspec-rails (~> 8.0)
   rubocop-rails-omakase
-  shoulda-matchers (>= 5.0)
+  shoulda-matchers (~> 6.0, >= 5.0)
   stern!
-  timecop (>= 0.9)
+  timecop (~> 0.9)
   tracer
 
 RUBY VERSION

@@ -29,21 +29,21 @@ Gem::Specification.new do |spec|
     Dir["{app,config,db,lib}/**/*", "Rakefile", "README.md"]
   end
 
-  spec.add_dependency "rails", ">= 8.0"
-  spec.add_dependency "pg", ">= 1.4.5"
-  spec.add_dependency "nokogiri", ">= 1.15.6"
-  spec.add_dependency "xxhash", ">= 0.5"
-  spec.add_dependency "prometheus-client", ">= 4.0"
-  spec.add_dependency "propshaft", ">= 1.0"
-  spec.add_dependency "cssbundling-rails", ">= 1.4"
-  spec.add_dependency "idp-jwt"
+  spec.add_dependency "rails", "~> 8.0"
+  spec.add_dependency "pg", "~> 1.4", ">= 1.4.5"
+  spec.add_dependency "nokogiri", "~> 1.15", ">= 1.15.6"
+  spec.add_dependency "xxhash", "~> 0.5"
+  spec.add_dependency "prometheus-client", "~> 4.0"
+  spec.add_dependency "propshaft", "~> 1.0"
+  spec.add_dependency "cssbundling-rails", "~> 1.4"
+  spec.add_dependency "idp-jwt", "~> 0.1"
   spec.add_dependency "omniauth_openid_connect", "~> 0.8"
-  spec.add_dependency "omniauth-rails_csrf_protection"
+  spec.add_dependency "omniauth-rails_csrf_protection", "~> 2.0"
 
   # Development.
-  spec.add_development_dependency "rspec-rails"
-  spec.add_development_dependency "factory_bot_rails"
-  spec.add_development_dependency "shoulda-matchers", ">= 5.0"
-  spec.add_development_dependency "climate_control", ">= 1.2"
-  spec.add_development_dependency "timecop", ">= 0.9"
+  spec.add_development_dependency "rspec-rails", "~> 8.0"
+  spec.add_development_dependency "factory_bot_rails", "~> 6.0"
+  spec.add_development_dependency "shoulda-matchers", "~> 6.0"
+  spec.add_development_dependency "climate_control", "~> 1.2"
+  spec.add_development_dependency "timecop", "~> 0.9"
 end

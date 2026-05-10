@@ -119,7 +119,7 @@ jobs:
       # latency table for a human to notice in PR review. Running this across
       # the PG matrix catches lock-path regressions specific to a major PG
       # version (e.g. pg_advisory_xact_lock + hashtextextended behavior).
-      - name: Benchmark smoke (ChargePix)
+      - name: Benchmark smoke (ChargePayment, pix)
         env:
           STERN_BENCH_STRICT: "1"
         run: |
