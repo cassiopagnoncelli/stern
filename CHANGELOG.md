@@ -5,25 +5,26 @@ All notable changes to Stern are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.9.0] — 2026-05-10
 
-### Changed
-
-- **`Stern::Repair.clear` now also wipes `stern_operation_attempts`**, so test campaigns that rely on it as a DB reset no longer leak attempt rows (with `operation_id` nulled by the `:nullify` FK) across runs.
-- **`Stern::BaseOperation` split into composable concerns** under `app/operations/stern/base_operation/` (`RetryPolicy`, `InputsDsl`, `StakeholderPairing`, `AdvisoryLocking`, `Idempotency`, `AttemptLogging`). Pure refactor — no behavior change, public surface preserved.
-- **`Stern::Workers::Runner` auto-prune is now opt-out, not opt-in.**
-  `DEFAULT_PRUNE_INTERVAL` flipped from `0.0` (off) to `3600.0` (once an
-  hour). New `DEFAULT_PRUNE_MAX_BATCHES = 10` bounds each tick to a
-  predictable upper-bound of deletes per status, so first-run multi-million-
-  row sweeps split across many ticks instead of blocking shutdown.
-  Installations preferring the rake-from-cron path can disable with
-  `STERN_PRUNE_INTERVAL=0`. **Breaking only for installations that already
-  run the rake task on a cron and don't want the duplicative log line each
-  hour** — set `STERN_PRUNE_INTERVAL=0` to restore the prior behavior.
-  New `STERN_PRUNE_MAX_BATCHES` env var also routed through.
+Operations refactor and observability polish on top of 1.8.0's withdrawal-flow
+rework. `BaseOperation` is now a thin shell over six composable concerns; the
+stakeholder-pair macro absorbs seventeen ops plus the four `Charge*Fee` ops;
+advisory-lock key derivation is centralized in PL/pgSQL behind a single
+function used by both Ruby and SQL call sites; and operators get a new
+Prometheus gauge for the operation-attempts table so they can tell whether the
+worker's hourly auto-prune is keeping up.
 
 ### Added
 
+- **`stern_operation_attempts_count{status}` Prometheus gauge.** Per-status
+  row count over `stern_operation_attempts`, refreshed on the same path as
+  the existing SOP queue gauge — `Stern::Metrics.refresh_queue_gauges!` now
+  runs two cheap GROUP BY queries per scrape instead of one. Gives operators
+  visibility into whether the worker's hourly auto-prune is keeping up with
+  insert rate. Public method name preserved so
+  `Stern::Workers::Runner#refresh_gauges` and host-app scrape controllers
+  continue to work without changes.
 - **`Stern::Doctor.first_inconsistency`.** Full ledger health check that
   walks both invariants (`sum(amount) == 0` and per-tuple ending-balance
   cascade) and returns `nil` on success or a tagged detail hash
@@ -42,9 +43,42 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   now raise `Stern::InsufficientFunds` instead of writing a negative
   available balance; intentional overdrafts must opt in with
   `allow_overdraft: true`.
+- **Past-timestamp cascade concurrency coverage.** Three RSpec tests
+  prove the transaction-scoped advisory lock in `create_entry.sql`
+  serializes past-timestamp inserts on a single
+  `(book_id, gid, currency)` partition — companion to
+  `concurrency_spec.rb`, which only covered the tail-append branch. Each
+  test wraps `EntryPair.add_*` in a transaction so a leg-2 failure rolls
+  back leg 1, mirroring `BaseOperation#call`'s atomicity.
+- **Benchmark latency regression in CI.** `scripts/benchmark/compare.rb`
+  diffs current-branch numbers against a stored baseline and surfaces
+  per-scenario regressions; CI workflow extended to run the comparison and
+  fail on regressions outside tolerance.
+- **CI smoke test workflow** that boots the dummy app and runs a fast
+  subset of the suite on every push, separate from the full benchmark job.
+- **Entry-pair metaprogramming helpers.** `Stern::EntryPair` exposes new
+  introspection helpers (used by the `performs_stakeholder_pair` macro) so
+  ops can resolve their pair shape from the chart without ad-hoc lookups.
 
 ### Changed
 
+- **`Stern::Repair.clear` now also wipes `stern_operation_attempts`**, so
+  test campaigns that rely on it as a DB reset no longer leak attempt rows
+  (with `operation_id` nulled by the `:nullify` FK) across runs.
+- **`Stern::BaseOperation` split into composable concerns** under
+  `app/operations/stern/base_operation/` (`RetryPolicy`, `InputsDsl`,
+  `StakeholderPairing`, `AdvisoryLocking`, `Idempotency`, `AttemptLogging`).
+  Pure refactor — no behavior change, public surface preserved.
+- **`Stern::Workers::Runner` auto-prune is now opt-out, not opt-in.**
+  `DEFAULT_PRUNE_INTERVAL` flipped from `0.0` (off) to `3600.0` (once an
+  hour). New `DEFAULT_PRUNE_MAX_BATCHES = 10` bounds each tick to a
+  predictable upper-bound of deletes per status, so first-run multi-million-
+  row sweeps split across many ticks instead of blocking shutdown.
+  Installations preferring the rake-from-cron path can disable with
+  `STERN_PRUNE_INTERVAL=0`. **Breaking only for installations that already
+  run the rake task on a cron and don't want the duplicative log line each
+  hour** — set `STERN_PRUNE_INTERVAL=0` to restore the prior behavior.
+  New `STERN_PRUNE_MAX_BATCHES` env var also routed through.
 - **Stakeholder-pair operations now use a class-level `performs_stakeholder_pair`
   macro** instead of hand-written `target_tuples` / `perform` / `runtime_check`
   triplets. Seventeen ops collapsed from ~25 lines of dispatch boilerplate to a
@@ -52,10 +86,19 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ApplyCredit`, `AddCredit`, `Deposit`, `ConfirmWithdrawal`,
   `ReverseChargeback`, `UnlockBalance`, `ReleaseWithheldBalance`,
   `ReverseWithdrawal`, `LockBalance`, `LockWithdrawal`, `CancelWithdrawal`,
-  `SplitPayment`, `CancelRefund`, `ReverseRefund`. Pure refactor — emits the
+  `SplitPayment`, `CancelRefund`, `ReverseRefund`. Macro extended to cover
+  the four `Charge*Fee` ops (`ChargePaymentFee`, `ChargeRefundFee`,
+  `ChargeChargebackFee`, `ChargeWithdrawalFee`). Pure refactor — emits the
   same `EntryPair.add_*` calls and same `Stern::InsufficientFunds` messages,
   so existing callers and specs are unaffected. Multi-pair / two-stakeholder
-  ops (`TransferBalance`, `ReintegratePayment`, fee ops) are unchanged.
+  ops (`TransferBalance`, `ReintegratePayment`) are unchanged.
+- **Advisory-lock key derivation centralized in a SQL function.** New
+  `stern_advisory_lock_key(book_id, gid, currency)` PL/pgSQL function (and
+  matching Ruby helper on `Stern::ApplicationRecord`) replaces the inlined
+  `hashtextextended` expression previously duplicated across `create_entry`,
+  `destroy_entry`, and the Ruby advisory-lock path. Pure refactor — same
+  key for the same tuple, so existing callers and in-flight locks are
+  unaffected.
 - **`Stern::Divest` now raises `Stern::InsufficientFunds`** when the
   per-investment `customer_investment` balance is negative and
   `allow_overdraft` is false. Previously the op silently no-op'd while still
@@ -108,6 +151,36 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the parameter got a non-zone-aware "now" — silently wrong for time-windowing
   in non-UTC tenants. Replaced with `Time.current`, which respects the
   per-request `Time.use_zone(...)` set by `AuthenticatedController`.
+- **Foreign-key gap closed.** New migration
+  `20260509120000_add_stern_foreign_keys.rb` adds the FKs that were
+  missing between operation / attempt / entry tables, so referential
+  integrity is enforced at the DB layer instead of relying on the Ruby
+  layer alone.
+- **`destroy_entry` no longer floods PG logs.** The unconditional
+  `RAISE NOTICE` on every destroy is now gated behind `verbose_mode`
+  (matching sibling calls in `create_entry.sql`). Migration
+  `20260510000000_gate_destroy_entry_notice.rb` re-executes the function
+  source so deployed installs pick up the change.
+
+### Dependencies
+
+- Adds `climate_control >= 1.2` (development) — used in the metrics specs
+  to scope env-var overrides and avoid bleed across examples.
+- Adds `timecop >= 0.9` (development) — used in metrics and operation
+  specs to make time-sensitive assertions deterministic.
+
+### Migration notes
+
+Hosts must run `bundle exec rake db:migrate` to pick up
+`20260509120000_add_stern_foreign_keys` (FK closure),
+`20260510000000_gate_destroy_entry_notice` (PG log noise fix), and
+`20260510000002_centralize_advisory_lock_key` (refactor; same lock keys,
+no behavior change). `WithholdBalance` callers that pass an amount
+exceeding the per-gid available balance must now opt into
+`allow_overdraft: true` or expect `Stern::InsufficientFunds`. Callers of
+`Stern::Repair.clear` must now pass `confirm: true`. `Doctor.consistent?`
+is removed — call `amount_consistent?` for the narrow check or
+`first_inconsistency` for a full audit.
 
 ### Documentation
 
