@@ -22,10 +22,12 @@ BEGIN
   -- Defense-in-depth: serialize cascade computation on this (book_id, gid, currency)
   -- tuple against any other concurrent writer, even if the caller bypassed the
   -- operation-level advisory lock in BaseOperation#call. Transaction-scoped;
-  -- releases at commit/rollback. Same hash shape as BaseOperation#acquire_advisory_locks
-  -- so the two layers grab the same lock and are reentrant.
+  -- releases at commit/rollback. Routes through `stern_advisory_lock_key` —
+  -- the single definition shared with `BaseOperation#acquire_advisory_locks`,
+  -- `destroy_entry`, and `Stern::Repair` — so all layers grab the same lock
+  -- and are reentrant.
   PERFORM pg_advisory_xact_lock(
-    hashtextextended(format('stern:%s:%s:%s', in_book_id, in_gid, in_currency), 0)
+    stern_advisory_lock_key(in_book_id, in_gid, in_currency)
   );
 
   -- Chart-level non_negative flag: if set, reject any write that leaves

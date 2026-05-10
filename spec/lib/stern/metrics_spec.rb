@@ -160,6 +160,112 @@ module Stern
       end
     end
 
+    describe ".refresh_queue_gauges! threshold warning" do
+      before { described_class.install_subscribers! }
+      before { OperationAttempt.delete_all }
+      after  { OperationAttempt.delete_all }
+
+      let(:logger) { instance_double(Logger, warn: nil) }
+
+      def create_attempts(n, status: :success)
+        n.times do
+          OperationAttempt.create!(
+            name: "ChargePayment", params: {}, status: status,
+            attempted_at: Time.current,
+          )
+        end
+      end
+
+      def with_env(key, value)
+        prev_set = ENV.key?(key)
+        prev = ENV[key]
+        ENV[key] = value
+        yield
+      ensure
+        prev_set ? ENV[key] = prev : ENV.delete(key)
+      end
+
+      it "warns when a status sits at-or-above the threshold" do
+        create_attempts(3, status: :success)
+
+        described_class.refresh_queue_gauges!(warn_threshold: 3, logger: logger)
+
+        expect(logger).to have_received(:warn).with(
+          a_string_matching(/stern_operation_attempts_count\{status=success\}=3.*threshold 3/),
+        )
+      end
+
+      it "does not warn when every status is below the threshold" do
+        create_attempts(2, status: :success)
+
+        described_class.refresh_queue_gauges!(warn_threshold: 5, logger: logger)
+
+        expect(logger).not_to have_received(:warn)
+      end
+
+      it "is a no-op when threshold is nil (default)" do
+        create_attempts(50, status: :success)
+
+        described_class.refresh_queue_gauges!(warn_threshold: nil, logger: logger)
+
+        expect(logger).not_to have_received(:warn)
+      end
+
+      it "rate-limits repeat warnings for the same status within the cooldown window" do
+        create_attempts(3, status: :success)
+
+        described_class.refresh_queue_gauges!(warn_threshold: 1, logger: logger)
+        described_class.refresh_queue_gauges!(warn_threshold: 1, logger: logger)
+        described_class.refresh_queue_gauges!(warn_threshold: 1, logger: logger)
+
+        # Only the first scrape emits — the next two land inside the cooldown.
+        expect(logger).to have_received(:warn).once
+      end
+
+      it "warns again once the rate-limit window elapses" do
+        create_attempts(3, status: :success)
+
+        described_class.refresh_queue_gauges!(warn_threshold: 1, logger: logger)
+        # Backdate the per-status timestamp past the cooldown to simulate
+        # ATTEMPT_COUNT_WARN_INTERVAL_SECONDS having elapsed.
+        last = described_class.instance_variable_get(:@last_attempt_warn_at)
+        last["success"] = Time.now - Stern::Metrics::ATTEMPT_COUNT_WARN_INTERVAL_SECONDS - 1
+        described_class.refresh_queue_gauges!(warn_threshold: 1, logger: logger)
+
+        expect(logger).to have_received(:warn).twice
+      end
+
+      it "tracks rate-limit state per status independently" do
+        create_attempts(3, status: :success)
+        create_attempts(3, status: :failed)
+
+        described_class.refresh_queue_gauges!(warn_threshold: 1, logger: logger)
+
+        expect(logger).to have_received(:warn).with(/status=success/).once
+        expect(logger).to have_received(:warn).with(/status=failed/).once
+      end
+
+      it "reads STERN_ATTEMPT_COUNT_WARN_THRESHOLD as the default" do
+        create_attempts(3, status: :success)
+
+        with_env("STERN_ATTEMPT_COUNT_WARN_THRESHOLD", "2") do
+          described_class.refresh_queue_gauges!(logger: logger)
+        end
+
+        expect(logger).to have_received(:warn).with(/status=success/)
+      end
+
+      it "treats STERN_ATTEMPT_COUNT_WARN_THRESHOLD=0 as disabled" do
+        create_attempts(3, status: :success)
+
+        with_env("STERN_ATTEMPT_COUNT_WARN_THRESHOLD", "0") do
+          described_class.refresh_queue_gauges!(logger: logger)
+        end
+
+        expect(logger).not_to have_received(:warn)
+      end
+    end
+
     describe "end-to-end integration via ScheduledOperationService" do
       before { described_class.install_subscribers! }
       before { Repair.clear(confirm: true) }

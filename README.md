@@ -499,7 +499,11 @@ events the scheduled-operation pipeline emits:
   `stern_operation_attempts` by status (`success` / `failed` / `pending`).
   Pair with the worker auto-prune to confirm prune throughput is keeping up
   with insert rate; sustained growth means raising `STERN_PRUNE_MAX_BATCHES`
-  or shortening `STERN_PRUNE_INTERVAL` (refresh-on-demand)
+  or shortening `STERN_PRUNE_INTERVAL` (refresh-on-demand). Set
+  `STERN_ATTEMPT_COUNT_WARN_THRESHOLD=<n>` to also emit an in-process
+  `logger.warn` whenever any status sits at-or-above the threshold — useful
+  for installations that aren't scraping/alerting on Prometheus directly.
+  Warnings are rate-limited per-status to once every 5 minutes.
 
 Scrape from a host-app controller:
 

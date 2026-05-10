@@ -33,6 +33,13 @@ module Stern
   module Metrics
     module_function
 
+    # Minimum seconds between repeat warnings for the same status when the
+    # operation-attempts gauge sits above the threshold. Prometheus scrapes
+    # land every 5-15s in typical setups; without rate limiting a stuck queue
+    # would flood logs once per scrape. Per-status so a spike in one bucket
+    # surfaces quickly even if another is already throttled.
+    ATTEMPT_COUNT_WARN_INTERVAL_SECONDS = 300
+
     # The single Prometheus registry holding all Stern metrics. Host apps can
     # merge it with their own registry or scrape it directly.
     def registry
@@ -109,7 +116,15 @@ module Stern
     # timer). Two GROUP BY queries, both cheap relative to anything else the
     # scheduler does. Name kept for backwards compatibility with existing
     # callers (e.g. `Stern::Workers::Runner#refresh_gauges`).
-    def refresh_queue_gauges!
+    #
+    # `warn_threshold` enables an in-process log warning when any status's
+    # `stern_operation_attempts_count` sits at-or-above the value, so an
+    # installation that isn't scraping/alerting on the gauge still gets a
+    # signal that the auto-prune can't keep up with insert rate. Defaults to
+    # `STERN_ATTEMPT_COUNT_WARN_THRESHOLD` (nil = disabled). Per-status rate-
+    # limited via `ATTEMPT_COUNT_WARN_INTERVAL_SECONDS` so frequent Prometheus
+    # scrapes don't flood logs.
+    def refresh_queue_gauges!(warn_threshold: default_warn_threshold, logger: default_logger)
       sop_counts = ::Stern::ScheduledOperation.group(:status).count
       ::Stern::ScheduledOperation.statuses.each_key do |status|
         sop_count.set(sop_counts[status] || 0, labels: { status: status })
@@ -117,8 +132,43 @@ module Stern
 
       attempt_counts = ::Stern::OperationAttempt.group(:status).count
       ::Stern::OperationAttempt.statuses.each_key do |status|
-        operation_attempts_count.set(attempt_counts[status] || 0, labels: { status: status })
+        count = attempt_counts[status] || 0
+        operation_attempts_count.set(count, labels: { status: status })
+        maybe_warn_attempt_count(status, count, warn_threshold, logger)
       end
+    end
+
+    # Resolved at call time (not load time) so a host app can set the env var
+    # after Stern has been required without having to pass it explicitly.
+    # Non-positive values disable the warning — same `0 == off` convention as
+    # `STERN_PRUNE_INTERVAL`.
+    def default_warn_threshold
+      raw = ENV["STERN_ATTEMPT_COUNT_WARN_THRESHOLD"]
+      return nil if raw.nil? || raw.empty?
+      value = raw.to_i
+      value.positive? ? value : nil
+    end
+
+    def default_logger
+      defined?(Rails) && Rails.respond_to?(:logger) ? Rails.logger : nil
+    end
+
+    def maybe_warn_attempt_count(status, count, threshold, logger)
+      return if threshold.nil? || logger.nil?
+      return if count < threshold
+
+      @last_attempt_warn_at ||= {}
+      now = Time.now
+      last = @last_attempt_warn_at[status]
+      return if last && (now - last) < ATTEMPT_COUNT_WARN_INTERVAL_SECONDS
+
+      @last_attempt_warn_at[status] = now
+      logger.warn(
+        "[Stern::Metrics] stern_operation_attempts_count{status=#{status}}=#{count} " \
+        "at-or-above threshold #{threshold}; auto-prune may not be keeping up with " \
+        "insert rate. Consider raising STERN_PRUNE_MAX_BATCHES, shortening " \
+        "STERN_PRUNE_INTERVAL, or running a one-shot `rake stern:operation_attempts:prune`."
+      )
     end
 
     # Resets all metric state. Only for test isolation — never call in prod.
@@ -130,6 +180,7 @@ module Stern
       @sop_terminal_total = nil
       @sop_process_duration_seconds = nil
       @sop_pickup_lag_seconds = nil
+      @last_attempt_warn_at = nil
     end
 
     # Idempotent — safe to call multiple times across dev-mode reloads.

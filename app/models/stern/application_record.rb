@@ -12,6 +12,16 @@ module Stern
       connection.execute("LOCK TABLE #{table.strip} IN EXCLUSIVE MODE;")
     end
 
+    # SQL fragment that derives the bigint advisory lock key for a
+    # `(book_id, gid, currency)` tuple. Delegates to the `stern_advisory_lock_key`
+    # SQL function, which is the single definition every writer shares —
+    # `BaseOperation#acquire_advisory_locks` (via `advisory_lock`),
+    # `Stern::Repair` (via `advisory_lock`), `create_entry` v03, and
+    # `destroy_entry` v03. Inline the fragment when you need the key
+    # alongside other SQL (e.g. tests holding a lock from a raw connection)
+    # so you don't reconstruct the formula.
+    ADVISORY_LOCK_KEY_FRAGMENT = "stern_advisory_lock_key(?, ?, ?)".freeze
+
     # Acquires a Postgres transaction-scoped advisory lock keyed on
     # (book_id, gid, currency). Every writer that touches the tuple — operations
     # (via BaseOperation#acquire_advisory_locks), direct Entry.create! (via
@@ -21,7 +31,7 @@ module Stern
     def self.advisory_lock(book_id:, gid:, currency:)
       connection.execute(
         sanitize_sql_array([
-          "SELECT pg_advisory_xact_lock(hashtextextended(format('stern:%s:%s:%s', ?, ?, ?), 0))",
+          "SELECT pg_advisory_xact_lock(#{ADVISORY_LOCK_KEY_FRAGMENT})",
           book_id, gid, currency
         ]),
       )

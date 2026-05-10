@@ -16,11 +16,13 @@ module Stern
     before { Repair.clear(confirm: true) }
     after { Repair.clear(confirm: true) }
 
-    # SQL fragment that matches the key `BaseOperation#acquire_advisory_locks` and
+    # SQL expression that matches the key `BaseOperation#acquire_advisory_locks` and
     # `create_entry` v03 use for this tuple. If Repair acquires the same key, a
-    # concurrent holder of it will block Repair.
+    # concurrent holder of it will block Repair. Delegates to the canonical
+    # `stern_advisory_lock_key` SQL function rather than reconstructing the
+    # formula — every site shares one definition.
     def lock_key_sql
-      "hashtextextended(format('stern:%s:%s:%s', #{book_id}, #{gid}, #{currency}), 0)"
+      "stern_advisory_lock_key(#{book_id}, #{gid}, #{currency})"
     end
 
     def seed_one_entry

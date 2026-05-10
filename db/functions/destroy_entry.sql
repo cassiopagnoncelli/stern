@@ -15,9 +15,11 @@ BEGIN
   -- Defense-in-depth: serialize cascade recomputation on this
   -- (book_id, gid, currency) tuple against concurrent writers. Taken after the
   -- initial SELECT because we need the row's columns to derive the lock key.
-  -- Transaction-scoped; releases at commit/rollback.
+  -- Transaction-scoped; releases at commit/rollback. Routes through
+  -- `stern_advisory_lock_key` so this lock collides with the one taken by
+  -- `BaseOperation#acquire_advisory_locks`, `create_entry`, and `Stern::Repair`.
   PERFORM pg_advisory_xact_lock(
-    hashtextextended(format('stern:%s:%s:%s', entry.book_id, entry.gid, entry.currency), 0)
+    stern_advisory_lock_key(entry.book_id, entry.gid, entry.currency)
   );
 
   SELECT non_negative INTO nn FROM stern_books WHERE id = entry.book_id;
