@@ -12,7 +12,6 @@ gem "idp-jwt", git: "https://github.com/cassiopagnoncelli/idp-jwt.git", branch: 
 
 group :development, :test do
   gem "pry"
-  gem "awesome_print"
   gem "dotenv-rails"
   gem "shoulda-matchers", ">= 5.0"
   gem "rubocop-rails-omakase", require: false
@@ -20,4 +19,11 @@ group :development, :test do
   gem "tracer"
   gem "puma"
   gem "foreman"
+end
+
+group :development do
+  # awesome_print 1.9.2 references ActiveSupport::LogSubscriber.colorize_logging,
+  # which Rails 8.1+ removed; keep it out of :test so the Rails-main matrix can
+  # boot the dummy app for db:schema:load.
+  gem "awesome_print"
 end
