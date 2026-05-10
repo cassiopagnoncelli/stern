@@ -91,6 +91,24 @@ module Stern
         expect(ScheduledOperation.count).to eq(0)
       end
 
+      it "wipes operation attempts so residue does not accumulate across runs" do
+        OperationAttempt.create!(
+          name: "ChargePayment",
+          params: {},
+          status: :success,
+          operation_id: operation.id,
+          attempted_at: Time.current,
+        )
+        OperationAttempt.create!(
+          name: "ChargePayment",
+          params: {},
+          status: :failed,
+          attempted_at: Time.current,
+        )
+
+        expect { described_class.clear(confirm: true) }.to change(OperationAttempt, :count).to(0)
+      end
+
       it "raises in production environment" do
         allow(Rails.env).to receive(:production?).and_return(true)
         expect { described_class.clear(confirm: true) }.to raise_error(StandardError, /production/)

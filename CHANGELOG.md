@@ -9,6 +9,7 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`Stern::Repair.clear` now also wipes `stern_operation_attempts`**, so test campaigns that rely on it as a DB reset no longer leak attempt rows (with `operation_id` nulled by the `:nullify` FK) across runs.
 - **`Stern::BaseOperation` split into composable concerns** under `app/operations/stern/base_operation/` (`RetryPolicy`, `InputsDsl`, `StakeholderPairing`, `AdvisoryLocking`, `Idempotency`, `AttemptLogging`). Pure refactor — no behavior change, public surface preserved.
 - **`Stern::Workers::Runner` auto-prune is now opt-out, not opt-in.**
   `DEFAULT_PRUNE_INTERVAL` flipped from `0.0` (off) to `3600.0` (once an
