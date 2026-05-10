@@ -124,7 +124,8 @@ jobs:
           STERN_BENCH_STRICT: "1"
         run: |
           bundle exec ruby scripts/benchmark/run.rb \
-            --op=charge_pix \
+            --op=charge_payment \
+            --payment-method=pix \
             --threads=4 \
             --iterations=200 \
             --warmup=20 \
