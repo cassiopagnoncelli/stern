@@ -1,41 +1,161 @@
 # Unit (reserved: 1)
-U: 1
+U:
+  code: 1
+  decimal_places: 0
+  symbol: "u"
+  kind: unit
 
 # Major global fiat (10-19)
-USD: 811
-EUR: 812
-GBP: 813
-JPY: 814
-CAD: 815
-AUD: 816
-CHF: 817
-CNY: 818
+USD:
+  code: 811
+  decimal_places: 2
+  symbol: "$"
+  kind: fiat
+EUR:
+  code: 812
+  decimal_places: 2
+  symbol: "€"
+  kind: fiat
+GBP:
+  code: 813
+  decimal_places: 2
+  symbol: "£"
+  kind: fiat
+JPY:
+  code: 814
+  decimal_places: 0
+  symbol: "¥"
+  kind: fiat
+CAD:
+  code: 815
+  decimal_places: 2
+  symbol: "CA$"
+  kind: fiat
+AUD:
+  code: 816
+  decimal_places: 2
+  symbol: "A$"
+  kind: fiat
+CHF:
+  code: 817
+  decimal_places: 2
+  symbol: "CHF"
+  kind: fiat
+CNY:
+  code: 818
+  decimal_places: 2
+  symbol: "¥"
+  kind: fiat
 
 # Latam fiat (20-29)
-BRL: 821
-MXN: 822
-ARS: 823
-CLP: 824
-COP: 825
-PEN: 826
-UYU: 827
-PYG: 828
+BRL:
+  code: 821
+  decimal_places: 2
+  symbol: "R$"
+  kind: fiat
+MXN:
+  code: 822
+  decimal_places: 2
+  symbol: "MX$"
+  kind: fiat
+ARS:
+  code: 823
+  decimal_places: 2
+  symbol: "AR$"
+  kind: fiat
+CLP:
+  code: 824
+  decimal_places: 0
+  symbol: "CL$"
+  kind: fiat
+COP:
+  code: 825
+  decimal_places: 2
+  symbol: "CO$"
+  kind: fiat
+PEN:
+  code: 826
+  decimal_places: 2
+  symbol: "S/"
+  kind: fiat
+UYU:
+  code: 827
+  decimal_places: 2
+  symbol: "$U"
+  kind: fiat
+PYG:
+  code: 828
+  decimal_places: 0
+  symbol: "₲"
+  kind: fiat
 
 # USD stablecoins (1000-1009)
-USDT: 1001
-USDC: 1002
-DAI:  1003
+USDT:
+  code: 1001
+  decimal_places: 6
+  symbol: "USDT"
+  kind: stablecoin
+USDC:
+  code: 1002
+  decimal_places: 6
+  symbol: "USDC"
+  kind: stablecoin
+DAI:
+  code: 1003
+  decimal_places: 18
+  symbol: "DAI"
+  kind: stablecoin
 
 # BRL stablecoins (1010-1019)
-DREX: 1021
-BRZ:  1022
-BRLA: 1023
-BRL1: 1024
+DREX:
+  code: 1021
+  decimal_places: 2
+  symbol: "DREX"
+  kind: stablecoin
+BRZ:
+  code: 1022
+  decimal_places: 4
+  symbol: "BRZ"
+  kind: stablecoin
+BRLA:
+  code: 1023
+  decimal_places: 6
+  symbol: "BRLA"
+  kind: stablecoin
+BRL1:
+  code: 1024
+  decimal_places: 6
+  symbol: "BRL1"
+  kind: stablecoin
 
 # Major cryptos (2000-2009)
-BTC: 2001
-ETH: 2002
-BNB: 2003
-SOL: 2004
-XRP: 2005
-ADA: 2006
+BTC:
+  code: 2001
+  decimal_places: 8
+  symbol: "₿"
+  kind: crypto
+ETH:
+  code: 2002
+  decimal_places: 18
+  symbol: "Ξ"
+  kind: crypto
+BNB:
+  code: 2003
+  decimal_places: 9
+  symbol: "BNB"
+  kind: crypto
+SOL:
+  code: 2004
+  decimal_places: 9
+  symbol: "SOL"
+  kind: crypto
+XRP:
+  code: 2005
+  decimal_places: 6
+  symbol: "XRP"
+  kind: crypto
+ADA:
+  code: 2006
+  decimal_places: 6
+  symbol: "ADA"
+  kind: crypto

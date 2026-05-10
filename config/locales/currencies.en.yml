@@ -1,0 +1,33 @@
+en:
+  stern:
+    currencies:
+      u:    { name: "Unit" }
+      usd:  { name: "US Dollar" }
+      eur:  { name: "Euro" }
+      gbp:  { name: "British Pound" }
+      jpy:  { name: "Japanese Yen" }
+      cad:  { name: "Canadian Dollar" }
+      aud:  { name: "Australian Dollar" }
+      chf:  { name: "Swiss Franc" }
+      cny:  { name: "Chinese Yuan" }
+      brl:  { name: "Brazilian Real" }
+      mxn:  { name: "Mexican Peso" }
+      ars:  { name: "Argentine Peso" }
+      clp:  { name: "Chilean Peso" }
+      cop:  { name: "Colombian Peso" }
+      pen:  { name: "Peruvian Sol" }
+      uyu:  { name: "Uruguayan Peso" }
+      pyg:  { name: "Paraguayan Guarani" }
+      usdt: { name: "Tether USD" }
+      usdc: { name: "USD Coin" }
+      dai:  { name: "Dai" }
+      drex: { name: "Drex" }
+      brz:  { name: "BRZ Stablecoin" }
+      brla: { name: "BRLA Stablecoin" }
+      brl1: { name: "BRL1 Stablecoin" }
+      btc:  { name: "Bitcoin" }
+      eth:  { name: "Ethereum" }
+      bnb:  { name: "BNB" }
+      sol:  { name: "Solana" }
+      xrp:  { name: "XRP" }
+      ada:  { name: "Cardano" }
