@@ -1,4 +1,4 @@
-.PHONY: all release build check clean dev docs tests test lint style stats benchmark benchmark-one benchmark-list help
+.PHONY: all release build check clean setup dev docs tests test lint style stats benchmark benchmark-one benchmark-list help
 .DEFAULT_GOAL := help
 
 BENCHMARK_OP         ?= charge_payment
@@ -32,6 +32,9 @@ check: build ## Verify build can run
 
 clean: ## Remove generated log files
 	@rm -f logs/*.log
+
+setup: ## Install dependencies and prepare the app
+	bin/setup
 
 dev: ## Run the Rails server locally (web + css watcher)
 	bin/dev
