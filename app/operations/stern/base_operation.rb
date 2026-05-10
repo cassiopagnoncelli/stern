@@ -53,6 +53,7 @@ module Stern
     include StakeholderPairing
     include AdvisoryLocking
     include Idempotency
+    include AttemptLogging
 
     # Public aliases of the policy constants. Defined on `RetryPolicy` (where
     # the methods that read them live) and re-exposed here so callers can
@@ -197,32 +198,6 @@ module Stern
 
     def operation_name
       self.class.name.demodulize
-    end
-
-    # Writes an `OperationAttempt` row recording this call. Runs outside the
-    # operation's transaction (the rescue path observes a rolled-back state),
-    # so the attempt persists even when `perform` raises and the `Operation`
-    # row is destroyed. Defensive: failures here are logged but never re-raised
-    # — masking the caller's actual error would be worse than losing one audit
-    # entry.
-    def record_attempt!(status, attempted_at, params, idem_key, operation_id: nil, error: nil)
-      OperationAttempt.create!(
-        name: operation_name,
-        params: params,
-        idem_key: idem_key,
-        operation_id: operation_id,
-        status: status,
-        attempted_at: attempted_at,
-        error_class: error&.class&.name,
-        error_message: error&.message,
-        error_backtrace: error&.backtrace&.first(OperationAttempt::BACKTRACE_LINES)&.join("\n"),
-      )
-    rescue StandardError => attempt_error
-      Rails.logger.error(
-        "[Stern::BaseOperation] failed to record OperationAttempt " \
-        "(#{operation_name}, status=#{status}): #{attempt_error.class}: #{attempt_error.message}"
-      )
-      nil
     end
   end
 end
