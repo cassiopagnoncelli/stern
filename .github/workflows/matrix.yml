@@ -188,6 +188,12 @@ jobs:
           export GEM_HOME="$scratch/.gem"
           export GEM_PATH="$GEM_HOME"
           export PATH="$GEM_HOME/bin:$PATH"
+          # idp-jwt is a runtime dep that lives on GitHub, not RubyGems. Build
+          # and install it from source into the scratch GEM_HOME first so the
+          # subsequent `gem install stern.gem` can resolve it.
+          git clone --depth 1 https://github.com/cassiopagnoncelli/idp-jwt.git "$scratch/idp-jwt-src"
+          (cd "$scratch/idp-jwt-src" && gem build idp-jwt.gemspec)
+          gem install "$scratch/idp-jwt-src"/idp-jwt-*.gem --no-document
           gem install "$gem_abs" --no-document
           # Prove `require "stern"` works with only the installed gem on the
           # load path and that VERSION matches what the gemspec declared.

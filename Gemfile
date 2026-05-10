@@ -5,8 +5,10 @@ ruby File.read(File.expand_path(File.join(__dir__, ".ruby-version"))).chomp
 # Specify your gem's dependencies in stern.gemspec.
 gemspec
 
-# Local path override for idp-jwt during sibling-repo development.
-gem "idp-jwt", path: "../idp-jwt"
+# idp-jwt is hosted on GitHub (not RubyGems). For sibling-repo development,
+# override the git source without touching the lockfile:
+#   bundle config local.idp-jwt ../idp-jwt
+gem "idp-jwt", git: "https://github.com/cassiopagnoncelli/idp-jwt.git", branch: "main"
 
 group :development, :test do
   gem "pry"
