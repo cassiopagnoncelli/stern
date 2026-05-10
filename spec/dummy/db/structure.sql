@@ -122,6 +122,17 @@ BEGIN
     RAISE DEBUG '-- ending_balance for the new record is %', entry.ending_balance;
   END IF;
 
+  -- non_negative invariant: pre-insert check.
+  -- ----------------------------------------------------------------------
+  -- This guards the inserted row only. Every prior row in the partition
+  -- was already valid before this call, and a non-cascade insert appends
+  -- at the tail (clock-now timestamp) so it can't affect their values —
+  -- only the new row's ending_balance is at risk. The cascade branch
+  -- below adds a SECOND, separate check covering downstream rows; the
+  -- two checks have different scopes by design and must NOT be merged
+  -- (a non-cascade insert has no downstream to scan, and a cascade
+  -- insert has already passed this same row-level check by the time it
+  -- arrives at the downstream check).
   IF nn AND entry.ending_balance < 0 THEN
     RAISE EXCEPTION 'balance would go negative on non_negative book (book_id=%, gid=%, currency=%, computed=%)',
       in_book_id, in_gid, in_currency, entry.ending_balance
@@ -193,6 +204,20 @@ BEGIN
     ) mirror
     WHERE stern_entries.id = mirror.id AND stern_entries.timestamp > entry.timestamp;
 
+    -- non_negative invariant: post-cascade check.
+    -- --------------------------------------------------------------------
+    -- The inserted row itself was already validated by the pre-insert
+    -- check above (its ending_balance was computed from prior partial
+    -- sum + amount before the INSERT). What's new on the cascade leg
+    -- is that the UPDATE above rewrote ending_balance on EVERY row at
+    -- a later timestamp, folding in `entry.amount` — any of those rows
+    -- could now be negative even though they were valid before this
+    -- past-timestamp insert. Scan downstream-only: rows upstream of
+    -- entry.timestamp weren't touched by the UPDATE and don't need
+    -- re-checking. Do NOT consolidate this with the pre-insert check
+    -- (different scope: that one is one row, this one is N rows) and
+    -- do NOT widen to all rows (the UPDATE's WHERE explicitly excludes
+    -- upstream — the two scopes must stay aligned).
     IF nn AND EXISTS (
       SELECT 1 FROM stern_entries
       WHERE book_id = entry.book_id
@@ -266,6 +291,21 @@ BEGIN
   ) mirror
   WHERE stern_entries.id = mirror.id;
 
+  -- non_negative invariant: post-destroy check.
+  -- ----------------------------------------------------------------------
+  -- Scope intentionally differs from create_entry's downstream-only
+  -- check. Reasoning:
+  --   * The UPDATE above recomputes ending_balance for the entire
+  --     (book_id, gid, currency) partition (no timestamp filter on the
+  --     outer match). Strictly speaking only rows AT or AFTER the
+  --     deleted entry's timestamp can change value, but recomputing all
+  --     is correct and simpler.
+  --   * Mirror that scope here: scan all rows. A `timestamp > entry.timestamp`
+  --     filter would also be correct under the current UPDATE, but if
+  --     someone later narrows the UPDATE's range without narrowing this
+  --     check, the two scopes drift and a pre-existing-but-unrelated
+  --     negative could slip through unnoticed. Keeping them both
+  --     full-partition makes the contract self-evident.
   IF nn AND EXISTS (
     SELECT 1 FROM stern_entries
     WHERE book_id = entry.book_id
@@ -766,6 +806,7 @@ ALTER TABLE ONLY public.stern_entries
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260509130000'),
 ('20260509120000'),
 ('20260509000000'),
 ('20260427000000'),

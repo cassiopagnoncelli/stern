@@ -3,14 +3,17 @@
 namespace :stern do
   namespace :worker do
     desc "Run the Stern scheduled-operation worker loop. Configurable via " \
-         "STERN_WORKER_CONCURRENCY, STERN_POLL_INTERVAL, STERN_JANITOR_INTERVAL."
+         "STERN_WORKER_CONCURRENCY, STERN_POLL_INTERVAL, STERN_JANITOR_INTERVAL, " \
+         "STERN_PRUNE_INTERVAL (set to 0 to disable in-process auto-prune), " \
+         "STERN_PRUNE_MAX_BATCHES."
     task start: :environment do
       require "stern/workers/runner"
       Stern::Workers::Runner.new(
         concurrency:      ENV.fetch("STERN_WORKER_CONCURRENCY", Stern::Workers::Runner::DEFAULT_CONCURRENCY.to_s).to_i,
         poll_interval:    ENV.fetch("STERN_POLL_INTERVAL",      Stern::Workers::Runner::DEFAULT_POLL_INTERVAL.to_s).to_f,
         janitor_interval: ENV.fetch("STERN_JANITOR_INTERVAL",   Stern::Workers::Runner::DEFAULT_JANITOR_INTERVAL.to_s).to_f,
-        prune_interval:   ENV.fetch("STERN_PRUNE_INTERVAL",     "0").to_f,
+        prune_interval:   ENV.fetch("STERN_PRUNE_INTERVAL",     Stern::Workers::Runner::DEFAULT_PRUNE_INTERVAL.to_s).to_f,
+        prune_max_batches: ENV.fetch("STERN_PRUNE_MAX_BATCHES", Stern::Workers::Runner::DEFAULT_PRUNE_MAX_BATCHES.to_s).to_i,
         prune_success_days: ENV["STERN_PRUNE_SUCCESS_DAYS"]&.to_i,
         prune_failed_days:  ENV["STERN_PRUNE_FAILED_DAYS"]&.to_i,
         prune_pending_days: ENV["STERN_PRUNE_PENDING_DAYS"]&.to_i,

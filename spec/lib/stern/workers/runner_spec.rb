@@ -155,6 +155,81 @@ module Stern
         end
       end
 
+      # The auto-prune default flipped from opt-in (0s = off) to opt-out
+      # (3600s = once an hour). The motivation: an installation that forgets
+      # to wire up `rake stern:operation_attempts:prune` from cron used to
+      # accumulate `OperationAttempt` rows forever. With opt-out + bounded
+      # `max_batches`, every running worker self-protects without entangling
+      # shutdown — first-run multi-million-row sweeps are split across many
+      # ticks instead of a single unbounded delete.
+      describe "pruner cadence" do
+        it "defaults prune_interval to a non-zero hourly cadence" do
+          expect(described_class::DEFAULT_PRUNE_INTERVAL).to eq(3600.0)
+        end
+
+        it "defaults prune_max_batches to a finite cap so a single tick is bounded" do
+          expect(described_class::DEFAULT_PRUNE_MAX_BATCHES).to eq(10)
+          expect(described_class::DEFAULT_PRUNE_MAX_BATCHES).to be_a(Integer)
+          expect(described_class::DEFAULT_PRUNE_MAX_BATCHES).to be_positive
+        end
+
+        it "raises for prune_max_batches <= 0" do
+          expect {
+            described_class.new(prune_max_batches: 0, install_signal_handlers: false, logger: null_logger)
+          }.to raise_error(ArgumentError, /prune_max_batches must be > 0/)
+        end
+
+        it "runs the pruner on the first tick (last_prune_at is nil)" do
+          runner = make_runner(concurrency: 1)
+          allow(::Stern::OperationAttemptPruner).to receive(:call)
+
+          runner.run_once
+
+          expect(::Stern::OperationAttemptPruner).to have_received(:call).once
+        end
+
+        it "passes max_batches through to OperationAttemptPruner so a single tick is bounded" do
+          runner = make_runner(concurrency: 1, prune_max_batches: 3)
+          allow(::Stern::OperationAttemptPruner).to receive(:call)
+
+          runner.run_once
+
+          expect(::Stern::OperationAttemptPruner).to have_received(:call)
+            .with(hash_including(max_batches: 3, triggered_by: "worker"))
+        end
+
+        it "skips the pruner on subsequent ticks within the interval" do
+          runner = make_runner(concurrency: 1, prune_interval: 3600.0)
+          allow(::Stern::OperationAttemptPruner).to receive(:call)
+
+          3.times { runner.run_once }
+
+          expect(::Stern::OperationAttemptPruner).to have_received(:call).once
+        end
+
+        it "is opted out by prune_interval: 0 — pruner never invoked" do
+          runner = make_runner(concurrency: 1, prune_interval: 0.0)
+          allow(::Stern::OperationAttemptPruner).to receive(:call)
+
+          5.times { runner.run_once }
+
+          expect(::Stern::OperationAttemptPruner).not_to have_received(:call)
+        end
+
+        # Mirrors the janitor regression — `maybe_run_pruner` must set
+        # `@last_prune_at` on the rescue path, otherwise a chronically-broken
+        # pruner retries on every poll tick and floods logs.
+        it "respects the prune interval even when the pruner keeps raising" do
+          runner = make_runner(concurrency: 1, prune_interval: 3600.0)
+          allow(::Stern::OperationAttemptPruner).to receive(:call)
+            .and_raise(StandardError, "db down")
+
+          3.times { runner.run_once }
+
+          expect(::Stern::OperationAttemptPruner).to have_received(:call).once
+        end
+      end
+
       describe "error isolation" do
         it "keeps the runner alive when a single SOP raises inside process_sop" do
           sop = seed_sop

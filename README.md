@@ -429,11 +429,17 @@ state that LISTEN registers is discarded at the next checkout. Opt out with
 
 `Stern::OperationAttempt` is an append-only audit log: every
 `BaseOperation#call` invocation writes one row, including the failed retries
-that pile up under a flapping external API. The table grows without bound
-unless host apps prune it. There's no upstream FK from `stern_operations`,
-so attempts can be deleted independently.
+that pile up under a flapping external API.
 
-Run from cron / a k8s CronJob (typically once a day, off-peak):
+**Default behavior.** `Stern::Workers::Runner` runs an in-process prune once
+an hour (`STERN_PRUNE_INTERVAL=3600`), bounded to
+`STERN_PRUNE_MAX_BATCHES=10` batches per status per tick. An installation
+that does nothing else still won't accumulate attempt rows forever. To
+disable when you'd rather drive prunes from cron, set `STERN_PRUNE_INTERVAL=0`.
+
+Run from cron / a k8s CronJob (typically once a day, off-peak) — unbounded
+sweep, recommended when retention windows are long and you want a single
+clean log line per cycle:
 
 ```sh
 bundle exec rake stern:operation_attempts:prune
@@ -450,9 +456,12 @@ STERN_PRUNE_SLEEP=0.1         # seconds between batches; raise for gentler throu
 ```
 
 The first run on an installation that has been retrying for months may
-delete millions of rows. Use a smaller batch size and a longer sleep
-(`STERN_PRUNE_BATCH_SIZE=500 STERN_PRUNE_SLEEP=0.5`) for the initial
-sweep, and consider a manual `VACUUM (ANALYZE) stern_operation_attempts`
+delete millions of rows. The worker's bounded sweep handles this
+automatically — the residual is split across many ticks and the table
+drains over hours, never blocking shutdown. If you'd rather clear the
+backlog in one pass via the rake task, use a smaller batch size and a
+longer sleep (`STERN_PRUNE_BATCH_SIZE=500 STERN_PRUNE_SLEEP=0.5`), and
+consider a manual `VACUUM (ANALYZE) stern_operation_attempts`
 afterwards — autovacuum will catch up on its own, but a manual run
 reclaims pages immediately.
 
@@ -460,16 +469,18 @@ The admin attempts view surfaces the configured retention at the top of
 the page so an empty result past the cutoff isn't misread as "nothing
 happened."
 
-For embedded single-process setups, the worker can run the prune itself.
-Off by default; enable by setting a non-zero `STERN_PRUNE_INTERVAL`
-(seconds — typically 86400 for once a day):
+To override the worker's auto-prune cadence (e.g. once a day instead of
+hourly):
 
 ```sh
 STERN_PRUNE_INTERVAL=86400 bundle exec rake stern:worker:start
 ```
 
-In every other case prefer the standalone rake task — one cron entry,
-one log line, no entanglement with worker shutdown.
+To disable it entirely (rake-from-cron is the source of truth):
+
+```sh
+STERN_PRUNE_INTERVAL=0 bundle exec rake stern:worker:start
+```
 
 ## Metrics (Prometheus)
 

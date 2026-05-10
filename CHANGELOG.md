@@ -7,6 +7,19 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **`Stern::Workers::Runner` auto-prune is now opt-out, not opt-in.**
+  `DEFAULT_PRUNE_INTERVAL` flipped from `0.0` (off) to `3600.0` (once an
+  hour). New `DEFAULT_PRUNE_MAX_BATCHES = 10` bounds each tick to a
+  predictable upper-bound of deletes per status, so first-run multi-million-
+  row sweeps split across many ticks instead of blocking shutdown.
+  Installations preferring the rake-from-cron path can disable with
+  `STERN_PRUNE_INTERVAL=0`. **Breaking only for installations that already
+  run the rake task on a cron and don't want the duplicative log line each
+  hour** — set `STERN_PRUNE_INTERVAL=0` to restore the prior behavior.
+  New `STERN_PRUNE_MAX_BATCHES` env var also routed through.
+
 ### Added
 
 - **`Stern::Doctor.first_inconsistency`.** Full ledger health check that

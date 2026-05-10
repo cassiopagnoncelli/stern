@@ -49,6 +49,21 @@ BEGIN
   ) mirror
   WHERE stern_entries.id = mirror.id;
 
+  -- non_negative invariant: post-destroy check.
+  -- ----------------------------------------------------------------------
+  -- Scope intentionally differs from create_entry's downstream-only
+  -- check. Reasoning:
+  --   * The UPDATE above recomputes ending_balance for the entire
+  --     (book_id, gid, currency) partition (no timestamp filter on the
+  --     outer match). Strictly speaking only rows AT or AFTER the
+  --     deleted entry's timestamp can change value, but recomputing all
+  --     is correct and simpler.
+  --   * Mirror that scope here: scan all rows. A `timestamp > entry.timestamp`
+  --     filter would also be correct under the current UPDATE, but if
+  --     someone later narrows the UPDATE's range without narrowing this
+  --     check, the two scopes drift and a pre-existing-but-unrelated
+  --     negative could slip through unnoticed. Keeping them both
+  --     full-partition makes the contract self-evident.
   IF nn AND EXISTS (
     SELECT 1 FROM stern_entries
     WHERE book_id = entry.book_id

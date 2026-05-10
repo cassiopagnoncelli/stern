@@ -21,10 +21,19 @@ module Stern
       DEFAULT_CONCURRENCY = 1
       DEFAULT_POLL_INTERVAL = 5.0
       DEFAULT_JANITOR_INTERVAL = 60.0
-      # In-process prune is opt-in: 0 disables it. Most deployments invoke
-      # `rake stern:operation_attempts:prune` from cron / a k8s CronJob; this
-      # path exists for embedded single-process setups.
-      DEFAULT_PRUNE_INTERVAL = 0.0
+      # In-process prune is opt-OUT — runs hourly by default so an installation
+      # that forgets to wire up a cron entry doesn't accumulate attempt rows
+      # forever. Set `STERN_PRUNE_INTERVAL=0` to disable when a standalone
+      # `rake stern:operation_attempts:prune` cron is the source of truth.
+      # Each sweep is bounded by DEFAULT_PRUNE_MAX_BATCHES so a multi-million-
+      # row first run is split across many ticks and never blocks shutdown.
+      DEFAULT_PRUNE_INTERVAL = 3600.0
+      # Hard cap on batches per worker-triggered prune tick (each batch is
+      # `OperationAttemptPruner::DEFAULT_BATCH_SIZE` rows per status). At the
+      # default 1000-row batch, this is 10k rows × 3 statuses = 30k rows max
+      # deleted per tick, keeping a single tick predictable and bounded.
+      # Cron-driven `rake stern:operation_attempts:prune` is unbounded.
+      DEFAULT_PRUNE_MAX_BATCHES = 10
       # Defaults applied when the Runner-level prune is enabled but the
       # corresponding *_days kwarg is nil. Mirrors the rake task defaults.
       DEFAULT_PRUNE_SUCCESS_DAYS = 14
@@ -42,6 +51,7 @@ module Stern
         poll_interval: DEFAULT_POLL_INTERVAL,
         janitor_interval: DEFAULT_JANITOR_INTERVAL,
         prune_interval: DEFAULT_PRUNE_INTERVAL,
+        prune_max_batches: DEFAULT_PRUNE_MAX_BATCHES,
         prune_success_days: nil,
         prune_failed_days: nil,
         prune_pending_days: nil,
@@ -55,6 +65,8 @@ module Stern
         @poll_interval = Float(poll_interval)
         @janitor_interval = Float(janitor_interval)
         @prune_interval = Float(prune_interval)
+        @prune_max_batches = prune_max_batches.nil? ? nil : Integer(prune_max_batches)
+        raise ArgumentError, "prune_max_batches must be > 0 or nil" if @prune_max_batches && @prune_max_batches <= 0
         @prune_success_days = prune_success_days || DEFAULT_PRUNE_SUCCESS_DAYS
         @prune_failed_days  = prune_failed_days  || DEFAULT_PRUNE_FAILED_DAYS
         @prune_pending_days = prune_pending_days || DEFAULT_PRUNE_PENDING_DAYS
@@ -190,9 +202,14 @@ module Stern
         @logger.error(log_prefix + "janitor error: #{e.class}: #{e.message}")
       end
 
-      # Opt-in periodic prune of `OperationAttempt`. Disabled when
-      # `@prune_interval <= 0`. Same "set last_run on failure too" pattern as
-      # `maybe_run_janitor` so a chronically broken pruner does not flood logs.
+      # Periodic prune of `OperationAttempt`. Opt-OUT — runs hourly by default;
+      # set `prune_interval: 0` (or `STERN_PRUNE_INTERVAL=0`) to disable when a
+      # cron-driven `rake stern:operation_attempts:prune` is the source of
+      # truth. `max_batches` bounds a single tick to a predictable upper-bound
+      # of deletes so first-run multi-million-row sweeps don't block shutdown
+      # — the residual gets cleared on subsequent ticks. Same "set last_run on
+      # failure too" pattern as `maybe_run_janitor` so a chronically broken
+      # pruner does not flood logs.
       def maybe_run_pruner
         return unless @prune_interval.positive?
 
@@ -203,6 +220,7 @@ module Stern
           success_days: @prune_success_days,
           failed_days:  @prune_failed_days,
           pending_days: @prune_pending_days,
+          max_batches:  @prune_max_batches,
           triggered_by: "worker",
           logger: @logger,
         )
