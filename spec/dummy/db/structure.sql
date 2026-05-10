@@ -1,6 +1,4 @@
 
--- Dumped from database version 17.9 (Postgres.app)
--- Dumped by pg_dump version 17.9 (Postgres.app)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
