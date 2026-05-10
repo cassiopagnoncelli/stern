@@ -229,7 +229,7 @@ module Stern
         # Backdate the per-status timestamp past the cooldown to simulate
         # ATTEMPT_COUNT_WARN_INTERVAL_SECONDS having elapsed.
         last = described_class.instance_variable_get(:@last_attempt_warn_at)
-        last["success"] = Time.now - Stern::Metrics::ATTEMPT_COUNT_WARN_INTERVAL_SECONDS - 1
+        last["success"] = Time.now - described_class::ATTEMPT_COUNT_WARN_INTERVAL_SECONDS - 1
         described_class.refresh_queue_gauges!(warn_threshold: 1, logger: logger)
 
         expect(logger).to have_received(:warn).twice

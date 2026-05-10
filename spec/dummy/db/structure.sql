@@ -57,10 +57,12 @@ BEGIN
   -- Defense-in-depth: serialize cascade computation on this (book_id, gid, currency)
   -- tuple against any other concurrent writer, even if the caller bypassed the
   -- operation-level advisory lock in BaseOperation#call. Transaction-scoped;
-  -- releases at commit/rollback. Same hash shape as BaseOperation#acquire_advisory_locks
-  -- so the two layers grab the same lock and are reentrant.
+  -- releases at commit/rollback. Routes through `stern_advisory_lock_key` —
+  -- the single definition shared with `BaseOperation#acquire_advisory_locks`,
+  -- `destroy_entry`, and `Stern::Repair` — so all layers grab the same lock
+  -- and are reentrant.
   PERFORM pg_advisory_xact_lock(
-    hashtextextended(format('stern:%s:%s:%s', in_book_id, in_gid, in_currency), 0)
+    stern_advisory_lock_key(in_book_id, in_gid, in_currency)
   );
 
   -- Chart-level non_negative flag: if set, reject any write that leaves
@@ -257,9 +259,11 @@ BEGIN
   -- Defense-in-depth: serialize cascade recomputation on this
   -- (book_id, gid, currency) tuple against concurrent writers. Taken after the
   -- initial SELECT because we need the row's columns to derive the lock key.
-  -- Transaction-scoped; releases at commit/rollback.
+  -- Transaction-scoped; releases at commit/rollback. Routes through
+  -- `stern_advisory_lock_key` so this lock collides with the one taken by
+  -- `BaseOperation#acquire_advisory_locks`, `create_entry`, and `Stern::Repair`.
   PERFORM pg_advisory_xact_lock(
-    hashtextextended(format('stern:%s:%s:%s', entry.book_id, entry.gid, entry.currency), 0)
+    stern_advisory_lock_key(entry.book_id, entry.gid, entry.currency)
   );
 
   SELECT non_negative INTO nn FROM stern_books WHERE id = entry.book_id;
@@ -325,6 +329,20 @@ BEGIN
 
   RETURN entry.id;
 END;
+$$;
+
+
+--
+-- Name: stern_advisory_lock_key(integer, bigint, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.stern_advisory_lock_key(in_book_id integer, in_gid bigint, in_currency integer) RETURNS bigint
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    AS $$
+  SELECT hashtextextended(
+    format('stern:%s:%s:%s', in_book_id, in_gid, in_currency),
+    0
+  );
 $$;
 
 
@@ -811,6 +829,7 @@ ALTER TABLE ONLY public.stern_entries
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260510000002'),
 ('20260510000001'),
 ('20260510000000'),
 ('20260509130000'),
