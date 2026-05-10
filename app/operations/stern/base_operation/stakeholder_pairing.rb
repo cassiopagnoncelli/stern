@@ -211,6 +211,27 @@ module Stern
           stakeholder_id, stakeholder_id, credit_to_apply, currency, operation_id:,
         )
       end
+
+      private
+
+      # Friendly pre-check for ops that move funds out of a `(book, gid, currency)`
+      # slice: reads the per-gid balance under the operation's advisory lock and
+      # raises `Stern::InsufficientFunds` when `amount` would overdraw it. The
+      # DB-level `non_negative` constraint on guarded books would translate the
+      # same condition into `BalanceNonNegativeViolation`; we raise the parent
+      # `InsufficientFunds` here so callers can rescue both layers uniformly.
+      #
+      # `op_label` and `balance_label` shape the message as
+      # `"#{op_label} amount #{amount} exceeds #{balance_label} #{current}"`,
+      # so existing callers (and their specs) can keep the exact phrasing they
+      # had before extraction.
+      def require_sufficient_balance!(book_id:, gid:, currency:, amount:, op_label:, balance_label:)
+        current = BalanceQuery.new(gid:, book_id:, currency:, timestamp: Time.current).call
+        return if amount <= current
+
+        raise ::Stern::InsufficientFunds,
+          "#{op_label} amount #{amount} exceeds #{balance_label} #{current}"
+      end
     end
   end
 end

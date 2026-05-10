@@ -48,6 +48,36 @@ module Stern
   class BaseOperation
     include ActiveModel::Validations
 
+    # The order of operations in `#call` is load-bearing and protected by the
+    # following module concerns. Reading them in declaration order traces the
+    # call's flow:
+    #
+    #   * `RetryPolicy`           — declare-time validation of per-class
+    #                               retry config (consumed by
+    #                               `ScheduledOperationService` on retry).
+    #   * `InputsDsl`             — kwarg-checked construction, the
+    #                               `normalize_inputs` hook, currency
+    #                               validation/coercion, and the hash/JSON
+    #                               projections used downstream.
+    #   * `StakeholderPairing`    — stakeholder/funder polymorphism helpers
+    #                               and the `performs_stakeholder_pair`
+    #                               macro.
+    #   * `AdvisoryLocking`       — `target_tuples` + canonical-order lock
+    #                               acquisition. The sort-by-tuple step is
+    #                               the deadlock-prevention invariant.
+    #   * `Idempotency`           — `find_existing_operation`. Same
+    #                               comparison drives the pre-flight
+    #                               lookup and the race-loser rescue.
+    #   * `AttemptLogging`        — `record_attempt!`, written outside the
+    #                               op's transaction so failed attempts
+    #                               survive a rollback.
+    #
+    # `#call` itself sequences these: validate → normalize → idempotency
+    # lookup → transaction(locks → record + runtime_check → perform) →
+    # `record_attempt!`. The rescue paths route `RecordNotUnique` through
+    # `Idempotency` again to disambiguate idem_key races from real
+    # uniqueness failures, and the `StandardError` path always logs a
+    # failed attempt before re-raising.
     extend RetryPolicy
     include InputsDsl
     include StakeholderPairing
@@ -175,25 +205,6 @@ module Stern
       self.operation = Operation.new(name: operation_name, params: operation_params, idem_key:)
       operation.save!
       operation.id
-    end
-
-    # Friendly pre-check for ops that move funds out of a `(book, gid, currency)`
-    # slice: reads the per-gid balance under the operation's advisory lock and
-    # raises `Stern::InsufficientFunds` when `amount` would overdraw it. The
-    # DB-level `non_negative` constraint on guarded books would translate the
-    # same condition into `BalanceNonNegativeViolation`; we raise the parent
-    # `InsufficientFunds` here so callers can rescue both layers uniformly.
-    #
-    # `op_label` and `balance_label` shape the message as
-    # `"#{op_label} amount #{amount} exceeds #{balance_label} #{current}"`,
-    # so existing callers (and their specs) can keep the exact phrasing they
-    # had before extraction.
-    def require_sufficient_balance!(book_id:, gid:, currency:, amount:, op_label:, balance_label:)
-      current = BalanceQuery.new(gid:, book_id:, currency:, timestamp: Time.current).call
-      return if amount <= current
-
-      raise ::Stern::InsufficientFunds,
-        "#{op_label} amount #{amount} exceeds #{balance_label} #{current}"
     end
 
     def operation_name

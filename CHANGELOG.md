@@ -9,6 +9,7 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`Stern::BaseOperation` split into composable concerns** under `app/operations/stern/base_operation/` (`RetryPolicy`, `InputsDsl`, `StakeholderPairing`, `AdvisoryLocking`, `Idempotency`, `AttemptLogging`). Pure refactor — no behavior change, public surface preserved.
 - **`Stern::Workers::Runner` auto-prune is now opt-out, not opt-in.**
   `DEFAULT_PRUNE_INTERVAL` flipped from `0.0` (off) to `3600.0` (once an
   hour). New `DEFAULT_PRUNE_MAX_BATCHES = 10` bounds each tick to a
