@@ -7,6 +7,38 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.9.2] — 2026-05-10
+
+Patch release on top of 1.9.1. Collapses the seven-file migration history
+accumulated through the 1.9.x line into a single squashed init migration,
+and refreshes the admin dashboard landing page with a copy-to-clipboard
+control for the signed-in user's UUID and a database-icon affordance for
+the current database name.
+
+### Changed
+
+- **Migrations squashed to a single `InitSternSchema`.** The original init
+  plus the six follow-ups added through 1.9.x — `add_stern_operation_attempts`,
+  `add_stern_foreign_keys`, `document_cascade_invariant`,
+  `gate_destroy_entry_notice`, `reconcile_destroy_entry_comment`,
+  `centralize_advisory_lock_key` — are merged into one migration that
+  builds the final-state schema directly: all five tables, the three FKs
+  on the `Entry → EntryPair → Operation` and `OperationAttempt → Operation`
+  graph, and all four PL/pgSQL functions (`stern_advisory_lock_key`,
+  `create_entry`, `destroy_entry`, `sop_notify`) loaded from
+  `db/functions/*.sql`. No behaviour change — the function bodies and FK
+  semantics are byte-identical to the post-1.9.1 deployed state. Pre-1.9.2
+  installs that already ran the seven-migration sequence remain compatible
+  by aligning their `schema_migrations` table to the single
+  `20260427000000` stamp; fresh installs build straight to the final
+  schema in one step.
+- **Admin dashboard header** (`app/views/stern/admin/dashboard/show.html.erb`)
+  now renders the user's UUID as a click-to-copy chip (clipboard API with
+  a legacy `execCommand` fallback, transient check-mark feedback) next to
+  the email, and the current database name as a small DB-icon line
+  instead of a labelled paragraph. Pure presentation; no controller or
+  data changes.
+
 ## [1.9.1] — 2026-05-10
 
 Patch release on top of 1.9.0. Adds a per-book companion-parity audit to
