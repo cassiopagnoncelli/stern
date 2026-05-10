@@ -61,14 +61,19 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   non-`production` env (staging, demo, sandbox). Brings the safeguard in line
   with `rebuild_balances`. **Breaking:** host apps and scripts calling
   `Repair.clear` must pass `confirm: true`.
-- **`Stern::ScheduledOperation#rescue!` accepts `force: true`.** Default
-  behavior is unchanged — `rescue!` still refuses non-`:runtime_error`
-  SOPs, because `:argument_error` means the stored params can't be
-  processed and a bare retry would just re-fail. After deploying a fix to
-  the underlying validation bug, operators can now call
-  `rescue!(force: true)` to also rehabilitate `:argument_error` SOPs back
-  to `:pending` instead of editing rows by hand. `:finished`, `:canceled`,
-  and the in-flight states remain rejected even with `force: true`.
+- **`Stern::ScheduledOperation#rescue!` accepts `force: true`, surfaced
+  through both rake tasks.** Default behavior is unchanged — `rescue!`
+  still refuses non-`:runtime_error` SOPs, because `:argument_error` means
+  the stored params can't be processed and a bare retry would just
+  re-fail. After deploying a fix to the underlying validation bug,
+  operators can call `rescue!(force: true)` from a console, or pass
+  `force` as the second positional arg to the existing rake tasks —
+  `rake stern:sop:rescue[123,force]` for a single SOP and
+  `rake stern:sop:rescue_all[ChargePix,force]` to rehabilitate every
+  `:runtime_error` *or* `:argument_error` SOP of that op name.
+  `:finished`, `:canceled`, and the in-flight states remain rejected even
+  with `force: true`. Anything other than the literal string `force` in
+  the rake arg position is rejected so a typo can't silently escalate.
 
 ### Removed
 

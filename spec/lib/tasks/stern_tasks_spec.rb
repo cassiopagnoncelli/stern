@@ -59,6 +59,40 @@ RSpec.describe "stern rake tasks", type: :task do
         end
       end
     end
+
+    describe "force flag" do
+      let(:bad_params_sop) do
+        create(:scheduled_operation,
+               status: :argument_error, retry_count: 2, error_message: "missing currency")
+      end
+
+      it "rescues an :argument_error SOP when called with `force`" do
+        expect { task.invoke(bad_params_sop.id.to_s, "force") }
+          .to change { bad_params_sop.reload.status }.from("argument_error").to("pending")
+      end
+
+      it "still refuses :finished even with `force`" do
+        done = create(:scheduled_operation, status: :finished)
+        expect { task.invoke(done.id.to_s, "force") }
+          .to raise_error(ArgumentError, /:runtime_error or :argument_error/)
+      end
+
+      it "logs force=true when invoked with `force`" do
+        expect(Rails.logger).to receive(:info).with(/force=true/)
+        task.invoke(bad_params_sop.id.to_s, "force")
+      end
+
+      it "logs force=false when invoked without the flag" do
+        sop = create(:scheduled_operation, status: :runtime_error, retry_count: 1, error_message: "boom")
+        expect(Rails.logger).to receive(:info).with(/force=false/)
+        task.invoke(sop.id.to_s)
+      end
+
+      it "rejects unrecognized force values to prevent typo-escalation" do
+        expect { task.invoke(bad_params_sop.id.to_s, "yes") }
+          .to raise_error(ArgumentError, /unrecognized force flag/)
+      end
+    end
   end
 
   describe "stern:sop:rescue_all" do
@@ -148,6 +182,53 @@ RSpec.describe "stern rake tasks", type: :task do
         end
         task.invoke("ChargePayment")
         expect(::Stern::ScheduledOperation.runtime_error.where(name: "ChargePayment").count).to eq(0)
+      end
+    end
+
+    describe "force flag" do
+      let!(:rt_match) do
+        create(:scheduled_operation,
+               name: "ChargePayment", status: :runtime_error, retry_count: 5, error_message: "boom")
+      end
+      let!(:arg_match) do
+        create(:scheduled_operation,
+               name: "ChargePayment", status: :argument_error, retry_count: 1, error_message: "bad params")
+      end
+      let!(:arg_other_name) do
+        create(:scheduled_operation,
+               name: "RefundPix", status: :argument_error, retry_count: 1, error_message: "bad params")
+      end
+      let!(:done_match) { create(:scheduled_operation, name: "ChargePayment", status: :finished) }
+
+      it "rescues both :runtime_error and :argument_error SOPs of the named op when called with `force`" do
+        task.invoke("ChargePayment", "force")
+        expect(rt_match.reload.status).to eq("pending")
+        expect(arg_match.reload.status).to eq("pending")
+      end
+
+      it "leaves :argument_error SOPs of other names alone even with `force`" do
+        task.invoke("ChargePayment", "force")
+        expect(arg_other_name.reload.status).to eq("argument_error")
+      end
+
+      it "still skips :finished and other non-failed states even with `force`" do
+        task.invoke("ChargePayment", "force")
+        expect(done_match.reload.status).to eq("finished")
+      end
+
+      it "leaves :argument_error SOPs alone when invoked without `force`" do
+        task.invoke("ChargePayment")
+        expect(arg_match.reload.status).to eq("argument_error")
+      end
+
+      it "logs force=true and the bumped count when invoked with `force`" do
+        expect(Rails.logger).to receive(:info).with(/count=2.*name=ChargePayment.*force=true/)
+        task.invoke("ChargePayment", "force")
+      end
+
+      it "rejects unrecognized force values to prevent typo-escalation" do
+        expect { task.invoke("ChargePayment", "yes") }
+          .to raise_error(ArgumentError, /unrecognized force flag/)
       end
     end
   end

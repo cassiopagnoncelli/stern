@@ -35,24 +35,46 @@ namespace :stern do
   end
 
   namespace :sop do
-    desc "Reset a single :runtime_error SOP back to :pending. Usage: rake stern:sop:rescue[123]"
-    task :rescue, [ :id ] => :environment do |_, args|
+    # Both rescue tasks accept an optional second positional arg `force` that
+    # extends the rescue to `:argument_error` SOPs. Only pass it after
+    # deploying a fix to the underlying validation bug — otherwise the SOP
+    # just lands back in `:argument_error` on the next pick. Anything other
+    # than the literal string `force` is rejected so a typo can't silently
+    # escalate to the riskier path.
+
+    desc "Reset a single :runtime_error SOP back to :pending. " \
+         "Usage: rake stern:sop:rescue[123] or rake stern:sop:rescue[123,force] " \
+         "to also accept :argument_error SOPs."
+    task :rescue, [ :id, :force ] => :environment do |_, args|
+      raise ArgumentError, "unrecognized force flag #{args[:force].inspect}; pass `force` or omit" \
+        unless args[:force].nil? || args[:force] == "force"
+      force = args[:force] == "force"
+
       sop = Stern::ScheduledOperation.find(args.fetch(:id))
-      sop.rescue!
-      Rails.logger.info("[stern:sop:rescue] rescued id=#{sop.id} name=#{sop.name}")
+      sop.rescue!(force: force)
+      Rails.logger.info("[stern:sop:rescue] rescued id=#{sop.id} name=#{sop.name} force=#{force}")
     end
 
-    desc "Reset every :runtime_error SOP for a given op name. Usage: rake stern:sop:rescue_all[ChargePix]"
-    task :rescue_all, [ :name ] => :environment do |_, args|
+    desc "Reset every :runtime_error SOP for a given op name. " \
+         "Usage: rake stern:sop:rescue_all[ChargePix] or rake stern:sop:rescue_all[ChargePix,force] " \
+         "to also rescue :argument_error SOPs of that name."
+    task :rescue_all, [ :name, :force ] => :environment do |_, args|
       name = args.fetch(:name, nil)
       raise ArgumentError, "name required" if name.blank?
+      raise ArgumentError, "unrecognized force flag #{args[:force].inspect}; pass `force` or omit" \
+        unless args[:force].nil? || args[:force] == "force"
+      force = args[:force] == "force"
+
+      scope = force ?
+        Stern::ScheduledOperation.where(status: [ :runtime_error, :argument_error ], name: name) :
+        Stern::ScheduledOperation.runtime_error.where(name: name)
 
       count = 0
-      Stern::ScheduledOperation.runtime_error.where(name: name).find_each do |sop|
-        sop.rescue!
+      scope.find_each do |sop|
+        sop.rescue!(force: force)
         count += 1
       end
-      Rails.logger.info("[stern:sop:rescue_all] rescued count=#{count} name=#{name}")
+      Rails.logger.info("[stern:sop:rescue_all] rescued count=#{count} name=#{name} force=#{force}")
     end
   end
 end
