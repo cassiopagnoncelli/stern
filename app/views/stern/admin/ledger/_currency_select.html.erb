@@ -1,0 +1,61 @@
+<div class="w-full sm:w-auto">
+  <%= form.label :currency, "Currency", class: "sr-only" %>
+  <select name="currency"
+          data-bs-currency-select
+          class="select-menu"
+          onchange="this.form.submit()">
+    <% currency_groups.each do |group_name, names| %>
+      <optgroup label="<%= group_name %>">
+        <% names.each do |n| %>
+          <% long  = currency_display_label(n) %>
+          <% short = currency_short_label(n) %>
+          <option value="<%= n %>"
+                  data-bs-long="<%= long %>"
+                  data-bs-short="<%= short %>"
+                  <%= "selected" if n == currency %>>
+            <%= long %>
+          </option>
+        <% end %>
+      </optgroup>
+    <% end %>
+  </select>
+</div>
+
+<script>
+  (function () {
+    if (window.__sternCurrencySelectInit) return;
+    window.__sternCurrencySelectInit = true;
+
+    function applyVariant(select, key) {
+      for (var i = 0; i < select.options.length; i++) {
+        var o = select.options[i];
+        var v = o.dataset[key];
+        if (v != null) o.text = v;
+      }
+    }
+
+    function shorten(select)  { applyVariant(select, "bsShort"); }
+    function lengthen(select) { applyVariant(select, "bsLong"); }
+
+    function init(select) {
+      if (select.__sternCurrencyInited) return;
+      select.__sternCurrencyInited = true;
+
+      shorten(select);
+      select.addEventListener("mousedown", function () { lengthen(select); });
+      select.addEventListener("keydown",   function (e) {
+        // Space/Alt+Down/Enter open the native popup on most platforms.
+        if (e.key === " " || e.key === "Enter" || (e.altKey && e.key === "ArrowDown")) lengthen(select);
+      });
+      select.addEventListener("blur",      function () { shorten(select); });
+      select.addEventListener("change",    function () { shorten(select); });
+    }
+
+    function initAll() {
+      document.querySelectorAll("[data-bs-currency-select]").forEach(init);
+    }
+
+    document.addEventListener("DOMContentLoaded", initAll);
+    if (document.readyState !== "loading") initAll();
+  })();
+</script>

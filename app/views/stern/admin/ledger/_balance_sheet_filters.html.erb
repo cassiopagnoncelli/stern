@@ -5,14 +5,10 @@
     presets: Stern::Admin::BalanceSheetPreset.all,
     books: books %>
 
-<div class="w-full sm:w-auto">
-  <%= form.label :currency, "Currency", class: "sr-only" %>
-  <%= form.select :currency,
-      grouped_options_for_select(currency_groups.transform_values { |names| names.map { |n| [ currency_display_label(n), n ] } }, currency),
-      {},
-      class: "select-menu",
-      onchange: "this.form.submit()" %>
-</div>
+<%= render "stern/admin/ledger/currency_select",
+    form: form,
+    currency: currency,
+    currency_groups: currency_groups %>
 
 <%= render "stern/admin/ledger/date_range_picker",
     picker_id: "balance-sheet-date-range",

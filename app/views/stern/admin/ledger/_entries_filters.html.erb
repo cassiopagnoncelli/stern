@@ -1,13 +1,9 @@
 <% field_classes = "w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" %>
 
-<div class="w-full sm:w-auto">
-  <%= form.label :currency, "Currency", class: "sr-only" %>
-  <%= form.select :currency,
-      grouped_options_for_select(currency_groups.transform_values { |names| names.map { |n| [ currency_display_label(n), n ] } }, currency),
-      {},
-      class: "select-menu",
-      onchange: "this.form.submit()" %>
-</div>
+<%= render "stern/admin/ledger/currency_select",
+    form: form,
+    currency: currency,
+    currency_groups: currency_groups %>
 
 <div class="w-full sm:w-28">
   <%= form.label :gid, "GID", class: "sr-only" %>

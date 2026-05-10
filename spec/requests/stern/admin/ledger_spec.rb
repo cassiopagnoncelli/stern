@@ -63,6 +63,15 @@ RSpec.describe "Stern::Admin::Ledger", type: :request do
       expect(response.body).not_to match(/USDT — Tether USD \(USDT\)/)
     end
 
+    it "ships short labels on each currency option for the collapsed select" do
+      get "/stern/admin/ledger/balance_sheet"
+      expect(response.body).to include('data-bs-currency-select')
+      expect(response.body).to match(/data-bs-short="R\$"/)
+      expect(response.body).to match(/data-bs-short="₿"/)
+      # Symbol-equals-ticker case: short label is the ticker itself.
+      expect(response.body).to match(/data-bs-short="USDT"/)
+    end
+
     it "no longer renders the Decimal places filter" do
       get "/stern/admin/ledger/balance_sheet"
       expect(response.body).not_to include("Decimal places")

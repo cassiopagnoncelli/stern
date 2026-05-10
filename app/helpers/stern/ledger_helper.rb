@@ -19,5 +19,11 @@ module Stern
       label += " (#{symbol})" if symbol.present? && symbol != name.to_s
       label
     end
+
+    # Compact label used when the currency select is collapsed: prefer the
+    # rendering symbol, fall back to the ISO ticker.
+    def currency_short_label(name)
+      ::Stern.currencies.symbol(name).presence || name.to_s
+    end
   end
 end
