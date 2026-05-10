@@ -45,23 +45,26 @@ Operations are the public API. They extend `Stern::BaseOperation`, live under
 
 ```ruby
 module Stern
-  class ChargePix < BaseOperation
+  class ChargePayment < BaseOperation
     include ActiveModel::Validations
 
-    inputs :charge_id, :merchant_id, :customer_id, :amount, :currency
+    PAYMENT_METHODS = %w[bank_transfer credit_card debit_card wallet pix].freeze
+
+    inputs :charge_id, :payment_id, :payment_method, :amount, :currency
 
     validates :charge_id, presence: true, numericality: { other_than: 0 }
-    validates :merchant_id, presence: true, numericality: { other_than: 0 }
+    validates :payment_id, presence: true, numericality: { other_than: 0 }
+    validates :payment_method, presence: true, inclusion: { in: PAYMENT_METHODS }
     validates :amount, presence: true
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     def target_tuples
-      tuples_for_pair(:pp_charge_pix, merchant_id, merchant_id, currency)
+      tuples_for_pair("charge_#{payment_method}".to_sym, charge_id, payment_id, currency)
     end
 
     def perform(operation_id)
       raise ArgumentError if invalid? || operation_id.blank?
-      EntryPair.add_pp_charge_pix(charge_id, merchant_id, amount, currency, operation_id:)
+      EntryPair.public_send("add_charge_#{payment_method}", charge_id, payment_id, amount, currency, operation_id:)
     end
   end
 end

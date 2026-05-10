@@ -4,11 +4,11 @@
 # Benchmark Stern operations under concurrent load.
 #
 # Usage:
-#   bundle exec ruby scripts/benchmark/run.rb --op=charge_pix [options]
+#   bundle exec ruby scripts/benchmark/run.rb --op=charge_payment [options]
 #
 # Options:
 #   --op=NAME            scenario name (required; see --list)
-#                        e.g. charge_pix, deposit, add_credit,
+#                        e.g. charge_payment, deposit, add_credit,
 #                        adjust_balance, transfer_balance
 #   --threads=N          concurrent worker threads (default: 8)
 #   --iterations=N       total ops to run after warmup (default: 2000)
@@ -16,6 +16,8 @@
 #   --merchants=N        distinct merchant gids to rotate through (default: 16)
 #   --amount=N           per-op amount in cents (default: 1000)
 #   --currency=CODE      currency code (default: BRL)
+#   --payment-method=M   payment method for charge_payment scenario (default: pix;
+#                        one of bank_transfer, credit_card, debit_card, wallet, pix)
 #   --seed=N             randomness seed for merchant id base (default: 1)
 #   --no-reset           skip Stern::Repair.clear before the run
 #   --out=PATH           write a JSON metrics artifact to PATH (for CI)
@@ -66,24 +68,26 @@ opts = {
   merchants: 16,
   amount: 1000,
   currency: "BRL",
+  payment_method: "pix",
   seed: 1,
   reset: true,
   run_id: Time.now.to_i
 }
 
 parser = OptionParser.new do |o|
-  o.on("--op=NAME")         { |v| opts[:op] = v }
+  o.on("--op=NAME")             { |v| opts[:op] = v }
   o.on("--threads=N",     Integer) { |v| opts[:threads] = v }
   o.on("--iterations=N",  Integer) { |v| opts[:iterations] = v }
   o.on("--warmup=N",      Integer) { |v| opts[:warmup] = v }
   o.on("--merchants=N",   Integer) { |v| opts[:merchants] = v }
   o.on("--amount=N",      Integer) { |v| opts[:amount] = v }
-  o.on("--currency=CODE") { |v| opts[:currency] = v }
+  o.on("--currency=CODE")       { |v| opts[:currency] = v }
+  o.on("--payment-method=M")    { |v| opts[:payment_method] = v }
   o.on("--seed=N",        Integer) { |v| opts[:seed] = v }
-  o.on("--no-reset")      { opts[:reset] = false }
-  o.on("--out=PATH")      { |v| opts[:out] = v }
-  o.on("--list")          { opts[:list] = true }
-  o.on("-h", "--help")    { puts File.read(__FILE__).split(/^$/, 2).first; exit 0 }
+  o.on("--no-reset")            { opts[:reset] = false }
+  o.on("--out=PATH")            { |v| opts[:out] = v }
+  o.on("--list")                { opts[:list] = true }
+  o.on("-h", "--help")          { puts File.read(__FILE__).split(/^$/, 2).first; exit 0 }
 end
 parser.parse!(ARGV)
 
@@ -143,6 +147,7 @@ if opts[:out]
       "merchants" => opts[:merchants],
       "amount" => opts[:amount],
       "currency" => opts[:currency],
+      "payment_method" => opts[:payment_method],
       "seed" => opts[:seed]
     },
     "metrics" => {
@@ -184,8 +189,7 @@ end
 # non-zero exit. Trips on either:
 #   - any operation error during the measured window (transient infra hiccups
 #     would also count, but the benchmark is bounded so flakiness should be
-#     rare; if it isn't, the ChargePix op itself is unstable and that's worth
-#     learning).
+#     rare; if it isn't, the op itself is unstable and that's worth learning).
 #   - a ledger that is not amount-consistent at the end (sum of all entry
 #     amounts != 0). This is the strongest invariant Stern offers and any
 #     violation signals a real bug, not a flake.

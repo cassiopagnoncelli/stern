@@ -4,13 +4,16 @@ require_relative "base"
 
 module Benchmark
   module Scenarios
-    # Benchmarks Stern::ChargePix. Each call writes pay_pix + pp_charge_pix +
-    # pp_charge + a customer pair for a rotating payment_id. Contention is
-    # controlled by --merchants: fewer ids → more advisory-lock contention on
-    # the same tuple; more ids → closer to fully parallel. charge_id is
-    # globally unique per (thread, iteration) so runs don't collide across
-    # restarts within a run.
-    class ChargePix < Base
+    # Benchmarks Stern::ChargePayment. Each call writes one
+    # `charge_<payment_method>` entry pair (e.g. `charged_pix` ↔ `payment` for
+    # pix). The payment method is selected by --payment-method (default pix);
+    # all values in Stern::ChargePayment::PAYMENT_METHODS are accepted.
+    #
+    # Contention is controlled by --merchants: fewer ids → more advisory-lock
+    # contention on the same `(charge_<method>, payment_id)` tuple; more ids →
+    # closer to fully parallel. charge_id is globally unique per (thread,
+    # iteration) so runs don't collide across restarts within a run.
+    class ChargePayment < Base
       def setup
         return unless opts[:reset]
 
@@ -22,7 +25,7 @@ module Benchmark
         ::Stern::ChargePayment.new(
           charge_id: next_charge_id,
           payment_id: payment_id,
-          payment_method: "pix",
+          payment_method: opts[:payment_method],
           amount: opts[:amount],
           currency: opts[:currency],
         ).call

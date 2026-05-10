@@ -12,7 +12,7 @@ PostgreSQL, and exposes a small operations-based API for host apps to build on.
 - **Append-only records.** `Entry` and `EntryPair` forbid updates and bare `destroy`. The
   only write paths are `create!` (which hits the SQL function) and `destroy!` (likewise).
 - **Operations as the public API.** Host apps don't manipulate models directly; they call
-  `Operation` subclasses (`ChargePix.new(...).call`) which handle idempotency, locking,
+  `Operation` subclasses (`ChargePayment.new(payment_method: "pix", ...).call`) which handle idempotency, locking,
   and auditing.
 - **Chart-driven.** Books and entry-pair types are declared in a single YAML file,
   selected at boot via `STERN_CHART`. Adding a book means editing the YAML and reseeding.
@@ -176,10 +176,10 @@ Stern.chart.entry_pair(:split_merchant) # => #<EntryPair name=..., book_add=...,
 ### Run an operation
 
 ```ruby
-op = Stern::ChargePix.new(
+op = Stern::ChargePayment.new(
   charge_id: 1001,
-  merchant_id: 1101,
-  customer_id: 2001,
+  payment_id: 2001,
+  payment_method: "pix",
   amount: 9900,        # cents
   currency: "brl",
 )
@@ -314,8 +314,8 @@ Queue an operation for later:
 
 ```ruby
 Stern::ScheduledOperation.build(
-  name: "ChargePix",
-  params: { charge_id: 1, merchant_id: 1101, customer_id: 2, amount: 9900, currency: "usd" },
+  name: "ChargePayment",
+  params: { charge_id: 1, payment_id: 2, payment_method: "pix", amount: 9900, currency: "usd" },
   after_time: 1.hour.from_now,  # or a fixed Time, e.g. Time.utc(2026, 5, 1, 9, 0)
 ).save!
 ```

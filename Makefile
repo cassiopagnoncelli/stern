@@ -1,7 +1,7 @@
-.PHONY: all release build check clean dev docs tests test lint style stats benchmark benchmark-list help
+.PHONY: all release build check clean dev docs tests test lint style stats benchmark benchmark-one benchmark-list help
 .DEFAULT_GOAL := help
 
-BENCHMARK_OP         ?= charge_pix
+BENCHMARK_OP         ?= charge_payment
 BENCHMARK_THREADS    ?= 8
 BENCHMARK_ITERATIONS ?= 2000
 BENCHMARK_WARMUP     ?= 200
@@ -49,7 +49,18 @@ lint: ## Run static analysis
 style: ## Auto-correct style issues
 	bundle exec rubocop --auto-correct
 
-benchmark: ## Benchmark a Stern operation (override BENCHMARK_OP/THREADS/ITERATIONS/WARMUP/MERCHANTS)
+benchmark: ## Run the full benchmark suite (override BENCHMARK_THREADS/ITERATIONS/WARMUP/MERCHANTS)
+	@scenarios=$$(bundle exec ruby scripts/benchmark/run.rb --list | tail -n +2 | awk '{print $$1}'); \
+	for op in $$scenarios; do \
+		RAILS_MAX_THREADS=$(BENCHMARK_THREADS) bundle exec ruby scripts/benchmark/run.rb \
+			--op=$$op \
+			--threads=$(BENCHMARK_THREADS) \
+			--iterations=$(BENCHMARK_ITERATIONS) \
+			--warmup=$(BENCHMARK_WARMUP) \
+			--merchants=$(BENCHMARK_MERCHANTS) || exit $$?; \
+	done
+
+benchmark-one: ## Benchmark a single Stern operation (override BENCHMARK_OP/THREADS/ITERATIONS/WARMUP/MERCHANTS)
 	@RAILS_MAX_THREADS=$(BENCHMARK_THREADS) bundle exec ruby scripts/benchmark/run.rb \
 		--op=$(BENCHMARK_OP) \
 		--threads=$(BENCHMARK_THREADS) \
