@@ -339,6 +339,10 @@ Audits (read-only, safe to call anywhere):
 ```ruby
 Stern::Doctor.amount_consistent?                                       # sum(all amounts) == 0
 Stern::Doctor.amount_inconsistency                                     # nil, or { sum: <non-zero> }
+Stern::Doctor.companion_parity_consistent?                             # every declared book balances
+                                                                       # against its `_0` companion per currency
+Stern::Doctor.first_companion_parity_inconsistency                     # nil, or detail of the first broken
+                                                                       # (book, currency) pair (or unknown book_id)
 Stern::Doctor.ending_balance_consistent?(book_id:, gid:, currency:)    # ledger cascade is intact
 Stern::Doctor.first_ending_balance_inconsistency(book_id:, gid:, currency:)
                                                                        # nil, or detail of the first bad row

@@ -7,6 +7,26 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`Stern::Doctor.companion_parity_consistent?`** and
+  **`Stern::Doctor.first_companion_parity_inconsistency`** — per-book audit
+  that verifies every declared book `X` mass-balances against its implicit
+  `X_0` companion per currency: `sum(book = X, currency = c) +
+  sum(book = X_0, currency = c) == 0`. Strictly stronger than
+  `amount_consistent?`, which can hide cross-book imbalances that cancel
+  globally (e.g. book A is +100 vs A_0 and book B is -100 vs B_0). The
+  detail companion returns `{ book:, companion:, currency:, sum: }` for the
+  first per-currency residual that fails (alphabetical scan by book name
+  for determinism), or a separate `{ unknown_book_id:, book_id:, currency:,
+  sum: }` variant when entries reference a `book_id` not in the active
+  chart (chart-drift signal). Cost: O(n_entries) — one full GROUP BY scan
+  over `stern_entries`. Not for hot paths.
+- **`Stern::Doctor.first_inconsistency` now also runs the companion-parity
+  check** between the global-sum check and the per-tuple cascade walk, with
+  new `kind: :companion_parity` and `kind: :unknown_book` tagged variants
+  in its return contract.
+
 ### Changed
 
 - **Direct `Stern::Entry.create!` / `Entry#destroy!` callers now receive `Stern::BalanceNonNegativeViolation`** (a subclass of `Stern::InsufficientFunds`) when the PL/pgSQL `non_negative` guard fires, instead of the raw `ActiveRecord::StatementInvalid` wrapping a `PG::CheckViolation`. The translation matches structurally on the `stern_books_non_negative` constraint name (`PG_DIAG_CONSTRAINT_NAME` / `Book::NON_NEGATIVE_CONSTRAINT`), so unrelated DB errors — future-timestamp raises, duplicate-key violations, NULL-input rejections — keep propagating as `StatementInvalid` untouched. Closes the gap where callers bypassing `BaseOperation`'s `runtime_check` couldn't `rescue Stern::BalanceNonNegativeViolation` for the DB backstop case. Pinned by `spec/models/stern/entry_non_negative_translation_spec.rb`.
