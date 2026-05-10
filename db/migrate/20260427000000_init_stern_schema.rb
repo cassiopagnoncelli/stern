@@ -44,6 +44,24 @@ class InitSternSchema < ActiveRecord::Migration[7.0]
     add_index :stern_operations, :idem_key, unique: true,
                                              where: "idem_key IS NOT NULL"
 
+    create_table :stern_operation_attempts, if_not_exists: true do |t|
+      t.timestamps
+      t.string :name, null: false
+      t.json :params, null: false, default: "{}"
+      t.string :idem_key, null: true, limit: 24
+      t.bigint :operation_id, null: true
+      t.integer :status, null: false, default: 0
+      t.string :error_class, null: true
+      t.text :error_message, null: true
+      t.text :error_backtrace, null: true
+      t.datetime :attempted_at, null: false
+    end
+    add_index :stern_operation_attempts, :name
+    add_index :stern_operation_attempts, :idem_key
+    add_index :stern_operation_attempts, :operation_id
+    add_index :stern_operation_attempts, :status
+    add_index :stern_operation_attempts, :attempted_at
+
     create_table :stern_scheduled_operations, if_not_exists: true do |t|
       t.timestamps
       t.string :name, null: false
@@ -58,6 +76,26 @@ class InitSternSchema < ActiveRecord::Migration[7.0]
     add_index :stern_scheduled_operations, :after_time
     add_index :stern_scheduled_operations, :status
 
+    # Record graph (Entry -> EntryPair -> Operation, OperationAttempt -> Operation)
+    # is enforced at the DB layer so direct SQL writes and partial cleanup paths
+    # cannot leave orphans. on_delete semantics:
+    #   - entries -> entry_pairs:           :restrict (Entry rows are append-only;
+    #                                       Repair.clear deletes Entry first)
+    #   - entry_pairs -> operations:        :restrict (same Repair.clear ordering)
+    #   - operation_attempts -> operations: :nullify  (attempts can pre-exist their
+    #                                       op; Operation rows can be cleared
+    #                                       without losing the post-mortem record)
+    add_foreign_key :stern_entries, :stern_entry_pairs,
+                    column: :entry_pair_id, on_delete: :restrict,
+                    validate: true
+    add_foreign_key :stern_entry_pairs, :stern_operations,
+                    column: :operation_id, on_delete: :restrict,
+                    validate: true
+    add_foreign_key :stern_operation_attempts, :stern_operations,
+                    column: :operation_id, on_delete: :nullify,
+                    validate: true
+
+    execute File.read(File.expand_path("../functions/stern_advisory_lock_key.sql", __dir__))
     execute File.read(File.expand_path("../functions/create_entry.sql", __dir__))
     execute File.read(File.expand_path("../functions/destroy_entry.sql", __dir__))
     execute File.read(File.expand_path("../functions/sop_notify.sql", __dir__))
