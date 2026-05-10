@@ -7,6 +7,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.9.3] — 2026-05-10
+
 ## [1.9.2] — 2026-05-10
 
 Patch release on top of 1.9.1. Collapses the seven-file migration history
