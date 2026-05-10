@@ -83,6 +83,8 @@ module Benchmark
 
     attr_reader :scenario, :opts
 
+    Result = Struct.new(:metrics, :wall_ns, :warmup_stats, keyword_init: true)
+
     def initialize(scenario, opts)
       @scenario = scenario
       @opts = opts
@@ -96,7 +98,7 @@ module Benchmark
       scenario.teardown
       report(metrics, wall, warmup_stats)
       sanity_check
-      metrics
+      Result.new(metrics: metrics, wall_ns: wall, warmup_stats: warmup_stats)
     end
 
     private

@@ -64,17 +64,79 @@ jobs:
       # ops/s + p50/p95/p99 in the build log. Strict mode (set via env) makes
       # the step exit non-zero on either a recorded operation error during the
       # measured window or a ledger that fails Stern::Doctor.amount_consistent?
-      # at the end. We deliberately do not gate on absolute latency or
-      # throughput thresholds — shared CI runners are noisy enough that
-      # absolute numbers would flap; regressions show up in the printed
-      # latency table for a human to notice in PR review.
+      # at the end. The --out flag emits a JSON artifact that the next two
+      # steps use to compare against the latest successful main run.
       - name: Benchmark smoke (ChargePix)
         env:
           STERN_BENCH_STRICT: "1"
         run: |
+          mkdir -p tmp/bench
           bundle exec ruby scripts/benchmark/run.rb \
             --op=charge_pix \
             --threads=4 \
             --iterations=200 \
             --warmup=20 \
-            --merchants=8
+            --merchants=8 \
+            --out=tmp/bench/head.json
+
+      # Always store the artifact, even on main pushes — that's how a future PR
+      # finds something to compare against.
+      - name: Upload benchmark artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-results
+          path: tmp/bench/head.json
+          retention-days: 90
+
+      # On non-main runs (PRs and feature branch pushes), find the most recent
+      # successful main run of THIS workflow and pull its bench artifact. If
+      # there isn't one yet (first run after this lands, or all main runs
+      # failed), the comparison step skips silently.
+      - name: Fetch baseline benchmark from main
+        if: github.ref != 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p tmp/bench/baseline
+          last_main_run=$(gh run list \
+            --workflow "${{ github.workflow }}" \
+            --branch main \
+            --status success \
+            --event push \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty')
+          if [ -z "$last_main_run" ]; then
+            echo "No prior successful main run; skipping baseline comparison."
+            exit 0
+          fi
+          echo "Baseline run id: $last_main_run"
+          if ! gh run download "$last_main_run" --name bench-results --dir tmp/bench/baseline; then
+            echo "Latest main run had no bench-results artifact; skipping."
+            exit 0
+          fi
+          if [ -f tmp/bench/baseline/head.json ]; then
+            mv tmp/bench/baseline/head.json tmp/bench/baseline.json
+            echo "baseline artifact:"
+            ls -l tmp/bench/baseline.json
+          fi
+
+      # Compare. Gates on p95 (more stable than p99 over a 200-iter sample);
+      # p99 is reported informationally to surface tail regressions in the
+      # check summary without flapping the build. Override gates via env if
+      # the noise floor changes:
+      #   STERN_BENCH_GATE_P95=50 (or "off") to relax/disable.
+      - name: Compare benchmark against baseline
+        if: github.ref != 'refs/heads/main'
+        run: |
+          if [ ! -f tmp/bench/baseline.json ]; then
+            echo "No baseline available, skipping compare step."
+            exit 0
+          fi
+          bundle exec ruby scripts/benchmark/compare.rb \
+            --baseline=tmp/bench/baseline.json \
+            --head=tmp/bench/head.json \
+            --gate-p95="${STERN_BENCH_GATE_P95:-30}" \
+            --gate-p99="${STERN_BENCH_GATE_P99:-off}" \
+            --gate-throughput="${STERN_BENCH_GATE_THROUGHPUT:-off}"

@@ -16,12 +16,14 @@
 #   --currency=CODE      currency code (default: BRL)
 #   --seed=N             randomness seed for merchant id base (default: 1)
 #   --no-reset           skip Stern::Repair.clear before the run
+#   --out=PATH           write a JSON metrics artifact to PATH (for CI)
 #   --list               list available scenarios and exit
 #
 # Environment:
 #   RAILS_ENV            defaults to development
 #   STERN_CHART          defaults to general (must match a chart with the op)
 
+require "json"
 require "optparse"
 
 ENV["RAILS_ENV"] ||= "development"
@@ -77,6 +79,7 @@ parser = OptionParser.new do |o|
   o.on("--currency=CODE") { |v| opts[:currency] = v }
   o.on("--seed=N",        Integer) { |v| opts[:seed] = v }
   o.on("--no-reset")      { opts[:reset] = false }
+  o.on("--out=PATH")      { |v| opts[:out] = v }
   o.on("--list")          { opts[:list] = true }
   o.on("-h", "--help")    { puts File.read(__FILE__).split(/^$/, 2).first; exit 0 }
 end
@@ -109,7 +112,71 @@ if opts[:threads] > pool_size
 end
 
 scenario = klass.new(opts)
-metrics = Benchmark::Runner.new(scenario, opts).run
+result = Benchmark::Runner.new(scenario, opts).run
+metrics = result.metrics
+
+# JSON artifact: a stable, machine-readable snapshot of this run for cross-run
+# comparison in CI (see scripts/benchmark/compare.rb). Schema is versioned so
+# the comparator can refuse incompatible inputs rather than silently drift.
+if opts[:out]
+  wall_s = result.wall_ns / 1e9
+  ok = metrics.ok_count
+  err = metrics.errors.values.sum
+  total = metrics.total
+
+  pg_version =
+    begin
+      ::Stern::ApplicationRecord.connection.execute("SHOW server_version").first["server_version"]
+    rescue StandardError
+      nil
+    end
+
+  artifact = {
+    "schema_version" => 1,
+    "scenario" => opts[:op],
+    "options" => {
+      "threads" => opts[:threads],
+      "iterations" => opts[:iterations],
+      "warmup" => opts[:warmup],
+      "merchants" => opts[:merchants],
+      "amount" => opts[:amount],
+      "currency" => opts[:currency],
+      "seed" => opts[:seed]
+    },
+    "metrics" => {
+      "ops_per_s" => total.positive? ? (total / wall_s) : 0.0,
+      "wall_s" => wall_s,
+      "ok_count" => ok,
+      "error_count" => err,
+      "errors" => metrics.errors,
+      "latency_ms" => {
+        "min" => metrics.min_ns / 1e6,
+        "p50" => metrics.percentile(50) / 1e6,
+        "mean" => metrics.mean_ns / 1e6,
+        "p95" => metrics.percentile(95) / 1e6,
+        "p99" => metrics.percentile(99) / 1e6,
+        "max" => metrics.max_ns / 1e6
+      }
+    },
+    "env" => {
+      "ruby" => RUBY_VERSION,
+      "rails" => (defined?(Rails) ? Rails::VERSION::STRING : nil),
+      "postgres_server_version" => pg_version,
+      "stern_chart" => ENV["STERN_CHART"] || "general",
+      "rails_max_threads" => ENV["RAILS_MAX_THREADS"]
+    },
+    "git" => {
+      "sha" => ENV["GITHUB_SHA"],
+      "ref" => ENV["GITHUB_REF"],
+      "run_id" => ENV["GITHUB_RUN_ID"]
+    }
+  }
+
+  require "fileutils"
+  FileUtils.mkdir_p(File.dirname(opts[:out]))
+  File.write(opts[:out], JSON.pretty_generate(artifact) + "\n")
+  warn "wrote benchmark artifact to #{opts[:out]}"
+end
 
 # Strict mode (STERN_BENCH_STRICT=1): used by CI to surface regressions as a
 # non-zero exit. Trips on either:
