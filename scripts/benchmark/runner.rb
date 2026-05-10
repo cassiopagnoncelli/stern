@@ -113,6 +113,12 @@ module Benchmark
       per_thread = divide_iterations(iterations, opts[:threads])
       buckets = Array.new(opts[:threads]) { Metrics.new }
 
+      # Setup may have implicitly checked out a connection on this (main)
+      # thread (e.g. TransferBalance pre-deposits 16 merchants). With pool
+      # size == threads, that lingering lease leaves the last worker waiting
+      # past the 5s checkout timeout. Release before spawning workers.
+      ::Stern::ApplicationRecord.connection_pool.release_connection
+
       t0 = monotonic_ns
       threads = per_thread.each_with_index.map do |n, tidx|
         Thread.new do
