@@ -53,6 +53,44 @@ RSpec.describe "Stern::Admin::Ledger", type: :request do
       expect(response.body).to include("Previous Balance")
       expect(response.body).to include("TOTALS")
     end
+
+    it "renders enriched currency labels in the picker and dropdown" do
+      get "/stern/admin/ledger/balance_sheet"
+      expect(response.body).to include("BRL — Brazilian Real (R$)")
+      expect(response.body).to include("BTC — Bitcoin (₿)")
+      # Stablecoins whose symbol equals the ticker omit the trailing parenthetical.
+      expect(response.body).to include("USDT — Tether USD")
+      expect(response.body).not_to match(/USDT — Tether USD \(USDT\)/)
+    end
+
+    it "no longer renders the Decimal places filter" do
+      get "/stern/admin/ledger/balance_sheet"
+      expect(response.body).not_to include("Decimal places")
+      expect(response.body).not_to match(/name="decimal_places"/)
+    end
+  end
+
+  describe "GET /stern/admin/ledger/entries decimal_places filter" do
+    it "is not rendered" do
+      get "/stern/admin/ledger/entries"
+      expect(response.body).not_to include("Decimal places")
+      expect(response.body).not_to match(/name="decimal_places"/)
+    end
+  end
+
+  describe "currency-driven decimal places" do
+    it "uses the catalog default for the chosen currency" do
+      query = instance_double(::Stern::EntriesQuery, call: [
+        { timestamp: Time.current, gid: 1, code: 1, amount: 12345678, ending_balance: 12345678 }
+      ])
+      allow(::Stern::EntriesQuery).to receive(:new).and_return(query)
+      allow(::Stern::Entry).to receive_message_chain(:where, :where, :count).and_return(1)
+
+      # BTC: catalog says 8 decimal places — 12345678 / 1e8 = 0.12345678
+      get "/stern/admin/ledger/entries", params: { book_id: ::Stern.chart.book_codes.first, currency: "BTC" }
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("0.12345678")
+    end
   end
 
   describe "passport time zone" do
