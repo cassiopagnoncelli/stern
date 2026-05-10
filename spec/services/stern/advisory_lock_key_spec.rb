@@ -51,7 +51,7 @@ module Stern
           [ 1, 2, 3 ],
           [ 2, 2, 3 ],
           [ 1, 4, 3 ],
-          [ 1, 2, 5 ],
+          [ 1, 2, 5 ]
         ].map do |b, g, c|
           ApplicationRecord.connection.select_value(
             ApplicationRecord.sanitize_sql_array(
@@ -99,7 +99,7 @@ module Stern
               try_result = c.select_value(
                 ApplicationRecord.sanitize_sql_array([
                   "SELECT pg_try_advisory_xact_lock(stern_advisory_lock_key(?, ?, ?))",
-                  book_id, gid, currency,
+                  book_id, gid, currency
                 ]),
               )
             end
