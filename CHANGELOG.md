@@ -109,6 +109,16 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `BalanceNonNegativeViolation`), but negative amounts drain `*_available`
   with no protection at all. No behavior change; callers needing a
   friendly pre-check must gate at the call site for now.
+- **`Charge*Fee` negative-amount reversal idiom.** Documented on
+  `ChargePaymentFee`, `ChargeRefundFee`, `ChargeChargebackFee`, and
+  `ChargeWithdrawalFee` that a negative `amount` reverses a previously-
+  charged fee (used by reverse-refund / reverse-chargeback / withdrawal-
+  cancel flows, since `ReverseRefund`, `ReverseChargeback`,
+  `CancelWithdrawal`, and `ReverseWithdrawal` only unwind the underlying
+  fund movement and not the fee). The intentional credit-application skip
+  on the reversal path is now noted on each op. Backfilled the missing
+  `"reverses sign on a negative amount (fee reversal)"` parity spec on
+  `ChargePaymentFee`. No behavior change.
 
 ## [1.8.0] — 2026-05-09
 

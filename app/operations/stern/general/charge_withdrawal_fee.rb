@@ -1,6 +1,15 @@
 # frozen_string_literal: true
 
 module Stern
+  # Charges a withdrawal fee against a stakeholder's `*_available`, optionally
+  # drawing from `*_credit` first to reduce out-of-pocket.
+  #
+  # A negative `amount` reverses a previously-charged fee — the same entry
+  # pair is emitted with flipped signs. Withdrawal-cancel / reverse callers
+  # rely on this idiom because `CancelWithdrawal` and `ReverseWithdrawal` only
+  # unwind the underlying fund movement, not the fee. Credit application is
+  # intentionally skipped on the reversal path: the credit redemption from
+  # the original charge is its own movement and is not undone here.
   class ChargeWithdrawalFee < BaseOperation
     inputs :merchant_id, :customer_id, :partner_id, :amount, :currency
 
@@ -40,7 +49,9 @@ module Stern
     # Draws from the stakeholder's *_credit book up to the fee amount and moves
     # it into *_available before the fee is charged in full. The full `amount`
     # is then debited from *_available, so the stakeholder's net out-of-pocket
-    # is `amount - credit_used`. No-op for non-positive amounts.
+    # is `amount - credit_used`. Skipped on the reversal path (negative
+    # `amount`): the credit redemption from the original charge is its own
+    # movement and is not undone here.
     def apply_available_credit(stakeholder_id, stakeholder_type, operation_id)
       return unless amount.positive?
 

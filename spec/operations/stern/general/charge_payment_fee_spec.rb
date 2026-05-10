@@ -152,6 +152,13 @@ module Stern
         }.to change(EntryPair, :count).by(1)
       end
 
+      it "reverses sign on a negative amount (fee reversal)" do
+        described_class.new(**valid_inputs(amount: -100)).call
+
+        expect(::Stern.balance(payment_id, :merchant_available, :BRL)).to eq(100)
+        expect(::Stern.balance(payment_id, :payment_fee_pix, :BRL)).to eq(-100)
+      end
+
       context "with available credit" do
         it "applies partial credit when balance < fee, debiting available by the net" do
           AddCredit.new(merchant_id:, amount: 30, currency: "BRL").call
