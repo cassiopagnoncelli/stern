@@ -1,4 +1,4 @@
-.PHONY: all release build check clean setup dev docs tests test lint style stats benchmark benchmark-one benchmark-list help
+.PHONY: all release build check clean setup dev docs tests test lint style stats benchmark benchmark-one benchmark-list bump help
 .DEFAULT_GOAL := help
 
 BENCHMARK_OP         ?= charge_payment
@@ -73,6 +73,9 @@ benchmark-one: ## Benchmark a single Stern operation (override BENCHMARK_OP/THRE
 
 benchmark-list: ## List available benchmark scenarios
 	@bundle exec ruby scripts/benchmark/run.rb --list
+
+bump: ## Bump version, finalize CHANGELOG, commit & tag (LEVEL=patch|minor|major or VERSION=X.Y.Z; PUSH=1; DRY_RUN=1)
+	@bin/bump-version $(if $(VERSION),$(VERSION),$(or $(LEVEL),patch)) $(if $(PUSH),--push) $(if $(DRY_RUN),--dry-run)
 
 stats: ## Show current and historical LOC stats
 	@current_rails_loc=$$(find $(RAILS_LOC_DIRS) -type f $(RAILS_LOC_FIND_TYPES) -print0 | xargs -0 cat | wc -l | tr -d ' ') && \

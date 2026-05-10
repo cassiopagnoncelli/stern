@@ -1,0 +1,230 @@
+#!/usr/bin/env ruby
+require "date"
+require "fileutils"
+require "rubygems"
+
+APP_ROOT     = File.expand_path("..", __dir__)
+VERSION_FILE = "lib/stern/version.rb"
+CHANGELOG    = "CHANGELOG.md"
+GEMFILE_LOCK = "Gemfile.lock"
+RELEASE_BRANCH = ENV.fetch("STERN_BUMP_BRANCH", "main")
+
+RED    = "\e[31m"
+GREEN  = "\e[32m"
+YELLOW = "\e[33m"
+BLUE   = "\e[34m"
+BOLD   = "\e[1m"
+RESET  = "\e[0m"
+
+def system!(*args)
+  system(*args, exception: true)
+end
+
+def capture!(*args)
+  out = IO.popen(args, &:read)
+  raise "command failed: #{args.join(' ')}" unless $?.success?
+  out
+end
+
+def info(msg)  = puts("#{BLUE}#{msg}#{RESET}")
+def ok(msg)    = puts("#{GREEN}✓ #{msg}#{RESET}")
+def warn!(msg) = warn("#{YELLOW}#{msg}#{RESET}")
+def die!(msg)
+  warn("#{RED}error: #{msg}#{RESET}")
+  exit 1
+end
+
+def usage
+  <<~USAGE
+    usage: bin/bump-version <patch|minor|major|X.Y.Z> [--push] [--dry-run]
+
+      patch|minor|major   Bump the corresponding SemVer component.
+      X.Y.Z               Set an explicit version (escape hatch for
+                          backports / corrections).
+      --push              After tagging, push origin #{RELEASE_BRANCH} and the new tag.
+      --dry-run           Print planned mutations; touch nothing.
+      -h, --help          Show this help.
+  USAGE
+end
+
+# --- arg parsing ----------------------------------------------------------
+
+args = ARGV.dup
+if args.empty? || args.include?("-h") || args.include?("--help")
+  puts usage
+  exit(args.empty? ? 1 : 0)
+end
+
+push    = !!args.delete("--push")
+dry_run = !!args.delete("--dry-run")
+arg     = args.shift
+die!("unexpected extra arguments: #{args.join(' ')}\n#{usage}") unless args.empty?
+
+FileUtils.chdir(APP_ROOT) do
+  # --- pre-flight ---------------------------------------------------------
+
+  info "Pre-flight checks"
+
+  system("git", "rev-parse", "--is-inside-work-tree", out: File::NULL, err: File::NULL) ||
+    die!("not inside a git work tree")
+
+  current_branch = capture!("git", "symbolic-ref", "--short", "HEAD").strip
+  unless current_branch == RELEASE_BRANCH
+    die!("must be on '#{RELEASE_BRANCH}' (currently on '#{current_branch}'). " \
+         "Override with STERN_BUMP_BRANCH=<branch>.")
+  end
+
+  unless capture!("git", "status", "--porcelain").empty?
+    die!("working tree is dirty; commit or stash first")
+  end
+
+  version_src = File.read(VERSION_FILE)
+  current = version_src[/VERSION\s*=\s*"([^"]+)"/, 1] or
+    die!("could not parse VERSION from #{VERSION_FILE}")
+  current_v = begin
+    Gem::Version.new(current)
+  rescue ArgumentError
+    die!("current version '#{current}' is not a valid SemVer")
+  end
+
+  changelog_src = File.read(CHANGELOG)
+  unless changelog_src =~ /^## \[Unreleased\]$/
+    die!("CHANGELOG.md: '## [Unreleased]' heading not found")
+  end
+
+  # --- compute new version ------------------------------------------------
+
+  x, y, z = current.split(".").map(&:to_i)
+  new_version =
+    case arg
+    when "patch" then "#{x}.#{y}.#{z + 1}"
+    when "minor" then "#{x}.#{y + 1}.0"
+    when "major" then "#{x + 1}.0.0"
+    when /\A\d+\.\d+\.\d+\z/ then arg
+    else die!("invalid argument: '#{arg}'\n#{usage}")
+    end
+
+  unless Gem::Version.new(new_version) > current_v
+    die!("new version (#{new_version}) must be greater than current (#{current})")
+  end
+
+  ok "current=#{current}  new=#{new_version}  branch=#{current_branch}"
+
+  tag = "v#{new_version}"
+  today = Date.today.strftime("%Y-%m-%d")
+
+  # --- step 1: edit lib/stern/version.rb ---------------------------------
+
+  info "Updating #{VERSION_FILE}"
+  new_version_src = version_src.sub(
+    /VERSION\s*=\s*"[^"]+"/,
+    %(VERSION = "#{new_version}"),
+  )
+  if dry_run
+    puts "  [dry-run] would write VERSION = \"#{new_version}\""
+  else
+    File.write(VERSION_FILE, new_version_src)
+    ok "wrote #{VERSION_FILE}"
+  end
+
+  # --- step 2: refresh Gemfile.lock --------------------------------------
+
+  info "Refreshing #{GEMFILE_LOCK}"
+  if dry_run
+    puts "  [dry-run] would run: bundle install --quiet"
+  else
+    begin
+      system!("bundle", "install", "--quiet")
+      ok "bundle install complete"
+    rescue StandardError => e
+      warn! "bundle install failed: #{e.message}"
+      warn! "to undo: git restore #{VERSION_FILE} #{GEMFILE_LOCK} #{CHANGELOG}"
+      raise
+    end
+  end
+
+  # --- step 3: rewrite CHANGELOG.md --------------------------------------
+
+  info "Finalizing #{CHANGELOG}"
+  replacement = "## [Unreleased]\n\n## [#{new_version}] — #{today}"
+  new_changelog = changelog_src.sub(/^## \[Unreleased\]$/, replacement)
+  if new_changelog == changelog_src
+    die!("CHANGELOG.md: substitution failed (heading not matched)")
+  end
+  if dry_run
+    puts "  [dry-run] would insert: ## [#{new_version}] — #{today}"
+  else
+    File.write(CHANGELOG, new_changelog)
+    ok "wrote #{CHANGELOG}"
+  end
+
+  # --- step 4: build commit body from new release block ------------------
+
+  body = +""
+  if (m = new_changelog.match(/^## \[#{Regexp.escape(new_version)}\] — #{today}\n(.*?)(?=^## \[|\z)/m))
+    body << m[1].strip
+    body << "\n\n" unless body.empty?
+  end
+  body << "Bump VERSION to #{new_version} and #{GEMFILE_LOCK} to match."
+
+  subject = "Cut #{new_version}: bump version and finalize CHANGELOG"
+
+  # --- step 5: commit ----------------------------------------------------
+
+  info "Committing"
+  if dry_run
+    puts "  [dry-run] would run: git add #{VERSION_FILE} #{GEMFILE_LOCK} #{CHANGELOG}"
+    puts "  [dry-run] would commit with subject: #{subject}"
+  else
+    begin
+      system!("git", "add", VERSION_FILE, GEMFILE_LOCK, CHANGELOG)
+      system!("git", "commit", "-m", subject, "-m", body)
+      ok "committed"
+    rescue StandardError => e
+      warn! "commit failed: #{e.message}"
+      warn! "to undo: git restore --staged #{VERSION_FILE} #{GEMFILE_LOCK} #{CHANGELOG} && " \
+            "git restore #{VERSION_FILE} #{GEMFILE_LOCK} #{CHANGELOG}"
+      raise
+    end
+  end
+
+  # --- step 6: tag -------------------------------------------------------
+
+  info "Tagging #{tag}"
+  if dry_run
+    puts "  [dry-run] would run: git tag -a #{tag} -m #{tag}"
+  else
+    begin
+      system!("git", "tag", "-a", tag, "-m", tag)
+      ok "tagged #{tag}"
+    rescue StandardError => e
+      warn! "tag failed: #{e.message}"
+      warn! "to undo the commit: git reset --soft HEAD~1"
+      raise
+    end
+  end
+
+  # --- step 7: push (opt-in) --------------------------------------------
+
+  if push
+    info "Pushing"
+    if dry_run
+      puts "  [dry-run] would run: git push origin #{RELEASE_BRANCH} && git push origin #{tag}"
+    else
+      begin
+        system!("git", "push", "origin", RELEASE_BRANCH)
+        system!("git", "push", "origin", tag)
+        ok "pushed #{RELEASE_BRANCH} and #{tag}"
+      rescue StandardError => e
+        warn! "push failed: #{e.message}"
+        warn! "retry manually: git push origin #{RELEASE_BRANCH} && git push origin #{tag}"
+        exit 1
+      end
+    end
+  else
+    puts
+    puts "#{BOLD}Next:#{RESET} git push origin #{RELEASE_BRANCH} && git push origin #{tag}"
+  end
+
+  puts "#{GREEN}#{BOLD}Done.#{RESET} #{current} → #{new_version}#{dry_run ? ' (dry-run)' : ''}"
+end
