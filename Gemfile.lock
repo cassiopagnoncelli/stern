@@ -8,7 +8,7 @@ PATH
 PATH
   remote: .
   specs:
-    stern (1.9.0)
+    stern (1.9.1)
       cssbundling-rails (>= 1.4)
       idp-jwt
       nokogiri (>= 1.15.6)

@@ -7,6 +7,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.9.1] — 2026-05-10
+
+Patch release on top of 1.9.0. Adds a per-book companion-parity audit to
+`Stern::Doctor` that catches cross-book imbalances `amount_consistent?` would
+miss, and tightens the direct-`Entry` error contract so callers bypassing
+`BaseOperation` get the same `BalanceNonNegativeViolation` everyone else does.
+
 ### Added
 
 - **`Stern::Doctor.companion_parity_consistent?`** and
