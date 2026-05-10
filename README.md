@@ -495,6 +495,11 @@ events the scheduled-operation pipeline emits:
 - `stern_sop_pickup_lag_seconds` — histogram, seconds between `after_time` and
   the actual pick
 - `stern_sop_count{status}` — gauge, queue depth by status (refresh-on-demand)
+- `stern_operation_attempts_count{status}` — gauge, current row count of
+  `stern_operation_attempts` by status (`success` / `failed` / `pending`).
+  Pair with the worker auto-prune to confirm prune throughput is keeping up
+  with insert rate; sustained growth means raising `STERN_PRUNE_MAX_BATCHES`
+  or shortening `STERN_PRUNE_INTERVAL` (refresh-on-demand)
 
 Scrape from a host-app controller:
 
@@ -508,8 +513,10 @@ class PrometheusController < ActionController::Base
 end
 ```
 
-`refresh_queue_gauges!` runs one `GROUP BY status` query to populate the
-gauges; the counters/histograms update automatically as events fire.
+`refresh_queue_gauges!` runs two `GROUP BY status` queries — one against
+`stern_scheduled_operations`, one against `stern_operation_attempts` — to
+populate the snapshot gauges; the counters/histograms update automatically
+as events fire.
 
 ## Console tips
 

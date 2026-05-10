@@ -49,6 +49,19 @@ module Stern
       )
     end
 
+    # Gauge: current row count of `stern_operation_attempts` by status. Pairs
+    # with the worker's auto-prune to surface "is the prune keeping up with
+    # insert rate" — sustained growth across ticks means the per-tick
+    # `max_batches` cap is too low for the workload.
+    # Not event-driven — call `refresh_queue_gauges!` to populate.
+    def operation_attempts_count
+      @operation_attempts_count ||= registry.gauge(
+        :stern_operation_attempts_count,
+        docstring: "Current number of operation attempts by status",
+        labels: [ :status ],
+      )
+    end
+
     # Counter: SOPs picked off the pending queue by `enqueue_list`.
     def sop_picked_total
       @sop_picked_total ||= registry.counter(
@@ -91,13 +104,20 @@ module Stern
       )
     end
 
-    # Refreshes the queue-depth gauges by querying `stern_scheduled_operations`
-    # grouped by status. Call this on each Prometheus scrape (or on a timer).
-    # One SELECT, ~O(rows) — cheap relative to anything else the scheduler does.
+    # Refreshes the snapshot gauges that mirror DB state — queue depth and
+    # operation-attempt counts. Call this on each Prometheus scrape (or on a
+    # timer). Two GROUP BY queries, both cheap relative to anything else the
+    # scheduler does. Name kept for backwards compatibility with existing
+    # callers (e.g. `Stern::Workers::Runner#refresh_gauges`).
     def refresh_queue_gauges!
-      counts = ::Stern::ScheduledOperation.group(:status).count
+      sop_counts = ::Stern::ScheduledOperation.group(:status).count
       ::Stern::ScheduledOperation.statuses.each_key do |status|
-        sop_count.set(counts[status] || 0, labels: { status: status })
+        sop_count.set(sop_counts[status] || 0, labels: { status: status })
+      end
+
+      attempt_counts = ::Stern::OperationAttempt.group(:status).count
+      ::Stern::OperationAttempt.statuses.each_key do |status|
+        operation_attempts_count.set(attempt_counts[status] || 0, labels: { status: status })
       end
     end
 
@@ -105,6 +125,7 @@ module Stern
     def reset!
       @registry = nil
       @sop_count = nil
+      @operation_attempts_count = nil
       @sop_picked_total = nil
       @sop_terminal_total = nil
       @sop_process_duration_seconds = nil

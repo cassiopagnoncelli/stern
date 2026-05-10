@@ -111,7 +111,9 @@ module Stern
     describe ".refresh_queue_gauges!" do
       before { described_class.install_subscribers! }
       before { ScheduledOperation.delete_all }
+      before { OperationAttempt.delete_all }
       after { ScheduledOperation.delete_all }
+      after { OperationAttempt.delete_all }
 
       it "populates the sop_count gauge from DB status counts" do
         3.times do |i|
@@ -133,6 +135,28 @@ module Stern
         expect(described_class.sop_count.get(labels: { status: "finished" })).to eq(1)
         # Every enum value is set (zero for empty buckets).
         expect(described_class.sop_count.get(labels: { status: "picked" })).to eq(0)
+      end
+
+      it "populates the operation_attempts_count gauge from DB status counts" do
+        2.times do
+          OperationAttempt.create!(
+            name: "ChargePayment", params: {}, status: :success,
+            attempted_at: Time.current,
+          )
+        end
+        OperationAttempt.create!(
+          name: "ChargePayment", params: {}, status: :failed,
+          attempted_at: Time.current,
+          error_class: "RuntimeError", error_message: "boom",
+        )
+
+        described_class.refresh_queue_gauges!
+
+        expect(described_class.operation_attempts_count.get(labels: { status: "success" })).to eq(2)
+        expect(described_class.operation_attempts_count.get(labels: { status: "failed" })).to eq(1)
+        # Empty buckets are still emitted as zero so a status that drops to
+        # nothing doesn't leave a stale value behind.
+        expect(described_class.operation_attempts_count.get(labels: { status: "pending" })).to eq(0)
       end
     end
 
