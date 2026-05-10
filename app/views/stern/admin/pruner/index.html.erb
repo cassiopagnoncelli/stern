@@ -2,7 +2,10 @@
 
 <%
   retention_label = ->(days) { days.nil? ? "default" : "#{days}d" }
-  status_row_classes = "grid grid-cols-[8rem_4rem_1fr_8rem] items-center gap-3 py-2"
+  retention_source = lambda do |days|
+    days.nil? ? "default" : "ENV"
+  end
+
   status_badge_classes = lambda do |status|
     case status
     when :success then "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200"
@@ -10,67 +13,124 @@
     when :pending then "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200"
     end
   end
+
+  source_pill_classes = lambda do |days|
+    if days.nil?
+      "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+    else
+      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200"
+    end
+  end
+
+  total_preview = @preview.values.sum
+  now = Time.current
+  cutoff_for = ->(days) { (now - days.days).in_time_zone.strftime("%Y-%m-%d %H:%M %Z") }
+  max_rows_per_run = Stern::Admin::PrunerController::MAX_BATCHES_PER_WEB_RUN * Stern::OperationAttemptPruner::DEFAULT_BATCH_SIZE
 %>
 
-<div class="max-w-3xl mx-auto p-6 space-y-6">
-  <div class="flex items-baseline justify-between">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Operation Attempt Pruner</h1>
-    <%= link_to "Back to Attempts", admin_attempts_path, class: "text-sm text-blue-600 dark:text-blue-400 hover:underline" %>
+<div class="max-w-4xl mx-auto p-6 space-y-6">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Operation Attempt Pruner</h1>
+      <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+        Hard-deletes old attempts past per-status retention windows. Cutoffs use your time zone (<%= Time.zone.name %>).
+      </p>
+    </div>
+    <%= link_to admin_attempts_path, class: "inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:underline" do %>
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+      Back to Attempts
+    <% end %>
   </div>
 
-  <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-6 space-y-4">
-    <div class="flex items-baseline justify-between">
+  <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 rounded-t-xl flex items-baseline justify-between">
       <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Configured retention</h2>
-      <span class="text-xs text-gray-500 dark:text-gray-400">From <code>STERN_PRUNE_*_DAYS</code></span>
+      <span class="text-xs text-gray-500 dark:text-gray-400">From <code>STERN_PRUNE_*_DAYS</code> · defaults: success=14d, failed=90d, pending=7d</span>
     </div>
-    <dl class="text-sm text-gray-700 dark:text-gray-300 grid grid-cols-3 gap-4">
-      <div>
-        <dt class="text-xs uppercase text-gray-500 dark:text-gray-400">Success</dt>
-        <dd class="mt-1 font-mono"><%= retention_label.call(@retention[:success_days]) %></dd>
-      </div>
-      <div>
-        <dt class="text-xs uppercase text-gray-500 dark:text-gray-400">Failed</dt>
-        <dd class="mt-1 font-mono"><%= retention_label.call(@retention[:failed_days]) %></dd>
-      </div>
-      <div>
-        <dt class="text-xs uppercase text-gray-500 dark:text-gray-400">Pending</dt>
-        <dd class="mt-1 font-mono"><%= retention_label.call(@retention[:pending_days]) %></dd>
-      </div>
-    </dl>
-    <p class="text-xs text-gray-500 dark:text-gray-400">
-      Defaults when unset: success=14d, failed=90d, pending=7d.
-    </p>
-  </section>
-
-  <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-6 space-y-4">
-    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Run a prune</h2>
-    <p class="text-sm text-gray-600 dark:text-gray-400">
-      Override retention for this run only. Leave a field blank to use the configured value.
-      The web run is bounded to <%= Stern::Admin::PrunerController::MAX_BATCHES_PER_WEB_RUN %>
-      batches (≈<%= Stern::Admin::PrunerController::MAX_BATCHES_PER_WEB_RUN * Stern::OperationAttemptPruner::DEFAULT_BATCH_SIZE %> rows).
-      For larger backlogs use <code>rake stern:operation_attempts:prune</code>.
-    </p>
-
-    <%= form_with url: admin_run_pruner_path, method: :post, local: true, html: { class: "space-y-4", data: { turbo_confirm: "Run the pruner now? This permanently deletes attempts past the cutoff." } } do |form| %>
-      <div class="space-y-2">
-        <% [ [ :success, :success_days ], [ :failed, :failed_days ], [ :pending, :pending_days ] ].each do |status, key| %>
-          <div class="<%= status_row_classes %>">
-            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium w-fit <%= status_badge_classes.call(status) %>">
+    <dl class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-200 dark:divide-gray-700">
+      <% [ [ :success, :success_days ], [ :failed, :failed_days ], [ :pending, :pending_days ] ].each do |status, key| %>
+        <div class="px-6 py-4">
+          <dt class="flex items-center gap-2">
+            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= status_badge_classes.call(status) %>">
               <%= status.to_s.titleize %>
             </span>
-            <%= form.number_field key,
-                placeholder: @effective[key].to_s,
-                min: 0,
-                class: "rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2 py-1 text-sm w-20" %>
-            <span class="text-xs text-gray-500 dark:text-gray-400">days; would delete now:</span>
-            <span class="font-mono text-sm text-gray-900 dark:text-gray-100 text-right"><%= number_with_delimiter(@preview[status]) %></span>
-          </div>
-        <% end %>
+            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide <%= source_pill_classes.call(@retention[key]) %>">
+              <%= retention_source.call(@retention[key]) %>
+            </span>
+          </dt>
+          <dd class="mt-2 font-mono text-lg text-gray-900 dark:text-gray-100"><%= retention_label.call(@retention[key]) %></dd>
+          <dd class="mt-1 text-xs text-gray-500 dark:text-gray-400">effective: <%= @effective[key] %>d</dd>
+        </div>
+      <% end %>
+    </dl>
+  </section>
+
+  <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 rounded-t-xl">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Run a prune</h2>
+      <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+        Override retention for this run only — leave a field blank to use the configured value.
+        Bounded to <%= number_with_delimiter(max_rows_per_run) %> rows per web run; for larger backlogs use
+        <code class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-900 text-xs">rake stern:operation_attempts:prune</code>.
+      </p>
+    </div>
+
+    <%= form_with url: admin_run_pruner_path, method: :post, local: true, html: { data: { turbo_confirm: "Run the pruner now? This permanently deletes attempts past the cutoff." } } do |form| %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-700/50 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            <tr>
+              <th scope="col" class="px-6 py-2 text-left font-medium">Status</th>
+              <th scope="col" class="px-6 py-2 text-left font-medium">Effective retention</th>
+              <th scope="col" class="px-6 py-2 text-left font-medium">Cutoff</th>
+              <th scope="col" class="px-6 py-2 text-left font-medium">Override (days)</th>
+              <th scope="col" class="px-6 py-2 text-right font-medium">Would delete now</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+            <% [ [ :success, :success_days ], [ :failed, :failed_days ], [ :pending, :pending_days ] ].each do |status, key| %>
+              <tr>
+                <td class="px-6 py-3">
+                  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium <%= status_badge_classes.call(status) %>">
+                    <%= status.to_s.titleize %>
+                  </span>
+                </td>
+                <td class="px-6 py-3 font-mono text-gray-900 dark:text-gray-100"><%= @effective[key] %>d</td>
+                <td class="px-6 py-3 text-gray-600 dark:text-gray-400 font-mono text-xs"><%= cutoff_for.call(@effective[key]) %></td>
+                <td class="px-6 py-3">
+                  <%= form.number_field key,
+                      placeholder: @effective[key].to_s,
+                      min: 0,
+                      class: "rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2 py-1 text-sm w-24" %>
+                </td>
+                <td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-100">
+                  <%= number_with_delimiter(@preview[status]) %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+          <tfoot class="bg-gray-50 dark:bg-gray-700/50">
+            <tr>
+              <td colspan="4" class="px-6 py-3 text-right text-xs uppercase tracking-wide font-medium text-gray-500 dark:text-gray-400">Total</td>
+              <td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-100"><%= number_with_delimiter(total_preview) %></td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
 
-      <div class="flex items-center justify-end gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+      <div class="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          <% if total_preview.zero? %>
+            Nothing past the cutoff right now.
+          <% else %>
+            Up to <strong><%= number_with_delimiter([ total_preview, max_rows_per_run ].min) %></strong> rows will be deleted on this run.
+          <% end %>
+        </p>
         <%= form.submit "Run prune",
-            class: "inline-flex items-center justify-center rounded-md shadow-sm text-white bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-indigo-400" %>
+            disabled: total_preview.zero?,
+            class: "inline-flex items-center justify-center rounded-md shadow-sm text-white bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-indigo-400" %>
       </div>
     <% end %>
   </section>

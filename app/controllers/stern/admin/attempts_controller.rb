@@ -19,7 +19,6 @@ module Stern
 
         @operation_names = ::Stern::Operation.list
         @statuses = ::Stern::OperationAttempt.statuses.keys
-        @retention_summary = retention_summary
 
         query = ::Stern::OperationAttemptsQuery.new(
           name: @name,
@@ -49,18 +48,6 @@ module Stern
         Time.zone.parse(value)
       rescue ArgumentError
         nil
-      end
-
-      # Surfaces the configured retention to operators so an empty-results
-      # page past the cutoff is not misread as "nothing happened." Reads
-      # ENV at request time — cheap, and avoids caching a value that may
-      # change between deploys.
-      def retention_summary
-        {
-          success: ENV["STERN_PRUNE_SUCCESS_DAYS"]&.to_i,
-          failed:  ENV["STERN_PRUNE_FAILED_DAYS"]&.to_i,
-          pending: ENV["STERN_PRUNE_PENDING_DAYS"]&.to_i
-        }
       end
     end
   end
