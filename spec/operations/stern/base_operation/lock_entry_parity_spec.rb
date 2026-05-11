@@ -84,7 +84,7 @@ module Stern
 
       [ "TransferBalance (customer → partner)",
         TransferBalance,
-        { from_customer_id: 2202, to_partner_id: 3303, amount: 500, currency: "BRL", allow_overdraft: true } ],
+        { from_customer_id: 2202, to_partner_id: 3303, amount: 500, currency: "BRL", allow_overdraft: true } ]
     ]
 
     cases.each do |label, klass, attrs, prep|
@@ -101,7 +101,7 @@ module Stern
             pair:         pair.to_sym,
             book_sub_gid: book_sub_gid,
             book_add_gid: book_add_gid,
-            currency:     currency,
+            currency:     currency
           }
           []
         end
@@ -120,7 +120,7 @@ module Stern
               sub_gid:  sub_gid,
               add_gid:  add_gid,
               amount:   amount,
-              currency: currency,
+              currency: currency
             }
             nil
           end
