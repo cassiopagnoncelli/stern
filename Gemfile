@@ -17,7 +17,7 @@ gem "psych", "5.2.2"
 group :development, :test do
   gem "pry"
   gem "dotenv-rails"
-  gem "shoulda-matchers", ">= 5.0"
+  gem "shoulda-matchers", "~> 7.0"
   gem "rubocop-rails-omakase", require: false
   gem "factory_bot_rails"
   gem "tracer"

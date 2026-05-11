@@ -43,7 +43,7 @@ Gem::Specification.new do |spec|
   # Development.
   spec.add_development_dependency "rspec-rails", "~> 8.0"
   spec.add_development_dependency "factory_bot_rails", "~> 6.0"
-  spec.add_development_dependency "shoulda-matchers", "~> 6.0"
+  spec.add_development_dependency "shoulda-matchers", "~> 7.0"
   spec.add_development_dependency "climate_control", "~> 1.2"
   spec.add_development_dependency "timecop", "~> 0.9"
 end
