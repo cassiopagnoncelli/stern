@@ -64,7 +64,11 @@ module Stern
 
     def perform(operation_id)
       raise ArgumentError if invalid? || operation_id.blank?
-      EntryPair.public_send("add_charge_#{payment_method}", charge_id, payment_id, amount, currency, operation_id:)
+      EntryPair.public_send("add_charge_#{payment_method}",
+        charge_id,    # uid     — joins the entry pair to its cause
+        charge_id,    # sub_gid — book_sub (payment_<method>) lands here
+        payment_id,   # add_gid — book_add (payment)          lands here
+        amount, currency, operation_id:)
     end
   end
 end
@@ -105,9 +109,13 @@ end
 
 `tuples_for_pair(pair_name, book_sub_gid, book_add_gid, currency)` looks up the
 named entry pair in `Stern.chart` and returns its two `(book, gid, currency)`
-tuples — one for `book_sub` and one for `book_add`. The two gids let custom
-entry pairs (declared under `entry_pairs:`) lock distinct entities per side;
-for symmetric pairs that share a single gid across both books, pass it twice.
+tuples — one for `book_sub` and one for `book_add`. The two gids you pass
+here are the same two you pass to `EntryPair.add_<pair>(uid, sub_gid,
+add_gid, …)`: each leg of the entry pair lands at *its own* gid, matching
+the lock side. When both legs naturally shard by the same entity (symmetric
+pairs like `adjust_<type>_balance`), pass the id twice; when they shard by
+different entities (`investment_invest`, `charge_<method>`,
+`charge_<method>_fee_<type>`), pass each leg's natural id.
 
 For operations that touch multiple pairs or additional books:
 

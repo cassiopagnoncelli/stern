@@ -17,39 +17,52 @@ see [README.md](README.md).
 ## The `gid` parameter
 
 Every entry is written at a `(book_id, gid, currency)` tuple. The `gid`
-("group id") is **the cause of the entry, not the owner of the balance**.
-Both legs of an `EntryPair.add_<pair>(uid, gid, …)` land at the single gid
-the caller passes — that gid identifies *what the entry is for* (a specific
-payment, withdrawal, refund, …), not necessarily the stakeholder whose
-balance moves.
+("group id") is **the cause an entry is keyed by, not necessarily the
+owner of the balance**. Each leg of an `EntryPair` lands at *its own* gid:
+`book_sub` at `sub_gid`, `book_add` at `add_gid`. The lock helper
+`tuples_for_pair(pair, book_sub_gid, book_add_gid, currency)` and the entry
+write `EntryPair.add_<pair>(uid, sub_gid, add_gid, …)` share the same
+`(sub_gid, add_gid)` shape so the lock side and the write side stay in
+lockstep.
+
+When a pair's two books shard by the same entity (most balance pairs:
+`adjust_<type>_balance`, `lock_<type>_balance`, `confirm_deposit_<type>`),
+callers pass the same id twice. When they shard by different entities
+(`investment_invest`: customer ↔ investment; `charge_<method>`: charge ↔
+payment), each leg lands at its natural sharding.
 
 ### Worked example: `ChargePaymentFee`
 
-When a payment fee is debited from a merchant, both legs land at `gid =
-payment_id`:
+When a payment fee is debited from a merchant, the merchant's available
+slice lands at `gid = merchant_id` and the per-payment fee accumulator
+lands at `gid = payment_id`:
 
 ```ruby
-# app/operations/stern/general/charge_payment_fee.rb (paraphrased)
+# app/operations/stern/general/charge_payment_fee.rb (via the
+# performs_stakeholder_pair macro, paraphrased)
 EntryPair.add_charge_pix_fee_merchant(
   merchant_id,   # uid — joins the entry pair to its cause
-  payment_id,    # gid — the cause these entries are keyed by
+  merchant_id,   # sub_gid — book_sub (merchant_available) lands here
+  payment_id,    # add_gid — book_add (payment_fee_pix)    lands here
   amount, currency, operation_id:,
 )
-# => Entry(book: merchant_available,  gid: payment_id, amount: -fee)
-# => Entry(book: payment_fee_pix,     gid: payment_id, amount: +fee)
+# => Entry(book: merchant_available, gid: merchant_id, amount: -fee)
+# => Entry(book: payment_fee_pix,    gid: payment_id,  amount: +fee)
 ```
 
-The same `merchant_available` book also carries entries written at `gid =
-merchant_id` (deposits, credit applications, transfers) and at other causes
-(withdrawal locks, refund locks). Each subset captures one cause's
-contribution to the merchant's available balance.
+The same `merchant_available` book also carries entries at `gid =
+merchant_id` written by deposits, credit applications, transfers,
+refund/chargeback reversals, and other fee charges — they all roll up into
+the same per-merchant slice. `payment_fee_pix` is sharded by payment so
+each payment's fee history is auditable on its own.
 
-`target_tuples` is independent of where entries land. `ChargePaymentFee`
-returns `(merchant_available, merchant_id, currency)` plus
-`(payment_fee_pix, payment_id, currency)`, so two fee charges on the **same**
-merchant serialize while charges on different merchants run in parallel. The
-lock key is the stakeholder; the entry's gid is the cause — they diverge by
-design.
+`target_tuples` mirrors the entry write: `ChargePaymentFee` locks
+`(merchant_available, merchant_id, currency)` and `(payment_fee_pix,
+payment_id, currency)`. Two fee charges against the same merchant serialize
+(same `merchant_available@merchant_id` tuple); two fee charges against
+different merchants on the same payment also serialize on the
+`payment_fee_pix@payment_id` tuple. That's intentional — the lock
+granularity matches the write granularity, by construction.
 
 ### Invariant: per-gid reads are partial
 
@@ -176,7 +189,7 @@ module Stern
       raise ArgumentError if invalid?
       EntryPair.add_merchant_balance(
         SecureRandom.random_number(1 << 30),
-        merchant_id, amount, currency, operation_id:,
+        merchant_id, merchant_id, amount, currency, operation_id:,
       )
     end
   end
@@ -196,22 +209,24 @@ When adding an operation:
 
 1. **Declare `inputs`** — every kwarg you accept. Drives the audit-log params
    hash. Use `validates_exactly_one_of` for stakeholder-pick ops.
-2. **Pick the entry's `gid` deliberately** — see [The `gid` parameter](#the-gid-parameter).
-   Choose the cause you want to slice the book by later: payment id for
-   per-payment fees, withdrawal id for per-withdrawal accounting, stakeholder
-   id when the cause *is* the stakeholder (deposits, transfers, credits).
-   Different ops on the same book may choose different gid kinds — that's
-   intentional, not a smell.
+2. **Pick `sub_gid` and `add_gid` deliberately** — see [The `gid` parameter](#the-gid-parameter).
+   Each leg of an entry pair lands at *its own* gid: the `book_sub` entry at
+   `sub_gid`, the `book_add` entry at `add_gid`. Choose the cause you want
+   to slice each book by later: payment id for per-payment fee accumulators,
+   stakeholder id for the stakeholder's available slice, withdrawal id for
+   per-withdrawal accounting. When both legs naturally shard by the same
+   entity, pass the same id twice.
 3. **Declare `target_tuples`** — every `(book, gid, currency)` the op reads
    or writes, typically via `tuples_for_pair(pair_name, book_sub_gid,
-   book_add_gid, currency)`. The two lock gids may differ from each other
-   *and* from the gid the entries are written at; they're the lock
-   granularity, not the entry key. Declaring extras is harmless; declaring
-   too few is a correctness bug.
+   book_add_gid, currency)`. The two gids you pass here are the same two
+   you pass to `EntryPair.add_<pair>(uid, sub_gid, add_gid, …)` — the lock
+   side and the write side stay in lockstep by construction. Declaring
+   extras is harmless; declaring too few is a correctness bug.
 4. **Implement `perform(operation_id)`** — runs inside a transaction with
-   advisory locks already held. Use `EntryPair.add_<pair>(uid, gid, …)` for
-   ledger writes; use `runtime_check` for state-dependent preconditions
-   (e.g. balance pre-checks via `require_sufficient_balance!`).
+   advisory locks already held. Use `EntryPair.add_<pair>(uid, sub_gid,
+   add_gid, …)` for ledger writes, passing the same `(sub_gid, add_gid)`
+   you locked; use `runtime_check` for state-dependent preconditions (e.g.
+   balance pre-checks via `require_sufficient_balance!`).
 5. **Add a concurrency spec** if `perform` reads-then-writes — see
    [AGENTS.md](AGENTS.md#testing-a-new-operation).
 

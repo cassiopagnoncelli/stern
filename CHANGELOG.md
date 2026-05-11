@@ -7,6 +7,55 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **`EntryPair` primitives now require per-leg gids.** The chart-derived
+  singletons `EntryPair.add_<pair>(uid, gid, amount, currency, …)` and the
+  underlying `EntryPair.double_entry_add(code, gid, uid, …)` both grew a
+  second positional `gid` slot so each leg lands at *its own* gid:
+  - `EntryPair.add_<pair>(uid, sub_gid, add_gid, amount, currency, timestamp:, operation_id:)`
+  - `EntryPair.double_entry_add(code, sub_gid, add_gid, uid, book_add, book_sub, amount, currency, timestamp, operation_id)`
+
+  The positional shape mirrors `tuples_for_pair(pair, book_sub_gid,
+  book_add_gid, currency)` so the lock side and the write side stay in
+  lockstep by construction. When a pair's two books naturally shard by the
+  same entity (most balance pairs), pass the same id twice; when they shard
+  by different entities (`investment_invest`, `charge_<method>`,
+  `charge_<method>_fee_<type>`), pass each leg's natural id.
+
+  Behaviour change for operations that previously wrote both legs at one
+  gid even though their lock side declared two: `Refund` (settle leg),
+  `Invest`, `Divest`, `ChargePayment`, `ChargePaymentFee`,
+  `ReintegratePayment`, `SplitPayment`, `CancelRefund`, `ReverseRefund`,
+  `ReverseChargeback`. Their entries now land at the per-book natural gid
+  the lock side already named. The cross-gid sum per `(book, currency)` is
+  unchanged; only the per-gid slices shift.
+
+- **`Divest` lock-side fix.** `target_tuples` previously called
+  `tuples_for_pair(:investment_trade_operation, investment_id, customer_id,
+  currency)` — `sub_gid` / `add_gid` were inverted relative to the books'
+  natural sharding. Corrected to `(customer_id, investment_id)` to match
+  `customer_available` (per-customer) / `customer_investment`
+  (per-investment).
+
+- **`performs_stakeholder_pair` macro: `entry_gid:` option dropped.** With
+  the per-leg gid signature there is no longer a single "entry gid" to
+  override — each leg writes at its lock-side gid. `entry_uid:` is kept
+  for the `EntryPair` record's grouping id. `CancelRefund` had
+  `entry_gid: :refund_id`; removed (book_add `<type>_available` now lands
+  at `gid=stakeholder_id`, was at `gid=refund_id`). `ReverseRefund` kept
+  `entry_uid: :refund_id` unchanged.
+
+### Migration note for existing deployments
+
+Entries written under the old behaviour stay where they were (the ledger
+is append-only). New writes go to the corrected gids. Per-gid balance
+reads that mix pre- and post-refactor entries on the affected books
+(`refund_confirmed`, `<type>_available`, `payment_fee_<method>`,
+`payment_<method>`, `chargeback_loss`, `customer_investment`,
+`customer_available`) will show a hybrid picture until a one-time
+reconciliation pass is run. Cross-gid book totals are unaffected.
+
 ## [1.9.5] — 2026-05-11
 
 ## [1.9.4] — 2026-05-10
