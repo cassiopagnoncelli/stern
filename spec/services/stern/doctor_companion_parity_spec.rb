@@ -41,9 +41,9 @@ module Stern
     end
 
     def seed_balanced_merchant!
-      EntryPair.add_merchant_available(1, gid, 100, brl, operation_id: operation.id)
-      EntryPair.add_merchant_available(2, gid, 50, brl, operation_id: operation.id)
-      EntryPair.add_merchant_available(3, other_gid, 25, brl, operation_id: operation.id)
+      EntryPair.add_merchant_available(1, gid, gid, 100, brl, operation_id: operation.id)
+      EntryPair.add_merchant_available(2, gid, gid, 50, brl, operation_id: operation.id)
+      EntryPair.add_merchant_available(3, other_gid, other_gid, 25, brl, operation_id: operation.id)
     end
 
     context "when the ledger is healthy" do

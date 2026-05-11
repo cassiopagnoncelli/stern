@@ -22,7 +22,7 @@ module Stern
 
     def seed(gid:, amount:)
       EntryPair.add_merchant_credit(
-        SecureRandom.random_number(1 << 30), gid, amount, brl, operation_id: new_op.id,
+        SecureRandom.random_number(1 << 30), gid, gid, amount, brl, operation_id: new_op.id,
       )
     end
 
@@ -52,7 +52,7 @@ module Stern
 
         expect {
           EntryPair.add_merchant_credit(
-            SecureRandom.random_number(1 << 30), gid, -100, brl, operation_id: new_op.id,
+            SecureRandom.random_number(1 << 30), gid, gid, -100, brl, operation_id: new_op.id,
           )
         }.to raise_error(::Stern::BalanceNonNegativeViolation)
 
@@ -64,7 +64,7 @@ module Stern
         gid = 970_102
         expect {
           EntryPair.add_merchant_credit(
-            SecureRandom.random_number(1 << 30), gid, -5, brl, operation_id: new_op.id,
+            SecureRandom.random_number(1 << 30), gid, gid, -5, brl, operation_id: new_op.id,
           )
         }.to raise_error(::Stern::InsufficientFunds)
       end
@@ -73,7 +73,7 @@ module Stern
         gid = 970_103
         expect {
           EntryPair.add_merchant_credit(
-            SecureRandom.random_number(1 << 30), gid, 50, brl, operation_id: new_op.id,
+            SecureRandom.random_number(1 << 30), gid, gid, 50, brl, operation_id: new_op.id,
           )
         }.not_to raise_error
 
@@ -96,7 +96,7 @@ module Stern
 
           def perform(operation_id)
             ::Stern::EntryPair.add_merchant_credit(
-              uid, merchant_id, amount, currency, operation_id:,
+              uid, merchant_id, merchant_id, amount, currency, operation_id:,
             )
           end
         end
@@ -125,7 +125,7 @@ module Stern
 
           def perform(operation_id)
             ::Stern::EntryPair.add_merchant_credit(
-              uid, merchant_id, amount, currency, operation_id:,
+              uid, merchant_id, merchant_id, amount, currency, operation_id:,
             )
           end
         end
@@ -163,7 +163,7 @@ module Stern
 
         expect {
           EntryPair.add_merchant_credit(
-            SecureRandom.random_number(1 << 30), gid, -500, brl,
+            SecureRandom.random_number(1 << 30), gid, gid, -500, brl,
             timestamp: 1.hour.ago, operation_id: new_op.id,
           )
         }.to raise_error(::Stern::BalanceNonNegativeViolation)
@@ -175,11 +175,11 @@ module Stern
         gid = 970_402
 
         EntryPair.add_merchant_credit(
-          SecureRandom.random_number(1 << 30), gid, 100, brl,
+          SecureRandom.random_number(1 << 30), gid, gid, 100, brl,
           timestamp: 3.hours.ago, operation_id: new_op.id,
         )
         EntryPair.add_merchant_credit(
-          SecureRandom.random_number(1 << 30), gid, -80, brl,
+          SecureRandom.random_number(1 << 30), gid, gid, -80, brl,
           timestamp: 1.hour.ago, operation_id: new_op.id,
         )
 
@@ -187,7 +187,7 @@ module Stern
 
         expect {
           EntryPair.add_merchant_credit(
-            SecureRandom.random_number(1 << 30), gid, -50, brl,
+            SecureRandom.random_number(1 << 30), gid, gid, -50, brl,
             timestamp: 2.hours.ago, operation_id: new_op.id,
           )
         }.to raise_error(::Stern::BalanceNonNegativeViolation)
@@ -202,11 +202,11 @@ module Stern
         gid = 970_501
 
         EntryPair.add_merchant_credit(
-          SecureRandom.random_number(1 << 30), gid, 100, brl,
+          SecureRandom.random_number(1 << 30), gid, gid, 100, brl,
           timestamp: 2.hours.ago, operation_id: new_op.id,
         )
         EntryPair.add_merchant_credit(
-          SecureRandom.random_number(1 << 30), gid, -80, brl,
+          SecureRandom.random_number(1 << 30), gid, gid, -80, brl,
           timestamp: 1.hour.ago, operation_id: new_op.id,
         )
 
@@ -236,7 +236,7 @@ module Stern
             raise ::Stern::InsufficientFunds if balance + amount < 0
 
             ::Stern::EntryPair.add_merchant_credit(
-              uid, merchant_id, amount, currency, operation_id:,
+              uid, merchant_id, merchant_id, amount, currency, operation_id:,
             )
           end
         end
@@ -274,7 +274,7 @@ module Stern
             raise ::Stern::InsufficientFunds if balance + amount < 0
 
             ::Stern::EntryPair.add_merchant_credit(
-              uid, merchant_id, amount, currency, operation_id:,
+              uid, merchant_id, merchant_id, amount, currency, operation_id:,
             )
           end
         end
@@ -289,7 +289,7 @@ module Stern
 
           def perform(operation_id)
             ::Stern::EntryPair.add_merchant_credit(
-              uid, merchant_id, amount, currency, operation_id:,
+              uid, merchant_id, merchant_id, amount, currency, operation_id:,
             )
           end
         end

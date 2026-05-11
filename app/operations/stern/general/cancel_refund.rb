@@ -29,7 +29,6 @@ module Stern
       sub_gid: :refund_id,
       add_gid: :resolved,
       entry_uid: :resolved,
-      entry_gid: :refund_id,
       requires_balance: { book: :refund_locked, label: "locked balance", gid: :refund_id }
   end
 end

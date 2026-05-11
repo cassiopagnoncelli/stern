@@ -84,20 +84,25 @@ module Stern
     describe "#call" do
       before { Repair.clear(confirm: true) }
 
-      it "credits merchant_available at gid=merchant_id (funder slot)" do
+      it "credits merchant_available@merchant_id and drains chargeback_loss@chargeback_id" do
         confirm_chargeback({ merchant_id: }, amount: 500)
 
         described_class.new(**valid_inputs(amount: 500)).call
 
-        expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(500)
+        # Full reversal returns the merchant to neutral (the -500 debit from
+        # reintegrate is now cancelled by the +500 reverse credit) and
+        # zeroes the loss book.
+        expect(::Stern.balance(merchant_id,   :merchant_available, :BRL)).to eq(0)
+        expect(::Stern.balance(chargeback_id, :chargeback_loss,    :BRL)).to eq(0)
       end
 
-      it "credits partner_available at gid=partner_id for partner-funded chargebacks" do
+      it "credits partner_available@partner_id and drains chargeback_loss@chargeback_id for partner-funded chargebacks" do
         confirm_chargeback({ partner_id: }, amount: 500)
 
         described_class.new(**valid_inputs(merchant_id: nil, partner_id:, amount: 500)).call
 
-        expect(::Stern.balance(partner_id, :partner_available, :BRL)).to eq(500)
+        expect(::Stern.balance(partner_id,    :partner_available, :BRL)).to eq(0)
+        expect(::Stern.balance(chargeback_id, :chargeback_loss,   :BRL)).to eq(0)
       end
 
       it "writes one reverse_chargeback_merchant entry pair keyed by chargeback_id" do
@@ -121,12 +126,15 @@ module Stern
         expect(EntryPair.last.code).to eq("reverse_chargeback_partner")
       end
 
-      it "supports partial reversal: 300 of 500 credits 300 to merchant_available@merchant_id" do
+      it "supports partial reversal: 300 of 500 leaves merchant_available@merchant_id at -200 and chargeback_loss@chargeback_id at 200" do
         confirm_chargeback({ merchant_id: }, amount: 500)
 
         described_class.new(**valid_inputs(amount: 300)).call
 
-        expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(300)
+        # confirm debited merchant_available by 500 and credited chargeback_loss by 500;
+        # the partial reverse credits 300 back and drains 300 of the loss.
+        expect(::Stern.balance(merchant_id,   :merchant_available, :BRL)).to eq(-200)
+        expect(::Stern.balance(chargeback_id, :chargeback_loss,    :BRL)).to eq(200)
       end
 
       it "is idempotent under the same idem_key with identical params" do

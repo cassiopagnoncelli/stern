@@ -17,8 +17,8 @@ module Stern
     end
 
     def perform(operation_id)
-      EntryPair.add_investment_trade(investment_id, investment_id, amount, currency, operation_id:) unless amount.zero?
-      EntryPair.add_investment_trade_fee(investment_id, investment_id, -fee, currency, operation_id:) unless fee.zero?
+      EntryPair.add_investment_trade(investment_id, investment_id, investment_id, amount, currency, operation_id:) unless amount.zero?
+      EntryPair.add_investment_trade_fee(investment_id, investment_id, investment_id, -fee, currency, operation_id:) unless fee.zero?
     end
   end
 end

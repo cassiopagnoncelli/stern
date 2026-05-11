@@ -102,20 +102,24 @@ module Stern
     describe "#call" do
       before { Repair.clear(confirm: true) }
 
-      it "credits merchant_available at gid=merchant_id (funder slot)" do
+      it "debits customer_available@customer_id and credits merchant_available@merchant_id (funder slot)" do
         settle_refund({ merchant_id: }, amount: 700)
 
         described_class.new(**valid_inputs(amount: 700)).call
 
-        expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(700)
+        # Full reversal returns customer to zero and merchant to neutral
+        # (-700 from reintegrate + 700 from reverse).
+        expect(::Stern.balance(customer_id, :customer_available, :BRL)).to eq(0)
+        expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(0)
       end
 
-      it "credits partner_available at gid=partner_id for partner-funded refunds" do
+      it "debits customer_available@customer_id and credits partner_available@partner_id for partner-funded refunds" do
         settle_refund({ partner_id: }, amount: 700)
 
         described_class.new(**valid_inputs(merchant_id: nil, partner_id:, amount: 700)).call
 
-        expect(::Stern.balance(partner_id, :partner_available, :BRL)).to eq(700)
+        expect(::Stern.balance(customer_id, :customer_available, :BRL)).to eq(0)
+        expect(::Stern.balance(partner_id,  :partner_available,  :BRL)).to eq(0)
       end
 
       it "writes one entry pair (reverse_refund_merchant) keyed by refund_id" do
@@ -139,12 +143,13 @@ module Stern
         expect(EntryPair.last.code).to eq("reverse_refund_partner")
       end
 
-      it "supports partial reversal: 300 of 700 credits 300 to merchant_available@merchant_id" do
+      it "supports partial reversal: 300 of 700 leaves customer_available@customer_id at 400 and merchant_available@merchant_id at -400" do
         settle_refund({ merchant_id: }, amount: 700)
 
         described_class.new(**valid_inputs(amount: 300)).call
 
-        expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(300)
+        expect(::Stern.balance(customer_id, :customer_available, :BRL)).to eq(400)
+        expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(-400)
       end
 
       it "raises InsufficientFunds when amount exceeds customer_available@customer_id" do
@@ -172,7 +177,12 @@ module Stern
 
         described_class.new(**valid_inputs(amount: 500, allow_overdraft: true)).call
 
-        expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(500)
+        # The funder was debited 100 by the initial reintegrate and now
+        # credited 500 by the over-reverse → net +400.
+        expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(400)
+        # The customer was credited 100 by the settle and now debited 500 by
+        # the over-reverse → net -400.
+        expect(::Stern.balance(customer_id, :customer_available, :BRL)).to eq(-400)
       end
 
       it "is idempotent under the same idem_key with identical params" do

@@ -15,7 +15,7 @@ module Stern
     end
 
     def perform(operation_id)
-      EntryPair.add_confirm_chargeback(chargeback_id, chargeback_id, amount, currency, operation_id:)
+      EntryPair.add_confirm_chargeback(chargeback_id, chargeback_id, chargeback_id, amount, currency, operation_id:)
     end
   end
 end

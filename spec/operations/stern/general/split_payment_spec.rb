@@ -122,10 +122,13 @@ module Stern
         )
       end
 
-      it "debits payment and credits merchant_pending at gid=merchant_id" do
+      it "debits payment@payment_id and credits merchant_pending@merchant_id" do
         described_class.new(**valid_inputs).call
-        expect(::Stern.balance(merchant_id, :payment, :BRL)).to eq(-5000)
+        expect(::Stern.balance(payment_id,  :payment,          :BRL)).to eq(-5000)
         expect(::Stern.balance(merchant_id, :merchant_pending, :BRL)).to eq(5000)
+        # Cross-gid leakage is zero.
+        expect(::Stern.balance(merchant_id, :payment,          :BRL)).to eq(0)
+        expect(::Stern.balance(payment_id,  :merchant_pending, :BRL)).to eq(0)
       end
 
       it "writes split_payment_partner for the partner variant" do

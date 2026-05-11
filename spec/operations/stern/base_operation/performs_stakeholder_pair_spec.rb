@@ -36,17 +36,17 @@ module Stern
         expect(op.target_tuples).to eq([ :sentinel ])
       end
 
-      it "generates perform that writes EntryPair.add_<pair>(stk, stk, amount, currency, operation_id:)" do
+      it "generates perform that writes EntryPair.add_<pair>(uid, sub_gid, add_gid, amount, currency, operation_id:)" do
         op = klass.new(customer_id:, amount: 250, currency: "BRL")
         expect(EntryPair).to receive(:public_send)
-          .with(:add_adjust_customer_balance, customer_id, customer_id, 250, "BRL", operation_id: operation_id)
+          .with(:add_adjust_customer_balance, customer_id, customer_id, customer_id, 250, "BRL", operation_id: operation_id)
         op.perform(operation_id)
       end
 
       it "interpolates :type from the resolved stakeholder branch" do
         op = klass.new(partner_id:, amount: 50, currency: "BRL")
         expect(EntryPair).to receive(:public_send)
-          .with(:add_adjust_partner_balance, partner_id, partner_id, 50, "BRL", operation_id: operation_id)
+          .with(:add_adjust_partner_balance, partner_id, partner_id, partner_id, 50, "BRL", operation_id: operation_id)
         op.perform(operation_id)
       end
 
@@ -74,33 +74,32 @@ module Stern
         op.target_tuples
       end
 
-      it "passes refund_id (entry_uid) to EntryPair.add_*, not the lock sub_gid" do
+      it "passes refund_id (entry_uid) as uid and writes each leg at its lock-side gid" do
         op = klass.new(merchant_id:, customer_id:, refund_id:, amount: 100, currency: "BRL")
         expect(EntryPair).to receive(:public_send)
-          .with(:add_reverse_refund_merchant, refund_id, merchant_id, 100, "BRL", operation_id: operation_id)
+          .with(:add_reverse_refund_merchant, refund_id, customer_id, merchant_id, 100, "BRL", operation_id: operation_id)
         op.perform(operation_id)
       end
     end
 
-    describe "entry_uid + entry_gid swap (CancelRefund-style)" do
+    describe "entry_uid override (CancelRefund-style)" do
       let(:klass) do
         define_op(inputs: %i[merchant_id partner_id refund_id amount currency]) do
           performs_stakeholder_pair "cancel_refund_%{type}",
             sub_gid: :refund_id,
             add_gid: :resolved,
-            entry_uid: :resolved,
-            entry_gid: :refund_id
+            entry_uid: :resolved
         end
       end
 
-      it "locks (refund_id, stakeholder_id) but writes the entry at (uid: stakeholder_id, gid: refund_id)" do
+      it "locks (refund_id, stakeholder_id) and writes the entry at (uid: stakeholder_id, sub_gid: refund_id, add_gid: stakeholder_id)" do
         op = klass.new(merchant_id:, refund_id:, amount: 1, currency: "BRL")
         expect(op).to receive(:tuples_for_pair)
           .with(:cancel_refund_merchant, refund_id, merchant_id, "BRL")
         op.target_tuples
 
         expect(EntryPair).to receive(:public_send)
-          .with(:add_cancel_refund_merchant, merchant_id, refund_id, 1, "BRL", operation_id: operation_id)
+          .with(:add_cancel_refund_merchant, merchant_id, refund_id, merchant_id, 1, "BRL", operation_id: operation_id)
         op.perform(operation_id)
       end
     end
@@ -200,7 +199,7 @@ module Stern
         expect(op).to receive(:apply_available_credit)
           .with(partner_id, :partner, operation_id).ordered
         expect(EntryPair).to receive(:public_send)
-          .with(:add_charge_some_fee_partner, partner_id, payment_id, 100, "BRL", operation_id: operation_id)
+          .with(:add_charge_some_fee_partner, partner_id, partner_id, payment_id, 100, "BRL", operation_id: operation_id)
           .ordered
         op.perform(operation_id)
       end
@@ -224,7 +223,7 @@ module Stern
       it "uses the interpolated name when writing the entry pair" do
         op = klass.new(customer_id:, payment_id:, payment_method: "credit_card", amount: 1, currency: "BRL")
         expect(EntryPair).to receive(:public_send)
-          .with(:add_charge_credit_card_fee_customer, customer_id, payment_id, 1, "BRL", operation_id: operation_id)
+          .with(:add_charge_credit_card_fee_customer, customer_id, customer_id, payment_id, 1, "BRL", operation_id: operation_id)
         op.perform(operation_id)
       end
     end

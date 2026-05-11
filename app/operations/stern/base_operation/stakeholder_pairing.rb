@@ -42,18 +42,18 @@ module Stern
         # `merchant`/`partner` only — for ops where `customer_id` is a recipient,
         # not a stakeholder candidate (see `ReverseRefund`).
         #
-        # `sub_gid:` / `add_gid:` choose the gid passed to `tuples_for_pair` for
-        # each side, and (by default) the matching arg to `EntryPair.add_<pair>`.
-        # Pass `:resolved` (default) for the id returned by the configured
-        # helper, or any input symbol (e.g. `:payment_id`, `:refund_id`).
+        # `sub_gid:` / `add_gid:` choose the gid for each leg of the entry
+        # pair: `book_sub` lands at `sub_gid`, `book_add` lands at `add_gid`.
+        # The same `(sub_gid, add_gid)` is passed to `tuples_for_pair` so the
+        # lock side and the write side stay in lockstep. Pass `:resolved`
+        # (default) for the id returned by the configured helper, or any
+        # input symbol (e.g. `:payment_id`, `:refund_id`).
         #
-        # `entry_uid:` / `entry_gid:` override the args to `EntryPair.add_<pair>`
-        # (entry uid / cause-of-entry, and the gid both legs land at) for the
-        # rare cases where the lock-side gids and the entry-side gids diverge —
-        # `ReverseRefund` writes the entry at `(uid: refund_id, gid: funder_id)`
-        # while locking on `customer_id`/`funder_id`; `CancelRefund` writes at
-        # `(uid: stakeholder_id, gid: refund_id)` while locking on
-        # `refund_id`/`stakeholder_id`. Default to `sub_gid` / `add_gid`.
+        # `entry_uid:` overrides the cause-of-entry id stored on the
+        # `EntryPair` record's `uid` field, for the cases where the
+        # grouping/cause id differs from the sub-side gid — e.g.
+        # `ReverseRefund` keys the entry by `refund_id` even though
+        # `sub_gid: :customer_id`. Defaults to `sub_gid`.
         #
         # `requires_balance:` declares a friendly pre-check via
         # `require_sufficient_balance!`. Keys:
@@ -80,12 +80,10 @@ module Stern
                                       sub_gid: :resolved,
                                       add_gid: :resolved,
                                       entry_uid: nil,
-                                      entry_gid: nil,
                                       requires_balance: nil,
                                       requires_credit_application: false)
           helper       = using
           uid_slot     = entry_uid || sub_gid
-          gid_slot     = entry_gid || add_gid
           balance_cfg  = requires_balance
           needs_credit = requires_credit_application
 
@@ -108,7 +106,8 @@ module Stern
             pair = "add_#{pair_template_for(pair_template, type)}".to_sym
             EntryPair.public_send(pair,
               gid_for_slot(uid_slot, rid),
-              gid_for_slot(gid_slot, rid),
+              gid_for_slot(sub_gid,  rid),
+              gid_for_slot(add_gid,  rid),
               amount, currency, operation_id:)
           end
 
@@ -208,7 +207,7 @@ module Stern
 
         EntryPair.public_send(
           "add_apply_#{stakeholder_type}_credit".to_sym,
-          stakeholder_id, stakeholder_id, credit_to_apply, currency, operation_id:,
+          stakeholder_id, stakeholder_id, stakeholder_id, credit_to_apply, currency, operation_id:,
         )
       end
 

@@ -16,7 +16,7 @@ module Stern
     end
 
     def target_tuples
-      tuples_for_pair(:investment_trade_operation, investment_id, customer_id, currency)
+      tuples_for_pair(:investment_trade_operation, customer_id, investment_id, currency)
     end
 
     # Reads the per-investment balance under the operation's advisory lock and
@@ -43,7 +43,7 @@ module Stern
     def perform(operation_id)
       return if amount.zero?
 
-      EntryPair.add_investment_trade_operation(customer_id, investment_id, -amount, currency, operation_id:)
+      EntryPair.add_investment_trade_operation(customer_id, customer_id, investment_id, -amount, currency, operation_id:)
     end
   end
 end

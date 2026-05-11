@@ -78,10 +78,13 @@ module Stern
     describe "#call" do
       before { Repair.clear(confirm: true) }
 
-      it "credits refund_locked at refund_id and debits merchant_available at refund_id" do
+      it "credits refund_locked@refund_id and debits merchant_available@merchant_id" do
         described_class.new(**valid_inputs).call
-        expect(::Stern.balance(refund_id, :refund_locked, :BRL)).to eq(700)
-        expect(::Stern.balance(refund_id, :merchant_available, :BRL)).to eq(-700)
+        expect(::Stern.balance(refund_id,   :refund_locked,      :BRL)).to eq(700)
+        expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(-700)
+        # Cross-gid leakage is zero.
+        expect(::Stern.balance(refund_id,   :merchant_available, :BRL)).to eq(0)
+        expect(::Stern.balance(merchant_id, :refund_locked,      :BRL)).to eq(0)
       end
 
       it "writes lock_refund_merchant for merchant + refund" do

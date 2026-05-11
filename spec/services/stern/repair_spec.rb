@@ -10,7 +10,7 @@ module Stern
 
     def seed_entries(count: 3, amount: 100)
       count.times do |i|
-        EntryPair.add_merchant_available(i + 1, gid, amount, currency, operation_id: operation.id)
+        EntryPair.add_merchant_available(i + 1, gid, gid, amount, currency, operation_id: operation.id)
       end
     end
 

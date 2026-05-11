@@ -12,7 +12,7 @@ module Stern
     before { Repair.clear(confirm: true) }
 
     def seed(uid, amount, currency, account = gid)
-      EntryPair.add_merchant_available(uid, account, amount, currency, operation_id: operation.id)
+      EntryPair.add_merchant_available(uid, account, account, amount, currency, operation_id: operation.id)
     end
 
     describe "#call" do

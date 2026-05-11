@@ -132,10 +132,13 @@ module Stern
         )
       end
 
-      it "credits payment and debits charged_pix, both at gid=payment_id" do
+      it "credits payment@payment_id and debits charged_pix@charge_id" do
         described_class.new(**valid_inputs).call
-        expect(::Stern.balance(payment_id, :payment, :BRL)).to eq(9900)
-        expect(::Stern.balance(payment_id, :charged_pix, :BRL)).to eq(-9900)
+        expect(::Stern.balance(payment_id, :payment,     :BRL)).to eq(9900)
+        expect(::Stern.balance(charge_id,  :charged_pix, :BRL)).to eq(-9900)
+        # Cross-gid leakage is zero.
+        expect(::Stern.balance(charge_id,  :payment,     :BRL)).to eq(0)
+        expect(::Stern.balance(payment_id, :charged_pix, :BRL)).to eq(0)
       end
 
       it "stamps every entry with the operation's currency" do

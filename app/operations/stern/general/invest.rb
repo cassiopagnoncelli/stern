@@ -14,7 +14,7 @@ module Stern
     end
 
     def perform(operation_id)
-      EntryPair.add_investment_invest(customer_id, investment_id, amount, currency, operation_id:)
+      EntryPair.add_investment_invest(customer_id, customer_id, investment_id, amount, currency, operation_id:)
     end
   end
 end

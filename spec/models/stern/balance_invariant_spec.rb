@@ -49,11 +49,11 @@ module Stern
       op = Operation.create!(name: "invariant_seed", params: {})
       if book == :merchant_available
         EntryPair.add_merchant_available(
-          SecureRandom.random_number(1 << 30), gid, amount, currency, operation_id: op.id,
+          SecureRandom.random_number(1 << 30), gid, gid, amount, currency, operation_id: op.id,
         )
       elsif book == :customer_available
         EntryPair.add_customer_available(
-          SecureRandom.random_number(1 << 30), gid, amount, currency, operation_id: op.id,
+          SecureRandom.random_number(1 << 30), gid, gid, amount, currency, operation_id: op.id,
         )
       end
     end
@@ -110,7 +110,7 @@ module Stern
 
           def perform(operation_id)
             ::Stern::EntryPair.add_merchant_available(
-              SecureRandom.random_number(1 << 30), merchant_id, amount, currency, operation_id:,
+              SecureRandom.random_number(1 << 30), merchant_id, merchant_id, amount, currency, operation_id:,
             )
           end
         end
@@ -150,7 +150,7 @@ module Stern
 
           def perform(operation_id)
             ::Stern::EntryPair.add_merchant_available(
-              SecureRandom.random_number(1 << 30), merchant_id, amount, currency, operation_id:,
+              SecureRandom.random_number(1 << 30), merchant_id, merchant_id, amount, currency, operation_id:,
             )
           end
         end
@@ -197,11 +197,11 @@ module Stern
           def perform(operation_id)
             if book_name == "merchant_available"
               ::Stern::EntryPair.add_merchant_available(
-                SecureRandom.random_number(1 << 30), merchant_id, amount, currency, operation_id:,
+                SecureRandom.random_number(1 << 30), merchant_id, merchant_id, amount, currency, operation_id:,
               )
             else
               ::Stern::EntryPair.add_customer_available(
-                SecureRandom.random_number(1 << 30), merchant_id, amount, currency, operation_id:,
+                SecureRandom.random_number(1 << 30), merchant_id, merchant_id, amount, currency, operation_id:,
               )
             end
           end
@@ -248,7 +248,7 @@ module Stern
             raise ::Stern::InsufficientFunds if balance < amount
 
             ::Stern::EntryPair.add_merchant_available(
-              SecureRandom.random_number(1 << 30), merchant_id, -amount, currency, operation_id:,
+              SecureRandom.random_number(1 << 30), merchant_id, merchant_id, -amount, currency, operation_id:,
             )
           end
         end
@@ -295,7 +295,7 @@ module Stern
         base_op = Operation.create!(name: "past_seed", params: {})
         [ 30, 20, 10 ].each_with_index do |seconds_ago, i|
           EntryPair.add_merchant_available(
-            SecureRandom.random_number(1 << 30), gid, 100, brl,
+            SecureRandom.random_number(1 << 30), gid, gid, 100, brl,
             timestamp: seconds_ago.seconds.ago, operation_id: base_op.id,
           )
         end
@@ -306,7 +306,7 @@ module Stern
             ApplicationRecord.connection_pool.with_connection do
               op = Operation.create!(name: "past_a", params: {})
               EntryPair.add_merchant_available(
-                SecureRandom.random_number(1 << 30), gid, 50, brl,
+                SecureRandom.random_number(1 << 30), gid, gid, 50, brl,
                 timestamp: 25.seconds.ago, operation_id: op.id,
               )
             ensure
@@ -317,7 +317,7 @@ module Stern
             ApplicationRecord.connection_pool.with_connection do
               op = Operation.create!(name: "past_b", params: {})
               EntryPair.add_merchant_available(
-                SecureRandom.random_number(1 << 30), gid, 75, brl,
+                SecureRandom.random_number(1 << 30), gid, gid, 75, brl,
                 timestamp: 15.seconds.ago, operation_id: op.id,
               )
             ensure
@@ -369,7 +369,7 @@ module Stern
             raise ::Stern::InsufficientFunds if balance < amount
 
             ::Stern::EntryPair.add_merchant_available(
-              uid, merchant_id, -amount, currency, operation_id:,
+              uid, merchant_id, merchant_id, -amount, currency, operation_id:,
             )
           end
         end
@@ -423,7 +423,7 @@ module Stern
             raise ::Stern::InsufficientFunds if balance < 100
 
             ::Stern::EntryPair.add_merchant_available(
-              uid, merchant_id, -100, currency, operation_id:,
+              uid, merchant_id, merchant_id, -100, currency, operation_id:,
             )
           end
         end
@@ -473,7 +473,7 @@ module Stern
             end
 
             ::Stern::EntryPair.add_merchant_available(
-              uid, merchant_id, amount, currency, operation_id:,
+              uid, merchant_id, merchant_id, amount, currency, operation_id:,
             )
           end
         end
@@ -521,7 +521,7 @@ module Stern
 
           def perform(operation_id)
             ::Stern::EntryPair.add_merchant_available(
-              uid, merchant_id, 7, currency, operation_id:,
+              uid, merchant_id, merchant_id, 7, currency, operation_id:,
             )
           end
         end
@@ -609,7 +609,7 @@ module Stern
           def perform(_operation_id)
             @observed_balance = ::Stern.balance(merchant_id, :merchant_available, currency)
             ::Stern::EntryPair.add_merchant_available(
-              uid, merchant_id, 1, currency, operation_id: operation.id,
+              uid, merchant_id, merchant_id, 1, currency, operation_id: operation.id,
             )
           end
         end
@@ -675,7 +675,7 @@ module Stern
             raise ::Stern::InsufficientFunds if balance < 1
 
             ::Stern::EntryPair.add_merchant_available(
-              uid, merchant_id, -1, currency, operation_id:,
+              uid, merchant_id, merchant_id, -1, currency, operation_id:,
             )
           end
         end
@@ -730,7 +730,7 @@ module Stern
 
           def perform(operation_id)
             ::Stern::EntryPair.add_merchant_available(
-              SecureRandom.random_number(1 << 30), merchant_id, 1, currency, operation_id:,
+              SecureRandom.random_number(1 << 30), merchant_id, merchant_id, 1, currency, operation_id:,
             )
             raise "deliberate mid-perform failure"
           end
@@ -783,7 +783,7 @@ module Stern
 
           def perform(operation_id)
             ::Stern::EntryPair.add_merchant_available(
-              uid, merchant_id, 10, currency, operation_id:,
+              uid, merchant_id, merchant_id, 10, currency, operation_id:,
             )
           end
         end
@@ -837,7 +837,7 @@ module Stern
 
           def perform(operation_id)
             ::Stern::EntryPair.add_merchant_available(
-              SecureRandom.random_number(1 << 30), merchant_id, amount, currency, operation_id:,
+              SecureRandom.random_number(1 << 30), merchant_id, merchant_id, amount, currency, operation_id:,
             )
           end
         end

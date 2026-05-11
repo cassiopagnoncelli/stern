@@ -29,7 +29,7 @@ module Stern
           raise ::Stern::InsufficientFunds if balance < amount
 
           ::Stern::EntryPair.add_merchant_available(
-            SecureRandom.random_number(1 << 30), merchant_id, -amount, currency, operation_id:,
+            SecureRandom.random_number(1 << 30), merchant_id, merchant_id, -amount, currency, operation_id:,
           )
         end
       end
@@ -51,14 +51,14 @@ module Stern
     def seed(gid:, amount:)
       op = Operation.create!(name: "matrix_seed", params: {})
       EntryPair.add_merchant_available(
-        SecureRandom.random_number(1 << 30), gid, amount, currency, operation_id: op.id,
+        SecureRandom.random_number(1 << 30), gid, gid, amount, currency, operation_id: op.id,
       )
     end
 
     def direct_deposit(gid:, amount:)
       op = Operation.create!(name: "matrix_direct", params: {})
       EntryPair.add_merchant_available(
-        SecureRandom.random_number(1 << 30), gid, amount, currency, operation_id: op.id,
+        SecureRandom.random_number(1 << 30), gid, gid, amount, currency, operation_id: op.id,
       )
     end
 
@@ -253,10 +253,10 @@ module Stern
 
           def perform(operation_id)
             ::Stern::EntryPair.add_merchant_available(
-              SecureRandom.random_number(1 << 30), gid_a, -10, currency, operation_id:,
+              SecureRandom.random_number(1 << 30), gid_a, gid_a, -10, currency, operation_id:,
             )
             ::Stern::EntryPair.add_merchant_available(
-              SecureRandom.random_number(1 << 30), gid_b, 10, currency, operation_id:,
+              SecureRandom.random_number(1 << 30), gid_b, gid_b, 10, currency, operation_id:,
             )
           end
         end

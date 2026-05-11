@@ -19,8 +19,8 @@ module Stern
     end
 
     def perform(operation_id)
-      EntryPair.add_confirm_refund(refund_id, refund_id, amount, currency, operation_id:)
-      EntryPair.add_settle_refund(refund_id, customer_id, amount, currency, operation_id:)
+      EntryPair.add_confirm_refund(refund_id, refund_id, refund_id, amount, currency, operation_id:)
+      EntryPair.add_settle_refund(refund_id, refund_id, customer_id, amount, currency, operation_id:)
     end
   end
 end

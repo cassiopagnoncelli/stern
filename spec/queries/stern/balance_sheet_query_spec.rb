@@ -11,7 +11,7 @@ module Stern
     before { Repair.clear(confirm: true) }
 
     def seed(uid, gid, amount, currency)
-      EntryPair.add_merchant_available(uid, gid, amount, currency, operation_id: operation.id)
+      EntryPair.add_merchant_available(uid, gid, gid, amount, currency, operation_id: operation.id)
     end
 
     describe "#call" do
@@ -66,7 +66,7 @@ module Stern
 
       it "excludes prior balances recorded in a different currency from previous_balance" do
         old = 2.days.ago.to_datetime
-        EntryPair.add_merchant_available(1, 1101, 500, usd, timestamp: old, operation_id: operation.id)
+        EntryPair.add_merchant_available(1, 1101, 1101, 500, usd, timestamp: old, operation_id: operation.id)
 
         rows = described_class.new(
           start_date: 1.day.ago.to_datetime,
@@ -82,8 +82,8 @@ module Stern
 
       it "rolls prior balances into previous_balance per book, per gid" do
         old = 2.days.ago.to_datetime
-        EntryPair.add_merchant_available(1, 1101, 100, brl, timestamp: old, operation_id: operation.id)
-        EntryPair.add_merchant_available(2, 1102, 50, brl, timestamp: old, operation_id: operation.id)
+        EntryPair.add_merchant_available(1, 1101, 1101, 100, brl, timestamp: old, operation_id: operation.id)
+        EntryPair.add_merchant_available(2, 1102, 1102, 50, brl, timestamp: old, operation_id: operation.id)
 
         rows = described_class.new(
           start_date: 1.day.ago.to_datetime,

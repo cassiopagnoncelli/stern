@@ -77,7 +77,7 @@ module Stern
         baseline_amounts = [ 1000, 1000, 1000, 1000, 1000 ]
         baseline_amounts.each_with_index do |amt, idx|
           EntryPair.add_merchant_available(
-            SecureRandom.random_number(1 << 30), merchant_id, amt, currency,
+            SecureRandom.random_number(1 << 30), merchant_id, merchant_id, amt, currency,
             timestamp: base_time + (idx * 10).minutes,
             operation_id: operation.id,
           )
@@ -99,6 +99,7 @@ module Stern
               atomic_pair_write do
                 EntryPair.add_merchant_available(
                   SecureRandom.random_number(1 << 30) + idx,
+                  merchant_id,
                   merchant_id, per_thread_amount, currency,
                   timestamp: ts, operation_id: operation.id,
                 )
@@ -148,7 +149,7 @@ module Stern
       it "lets exactly one thread win and rejects the rest on the unique index" do
         [ 500, 500, 500 ].each_with_index do |amt, idx|
           EntryPair.add_merchant_available(
-            SecureRandom.random_number(1 << 30), merchant_id, amt, currency,
+            SecureRandom.random_number(1 << 30), merchant_id, merchant_id, amt, currency,
             timestamp: base_time + (idx * 10).minutes,
             operation_id: operation.id,
           )
@@ -166,6 +167,7 @@ module Stern
               atomic_pair_write do
                 EntryPair.add_merchant_available(
                   SecureRandom.random_number(1 << 30) + i,
+                  merchant_id,
                   merchant_id, 50, currency,
                   timestamp: collision_ts, operation_id: operation.id,
                 )
@@ -229,13 +231,13 @@ module Stern
       it "rejects every concurrent overdraft attempt and leaves the ledger unchanged" do
         # Step 1: deposit 100 credit at base_time (merchant_credit ending = 100).
         EntryPair.add_merchant_credit(
-          SecureRandom.random_number(1 << 30), merchant_id, 100, currency,
+          SecureRandom.random_number(1 << 30), merchant_id, merchant_id, 100, currency,
           timestamp: base_time, operation_id: operation.id,
         )
         # Step 2: apply 80 credit at base_time + 30.minutes
         # (merchant_credit downstream ending = 100 - 80 = 20).
         EntryPair.add_apply_merchant_credit(
-          SecureRandom.random_number(1 << 30), merchant_id, 80, currency,
+          SecureRandom.random_number(1 << 30), merchant_id, merchant_id, 80, currency,
           timestamp: base_time + 30.minutes, operation_id: operation.id,
         )
 
@@ -268,6 +270,7 @@ module Stern
               atomic_pair_write do
                 EntryPair.add_apply_merchant_credit(
                   SecureRandom.random_number(1 << 30) + idx,
+                  merchant_id,
                   merchant_id, 50, currency,
                   timestamp: ts, operation_id: operation.id,
                 )

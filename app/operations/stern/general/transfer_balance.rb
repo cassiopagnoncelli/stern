@@ -71,12 +71,14 @@ module Stern
         "add_#{from_type}_available".to_sym,
         from_id,
         from_id,
+        from_id,
         -amount,
         currency,
         operation_id:
       )
       EntryPair.public_send(
         "add_#{to_type}_available".to_sym,
+        to_id,
         to_id,
         to_id,
         amount,

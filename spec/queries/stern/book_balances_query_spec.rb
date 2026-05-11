@@ -9,7 +9,7 @@ module Stern
     before { Repair.clear(confirm: true) }
 
     def seed(uid, gid, amount, currency)
-      EntryPair.add_merchant_available(uid, gid, amount, currency, operation_id: operation.id)
+      EntryPair.add_merchant_available(uid, gid, gid, amount, currency, operation_id: operation.id)
     end
 
     it "returns a {gid => balance} map scoped to the currency" do

@@ -28,7 +28,7 @@ module Stern
     def seed_one_entry
       op = Operation.create!(name: "repair_concurrency_seed", params: {})
       EntryPair.add_merchant_available(
-        SecureRandom.random_number(1 << 30), gid, 100, currency, operation_id: op.id,
+        SecureRandom.random_number(1 << 30), gid, gid, 100, currency, operation_id: op.id,
       )
     end
 
@@ -123,7 +123,7 @@ module Stern
       def write_charge_pix(gid:, amount:, currency:)
         op = Operation.create!(name: "rebuild_concurrency_writer", params: {})
         EntryPair.add_charge_pix(
-          SecureRandom.random_number(1 << 30), gid, amount, currency, operation_id: op.id,
+          SecureRandom.random_number(1 << 30), gid, gid, amount, currency, operation_id: op.id,
         )
       end
 

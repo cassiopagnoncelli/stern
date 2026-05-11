@@ -116,10 +116,13 @@ module Stern
         )
       end
 
-      it "debits merchant_available and credits payment_fee_<method>, both at gid=payment_id" do
+      it "debits merchant_available@merchant_id and credits payment_fee_<method>@payment_id" do
         described_class.new(**valid_inputs).call
-        expect(::Stern.balance(payment_id, :merchant_available, :BRL)).to eq(-100)
-        expect(::Stern.balance(payment_id, :payment_fee_pix, :BRL)).to eq(100)
+        expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(-100)
+        expect(::Stern.balance(payment_id,  :payment_fee_pix,    :BRL)).to eq(100)
+        # Cross-gid leakage is zero.
+        expect(::Stern.balance(payment_id,  :merchant_available, :BRL)).to eq(0)
+        expect(::Stern.balance(merchant_id, :payment_fee_pix,    :BRL)).to eq(0)
       end
 
       it "stamps every entry with the operation's currency" do
@@ -155,8 +158,8 @@ module Stern
       it "reverses sign on a negative amount (fee reversal)" do
         described_class.new(**valid_inputs(amount: -100)).call
 
-        expect(::Stern.balance(payment_id, :merchant_available, :BRL)).to eq(100)
-        expect(::Stern.balance(payment_id, :payment_fee_pix, :BRL)).to eq(-100)
+        expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(100)
+        expect(::Stern.balance(payment_id,  :payment_fee_pix,    :BRL)).to eq(-100)
       end
 
       context "with available credit" do
@@ -167,10 +170,13 @@ module Stern
             described_class.new(**valid_inputs(amount: 100)).call
           }.to change(EntryPair, :count).by(2)
 
-          expect(::Stern.balance(merchant_id, :merchant_credit, :BRL)).to eq(0)
-          expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(30)
-          expect(::Stern.balance(payment_id, :merchant_available, :BRL)).to eq(-100)
-          expect(::Stern.balance(payment_id, :payment_fee_pix, :BRL)).to eq(100)
+          # AddCredit puts 30 into merchant_available@merchant_id;
+          # apply_<type>_credit drains the 30 from merchant_credit and shows
+          # +30 on merchant_available; then the fee debits merchant_available
+          # by 100 → net -70 on merchant_available@merchant_id.
+          expect(::Stern.balance(merchant_id, :merchant_credit,    :BRL)).to eq(0)
+          expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(-70)
+          expect(::Stern.balance(payment_id,  :payment_fee_pix,    :BRL)).to eq(100)
         end
 
         it "caps credit at the fee amount when balance > fee" do
@@ -178,8 +184,11 @@ module Stern
 
           described_class.new(**valid_inputs(amount: 100)).call
 
-          expect(::Stern.balance(merchant_id, :merchant_credit, :BRL)).to eq(400)
-          expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(100)
+          # apply_<type>_credit drains 100 from merchant_credit into
+          # merchant_available; the fee debits merchant_available by 100;
+          # net 0 on merchant_available@merchant_id.
+          expect(::Stern.balance(merchant_id, :merchant_credit,    :BRL)).to eq(400)
+          expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(0)
         end
 
         it "skips credit application when the credit balance is zero" do
@@ -205,9 +214,9 @@ module Stern
 
           described_class.new(**valid_inputs(merchant_id: nil, customer_id:, amount: 100)).call
 
-          expect(::Stern.balance(customer_id, :customer_credit, :BRL)).to eq(0)
-          expect(::Stern.balance(customer_id, :customer_available, :BRL)).to eq(40)
-          expect(::Stern.balance(payment_id, :customer_available, :BRL)).to eq(-100)
+          # credit (+40) − fee (-100) = -60 net on customer_available@customer_id.
+          expect(::Stern.balance(customer_id, :customer_credit,    :BRL)).to eq(0)
+          expect(::Stern.balance(customer_id, :customer_available, :BRL)).to eq(-60)
         end
 
         it "applies partner credit for the partner variant" do
@@ -215,9 +224,9 @@ module Stern
 
           described_class.new(**valid_inputs(merchant_id: nil, partner_id:, amount: 100)).call
 
-          expect(::Stern.balance(partner_id, :partner_credit, :BRL)).to eq(0)
-          expect(::Stern.balance(partner_id, :partner_available, :BRL)).to eq(70)
-          expect(::Stern.balance(payment_id, :partner_available, :BRL)).to eq(-100)
+          # credit (+70) − fee (-100) = -30 net on partner_available@partner_id.
+          expect(::Stern.balance(partner_id, :partner_credit,    :BRL)).to eq(0)
+          expect(::Stern.balance(partner_id, :partner_available, :BRL)).to eq(-30)
         end
 
         it "only consumes credit in the operation's currency" do

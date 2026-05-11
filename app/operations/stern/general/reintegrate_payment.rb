@@ -27,6 +27,7 @@ module Stern
       EntryPair.public_send(
         "add_lock_#{target_type}_#{stakeholder_type}",
         stakeholder_id,
+        stakeholder_id,
         target_id,
         amount,
         currency,

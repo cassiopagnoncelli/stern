@@ -71,11 +71,18 @@ module Stern
     describe "#call" do
       before { Repair.clear(confirm: true) }
 
-      it "debits customer_available and credits customer_investment, both at gid=investment_id" do
+      it "debits customer_available@customer_id and credits customer_investment@investment_id" do
         described_class.new(**valid_inputs(amount: 1000)).call
 
-        expect(::Stern.balance(investment_id, :customer_available, :BRL)).to eq(-1000)
+        expect(::Stern.balance(customer_id,   :customer_available,  :BRL)).to eq(-1000)
         expect(::Stern.balance(investment_id, :customer_investment, :BRL)).to eq(1000)
+      end
+
+      it "leaves customer_available@investment_id and customer_investment@customer_id untouched" do
+        described_class.new(**valid_inputs(amount: 1000)).call
+
+        expect(::Stern.balance(investment_id, :customer_available,  :BRL)).to eq(0)
+        expect(::Stern.balance(customer_id,   :customer_investment, :BRL)).to eq(0)
       end
 
       it "writes one entry pair (investment_invest) keyed by customer_id" do
@@ -108,7 +115,7 @@ module Stern
       it "reverses sign on a negative amount" do
         described_class.new(**valid_inputs(amount: -500)).call
 
-        expect(::Stern.balance(investment_id, :customer_available, :BRL)).to eq(500)
+        expect(::Stern.balance(customer_id,   :customer_available,  :BRL)).to eq(500)
         expect(::Stern.balance(investment_id, :customer_investment, :BRL)).to eq(-500)
       end
 

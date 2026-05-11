@@ -17,7 +17,7 @@ module Stern
     end
 
     def perform(operation_id)
-      EntryPair.public_send("add_charge_#{payment_method}".to_sym, charge_id, payment_id, amount, currency, operation_id:)
+      EntryPair.public_send("add_charge_#{payment_method}".to_sym, charge_id, charge_id, payment_id, amount, currency, operation_id:)
     end
   end
 end

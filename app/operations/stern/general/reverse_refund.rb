@@ -10,8 +10,10 @@ module Stern
   # and drained into the fungible `refund_confirmed`, so it is not derivable
   # from `refund_id` alone — the caller must re-supply it.
   #
-  # Entries land at gid=funder (uid=refund_id), matching the per-stakeholder
-  # attribution of `reverse_withdrawal_*`. `customer_available` is not
+  # Each leg lands at its natural gid: `customer_available` is debited at
+  # `gid=customer_id`, the funder's available is credited at `gid=funder_id`.
+  # The `EntryPair`'s `uid` is `refund_id` so the entry pair is grouped by
+  # the cause (the refund being reversed). `customer_available` is not
   # `non_negative`, so by default the op raises `InsufficientFunds` when
   # `customer_available[customer_id]` would not cover the reversal; pass
   # `allow_overdraft: true` to skip the friendly check (mirrors `LockBalance`).

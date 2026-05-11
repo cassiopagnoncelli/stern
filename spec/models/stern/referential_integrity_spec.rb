@@ -21,7 +21,7 @@ module Stern
     def seed_one_pair(gid: merchant_id, amount: 500, op_name: "invariant_seed", op_params: {})
       op = Operation.create!(name: op_name, params: op_params)
       EntryPair.add_merchant_available(
-        SecureRandom.random_number(1 << 30), gid, amount, brl, operation_id: op.id,
+        SecureRandom.random_number(1 << 30), gid, gid, amount, brl, operation_id: op.id,
       )
       op
     end
@@ -108,7 +108,7 @@ module Stern
         )
         # Seed an EntryPair on a DIFFERENT gid than params.payment_id claims.
         EntryPair.add_charge_pix(
-          SecureRandom.random_number(1 << 30), 99_999, 100, brl, operation_id: op.id,
+          SecureRandom.random_number(1 << 30), 99_999, 99_999, 100, brl, operation_id: op.id,
         )
 
         expect { assert_operations_integral! }

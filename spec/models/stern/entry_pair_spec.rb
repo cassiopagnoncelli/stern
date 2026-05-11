@@ -4,7 +4,7 @@ module Stern
   RSpec.describe EntryPair, type: :model do
     subject(:entry_pair) { described_class.find_by!(id: entry_pair_id, code:, uid:, currency:) }
     let(:entry_pair_id) do
-      described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, currency, timestamp, operation_id)
+      described_class.double_entry_add(code, gid, gid, uid, book_add, book_sub, amount, currency, timestamp, operation_id)
     end
 
     let(:first_pair) { ::Stern.chart.entry_pairs.values.first }
@@ -41,16 +41,16 @@ module Stern
 
       it "forbids duplicates" do
         expect {
-          described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, currency, timestamp, operation_id)
-          described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, currency, timestamp, operation_id)
+          described_class.double_entry_add(code, gid, gid, uid, book_add, book_sub, amount, currency, timestamp, operation_id)
+          described_class.double_entry_add(code, gid, gid, uid, book_add, book_sub, amount, currency, timestamp, operation_id)
         }.to raise_error(ActiveRecord::RecordNotUnique)
       end
 
       it "allows same uid in different currencies" do
         usd = ::Stern.cur("USD")
-        described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, currency, timestamp, operation_id)
+        described_class.double_entry_add(code, gid, gid, uid, book_add, book_sub, amount, currency, timestamp, operation_id)
         expect {
-          described_class.double_entry_add(code, gid, uid, book_add, book_sub, amount, usd, timestamp, operation_id)
+          described_class.double_entry_add(code, gid, gid, uid, book_add, book_sub, amount, usd, timestamp, operation_id)
         }.to change(described_class, :count).by(1)
       end
     end
@@ -93,9 +93,9 @@ module Stern
       let(:pair) { ::Stern.chart.entry_pairs.values.first }
 
       it "keeps independent ending_balance across currencies on the add-book" do
-        described_class.double_entry_add(pair.name, gid, 1, pair.book_add, pair.book_sub, 100, currency, DateTime.current, operation_id)
-        described_class.double_entry_add(pair.name, gid, 2, pair.book_add, pair.book_sub, 300, usd, DateTime.current, operation_id)
-        described_class.double_entry_add(pair.name, gid, 3, pair.book_add, pair.book_sub, 25, currency, DateTime.current, operation_id)
+        described_class.double_entry_add(pair.name, gid, gid, 1, pair.book_add, pair.book_sub, 100, currency, DateTime.current, operation_id)
+        described_class.double_entry_add(pair.name, gid, gid, 2, pair.book_add, pair.book_sub, 300, usd, DateTime.current, operation_id)
+        described_class.double_entry_add(pair.name, gid, gid, 3, pair.book_add, pair.book_sub, 25, currency, DateTime.current, operation_id)
 
         add_book_id = ::Stern.chart.book_code(pair.book_add)
         brl = Entry.where(book_id: add_book_id, gid:, currency:).order(:timestamp, :id).pluck(:ending_balance)
@@ -105,8 +105,8 @@ module Stern
       end
 
       it "keeps independent ending_balance across currencies on the sub-book" do
-        described_class.double_entry_add(pair.name, gid, 4, pair.book_add, pair.book_sub, 100, currency, DateTime.current, operation_id)
-        described_class.double_entry_add(pair.name, gid, 5, pair.book_add, pair.book_sub, 300, usd, DateTime.current, operation_id)
+        described_class.double_entry_add(pair.name, gid, gid, 4, pair.book_add, pair.book_sub, 100, currency, DateTime.current, operation_id)
+        described_class.double_entry_add(pair.name, gid, gid, 5, pair.book_add, pair.book_sub, 300, usd, DateTime.current, operation_id)
 
         sub_book_id = ::Stern.chart.book_code(pair.book_sub)
         brl = Entry.where(book_id: sub_book_id, gid:, currency:).pluck(:ending_balance)
@@ -122,14 +122,94 @@ module Stern
 
       it "requires currency as a positional argument" do
         expect {
-          described_class.public_send(method_name, 101, gid, 100, operation_id:)
+          described_class.public_send(method_name, 101, gid, gid, 100, operation_id:)
         }.to raise_error(ArgumentError)
       end
 
       it "accepts an integer currency code" do
         expect {
-          described_class.public_send(method_name, 101, gid, 100, currency, operation_id:)
+          described_class.public_send(method_name, 101, gid, gid, 100, currency, operation_id:)
         }.to change(Entry, :count).by(2)
+      end
+
+      it "raises ArgumentError when add_gid is omitted" do
+        expect {
+          described_class.public_send(method_name, 101, gid, 100, currency, operation_id:)
+        }.to raise_error(ArgumentError)
+      end
+    end
+
+    describe ".double_entry_add with sub_gid != add_gid" do
+      let(:pair) { ::Stern.chart.entry_pair(:investment_invest) }
+      let(:sub_gid) { 9001 }
+      let(:add_gid) { 9002 }
+
+      before { Repair.clear(confirm: true) }
+
+      it "lands book_sub at sub_gid and book_add at add_gid" do
+        described_class.double_entry_add(
+          pair.name, sub_gid, add_gid, 7777,
+          pair.book_add, pair.book_sub,
+          500, currency, DateTime.current, operation_id,
+        )
+
+        expect(::Stern.balance(sub_gid, pair.book_sub.to_sym, currency)).to eq(-500)
+        expect(::Stern.balance(add_gid, pair.book_add.to_sym, currency)).to eq(500)
+      end
+
+      it "leaves the other gid at zero on each book (no leakage)" do
+        described_class.double_entry_add(
+          pair.name, sub_gid, add_gid, 7778,
+          pair.book_add, pair.book_sub,
+          500, currency, DateTime.current, operation_id,
+        )
+
+        expect(::Stern.balance(add_gid, pair.book_sub.to_sym, currency)).to eq(0)
+        expect(::Stern.balance(sub_gid, pair.book_add.to_sym, currency)).to eq(0)
+      end
+
+      it "preserves the cross-gid invariant (sum per book across gids is zero)" do
+        described_class.double_entry_add(
+          pair.name, sub_gid, add_gid, 7779,
+          pair.book_add, pair.book_sub,
+          500, currency, DateTime.current, operation_id,
+        )
+
+        sub_total = ::Stern.balance(sub_gid, pair.book_sub.to_sym, currency) +
+                    ::Stern.balance(add_gid, pair.book_sub.to_sym, currency)
+        add_total = ::Stern.balance(sub_gid, pair.book_add.to_sym, currency) +
+                    ::Stern.balance(add_gid, pair.book_add.to_sym, currency)
+        expect(sub_total).to eq(-500)
+        expect(add_total).to eq(500)
+      end
+
+      it "produces exactly one EntryPair row with two Entry rows" do
+        expect {
+          described_class.double_entry_add(
+            pair.name, sub_gid, add_gid, 7780,
+            pair.book_add, pair.book_sub,
+            500, currency, DateTime.current, operation_id,
+          )
+        }.to change(described_class, :count).by(1)
+         .and change(Entry, :count).by(2)
+      end
+    end
+
+    describe ".add_<pair> singleton with sub_gid != add_gid" do
+      let(:sub_gid) { 9101 }
+      let(:add_gid) { 9102 }
+
+      before { Repair.clear(confirm: true) }
+
+      it "places each leg at its declared gid via the generated singleton" do
+        described_class.add_investment_invest(
+          8001, sub_gid, add_gid, 750, currency, operation_id:,
+        )
+
+        expect(::Stern.balance(sub_gid, :customer_available,  currency)).to eq(-750)
+        expect(::Stern.balance(add_gid, :customer_investment, currency)).to eq(750)
+        expect(::Stern.balance(add_gid, :customer_available,  currency)).to eq(0)
+        expect(::Stern.balance(sub_gid, :customer_investment, currency)).to eq(0)
       end
     end
   end

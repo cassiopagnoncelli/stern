@@ -54,11 +54,11 @@ module Stern
     end
 
     describe "#target_tuples" do
-      it "locks customer_available@investment_id (sub side) and customer_investment@customer_id (add side)" do
+      it "locks customer_available@customer_id and customer_investment@investment_id" do
         op = described_class.new(**valid_inputs)
         expect(op.target_tuples).to eq([
-          [ "customer_available",  investment_id, "BRL" ],
-          [ "customer_investment", customer_id,   "BRL" ]
+          [ "customer_available",  customer_id,   "BRL" ],
+          [ "customer_investment", investment_id, "BRL" ]
         ])
       end
     end
@@ -66,13 +66,16 @@ module Stern
     describe "#call" do
       before { Repair.clear(confirm: true) }
 
-      it "drains the full customer_investment balance back into customer_available" do
+      it "drains the full customer_investment balance back into customer_available at the natural gids" do
         seed_invested(amount: 1000)
 
         described_class.new(**valid_inputs).call
 
         expect(::Stern.balance(investment_id, :customer_investment, :BRL)).to eq(0)
-        expect(::Stern.balance(investment_id, :customer_available, :BRL)).to eq(0)
+        expect(::Stern.balance(customer_id,   :customer_available,  :BRL)).to eq(0)
+        # Cross-gid leakage stays at zero.
+        expect(::Stern.balance(investment_id, :customer_available,  :BRL)).to eq(0)
+        expect(::Stern.balance(customer_id,   :customer_investment, :BRL)).to eq(0)
       end
 
       it "writes one entry pair (investment_trade_operation) keyed by customer_id" do
@@ -123,6 +126,7 @@ module Stern
         described_class.new(**valid_inputs(allow_overdraft: true)).call
 
         expect(::Stern.balance(investment_id, :customer_investment, :BRL)).to eq(0)
+        expect(::Stern.balance(customer_id,   :customer_available,  :BRL)).to eq(0)
       end
 
       it "writes a positive-amount entry pair when settling a negative balance under allow_overdraft" do
