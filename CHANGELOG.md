@@ -7,6 +7,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.9.6] — 2026-05-11
+
 ### Changed
 
 - **`EntryPair` primitives now require per-leg gids.** The chart-derived
