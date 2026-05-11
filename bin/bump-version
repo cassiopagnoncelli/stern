@@ -87,7 +87,7 @@ FileUtils.chdir(APP_ROOT) do
     die!("current version '#{current}' is not a valid SemVer")
   end
 
-  changelog_src = File.read(CHANGELOG)
+  changelog_src = File.read(CHANGELOG, encoding: "UTF-8")
   unless changelog_src =~ /^## \[Unreleased\]$/
     die!("CHANGELOG.md: '## [Unreleased]' heading not found")
   end
