@@ -1,4 +1,4 @@
-.PHONY: all release build check clean setup dev docs tests test lint style stats benchmark benchmark-one benchmark-list bump help
+.PHONY: all release build check clean setup dev docs tests test lint style stats benchmark benchmark-one benchmark-list load-profile bump help
 .DEFAULT_GOAL := help
 
 BENCHMARK_OP         ?= charge_payment
@@ -73,6 +73,9 @@ benchmark-one: ## Benchmark a single Stern operation (override BENCHMARK_OP/THRE
 
 benchmark-list: ## List available benchmark scenarios
 	@bundle exec ruby scripts/benchmark/run.rb --list
+
+load-profile: ## Run a heavy benchmark while sampling CPU/RAM + Postgres wait events
+	@bundle exec ruby scripts/benchmark/load_profile.rb
 
 bump: ## Bump version, finalize CHANGELOG, commit & tag (LEVEL=patch|minor|major or VERSION=X.Y.Z; PUSH=1; DRY_RUN=1)
 	@bin/bump-version $(if $(VERSION),$(VERSION),$(or $(LEVEL),patch)) $(if $(PUSH),--push) $(if $(DRY_RUN),--dry-run)
