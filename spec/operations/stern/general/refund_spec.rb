@@ -17,7 +17,7 @@ module Stern
 
     # Refund confirms a previously-locked refund and settles it to the customer.
     # The lock is set up by ReintegratePayment, which `non_negative: true` on
-    # `refund_locked` requires before any confirm/settle can run.
+    # `refund_outbound` requires before any confirm/settle can run.
     def lock_refund(amount: 700)
       ReintegratePayment.new(merchant_id:, refund_id:, amount:, currency: "BRL").call
     end
@@ -48,7 +48,7 @@ module Stern
       it "locks confirm_refund at refund_id and settle_refund's two sides" do
         op = described_class.new(**valid_inputs)
         expect(op.target_tuples).to eq([
-          [ "refund_locked",      refund_id,  "BRL" ],
+          [ "refund_outbound",      refund_id,  "BRL" ],
           [ "refund_confirmed",   refund_id,  "BRL" ],
           [ "refund_confirmed",   refund_id,  "BRL" ],
           [ "customer_available", customer_id, "BRL" ]
@@ -59,12 +59,12 @@ module Stern
     describe "#call" do
       before { Repair.clear(confirm: true) }
 
-      it "drains refund_locked at refund_id back to zero after confirm + settle" do
+      it "drains refund_outbound at refund_id back to zero after confirm + settle" do
         lock_refund(amount: 700)
 
         described_class.new(**valid_inputs).call
 
-        expect(::Stern.balance(refund_id, :refund_locked, :BRL)).to eq(0)
+        expect(::Stern.balance(refund_id, :refund_outbound, :BRL)).to eq(0)
       end
 
       it "credits the customer's available balance by amount" do
@@ -83,7 +83,7 @@ module Stern
         }.to change(EntryPair, :count).by(2)
       end
 
-      it "rejects confirming more than was locked (refund_locked is non_negative)" do
+      it "rejects confirming more than was locked (refund_outbound is non_negative)" do
         lock_refund(amount: 100)
 
         expect {

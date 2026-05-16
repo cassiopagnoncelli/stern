@@ -53,18 +53,18 @@ module Stern
     end
 
     describe "#target_tuples" do
-      it "merchant: locks refund_locked at refund_id and merchant_available at merchant_id" do
+      it "merchant: locks refund_outbound at refund_id and merchant_available at merchant_id" do
         op = described_class.new(**valid_inputs)
         expect(op.target_tuples).to eq([
-          [ "refund_locked",      refund_id,   "BRL" ],
+          [ "refund_outbound",      refund_id,   "BRL" ],
           [ "merchant_available", merchant_id, "BRL" ]
         ])
       end
 
-      it "partner: locks refund_locked at refund_id and partner_available at partner_id" do
+      it "partner: locks refund_outbound at refund_id and partner_available at partner_id" do
         op = described_class.new(**valid_inputs(merchant_id: nil, partner_id:))
         expect(op.target_tuples).to eq([
-          [ "refund_locked",     refund_id,  "BRL" ],
+          [ "refund_outbound",     refund_id,  "BRL" ],
           [ "partner_available", partner_id, "BRL" ]
         ])
       end
@@ -73,12 +73,12 @@ module Stern
     describe "#call" do
       before { Repair.clear(confirm: true) }
 
-      it "drains refund_locked at refund_id back to zero" do
+      it "drains refund_outbound at refund_id back to zero" do
         ReintegratePayment.new(merchant_id:, refund_id:, amount: 700, currency: "BRL").call
 
         described_class.new(**valid_inputs).call
 
-        expect(::Stern.balance(refund_id, :refund_locked, :BRL)).to eq(0)
+        expect(::Stern.balance(refund_id, :refund_outbound, :BRL)).to eq(0)
       end
 
       it "credits merchant_available at refund_id back by amount (undoes the lock)" do
@@ -123,10 +123,10 @@ module Stern
 
         described_class.new(**valid_inputs(amount: 300)).call
 
-        expect(::Stern.balance(refund_id, :refund_locked, :BRL)).to eq(400)
+        expect(::Stern.balance(refund_id, :refund_outbound, :BRL)).to eq(400)
       end
 
-      it "rejects cancelling more than was locked (refund_locked is non_negative)" do
+      it "rejects cancelling more than was locked (refund_outbound is non_negative)" do
         ReintegratePayment.new(merchant_id:, refund_id:, amount: 100, currency: "BRL").call
 
         expect {
@@ -140,7 +140,7 @@ module Stern
         }.to raise_error(::Stern::InsufficientFunds)
       end
 
-      it "after confirm_refund drains refund_locked, cancel no longer applies" do
+      it "after confirm_refund drains refund_outbound, cancel no longer applies" do
         ReintegratePayment.new(merchant_id:, refund_id:, amount: 700, currency: "BRL").call
         Refund.new(customer_id: 2202, refund_id:, amount: 700, currency: "BRL").call
 

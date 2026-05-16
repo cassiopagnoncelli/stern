@@ -74,7 +74,7 @@ module Stern
       it "merchant: pins merchant_id to settle_merchant_balance pair's two books" do
         op = described_class.new(**valid_inputs)
         expect(op.target_tuples).to eq([
-          [ "merchant_pending", merchant_id, "BRL" ],
+          [ "merchant_inbound", merchant_id, "BRL" ],
           [ "merchant_available", merchant_id, "BRL" ]
         ])
       end
@@ -82,7 +82,7 @@ module Stern
       it "customer: pins customer_id to settle_customer_balance pair's two books" do
         op = described_class.new(**valid_inputs(merchant_id: nil, customer_id: customer_id))
         expect(op.target_tuples).to eq([
-          [ "customer_pending", customer_id, "BRL" ],
+          [ "customer_inbound", customer_id, "BRL" ],
           [ "customer_available", customer_id, "BRL" ]
         ])
       end
@@ -90,7 +90,7 @@ module Stern
       it "partner: pins partner_id to settle_partner_balance pair's two books" do
         op = described_class.new(**valid_inputs(merchant_id: nil, partner_id: partner_id))
         expect(op.target_tuples).to eq([
-          [ "partner_pending", partner_id, "BRL" ],
+          [ "partner_inbound", partner_id, "BRL" ],
           [ "partner_available", partner_id, "BRL" ]
         ])
       end
@@ -117,9 +117,9 @@ module Stern
         )
       end
 
-      it "moves balance from merchant_pending to merchant_available" do
+      it "moves balance from merchant_inbound to merchant_available" do
         described_class.new(**valid_inputs).call
-        expect(::Stern.balance(merchant_id, :merchant_pending, :BRL)).to eq(-5000)
+        expect(::Stern.balance(merchant_id, :merchant_inbound, :BRL)).to eq(-5000)
         expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(5000)
       end
 

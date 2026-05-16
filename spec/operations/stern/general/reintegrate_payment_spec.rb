@@ -58,19 +58,19 @@ module Stern
     end
 
     describe "#target_tuples" do
-      it "merchant + refund: locks merchant_available at merchant_id, refund_locked at refund_id" do
+      it "merchant + refund: locks merchant_available at merchant_id, refund_outbound at refund_id" do
         op = described_class.new(**valid_inputs)
         expect(op.target_tuples).to eq([
           [ "merchant_available", merchant_id, "BRL" ],
-          [ "refund_locked",      refund_id,  "BRL" ]
+          [ "refund_outbound",      refund_id,  "BRL" ]
         ])
       end
 
-      it "partner + chargeback: locks partner_available at partner_id, chargeback_locked at chargeback_id" do
+      it "partner + chargeback: locks partner_available at partner_id, chargeback_outbound at chargeback_id" do
         op = described_class.new(**valid_inputs(merchant_id: nil, partner_id: partner_id, refund_id: nil, chargeback_id: chargeback_id))
         expect(op.target_tuples).to eq([
           [ "partner_available",  partner_id,    "BRL" ],
-          [ "chargeback_locked",  chargeback_id, "BRL" ]
+          [ "chargeback_outbound",  chargeback_id, "BRL" ]
         ])
       end
     end
@@ -78,13 +78,13 @@ module Stern
     describe "#call" do
       before { Repair.clear(confirm: true) }
 
-      it "credits refund_locked@refund_id and debits merchant_available@merchant_id" do
+      it "credits refund_outbound@refund_id and debits merchant_available@merchant_id" do
         described_class.new(**valid_inputs).call
-        expect(::Stern.balance(refund_id,   :refund_locked,      :BRL)).to eq(700)
+        expect(::Stern.balance(refund_id,   :refund_outbound,      :BRL)).to eq(700)
         expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(-700)
         # Cross-gid leakage is zero.
         expect(::Stern.balance(refund_id,   :merchant_available, :BRL)).to eq(0)
-        expect(::Stern.balance(merchant_id, :refund_locked,      :BRL)).to eq(0)
+        expect(::Stern.balance(merchant_id, :refund_outbound,      :BRL)).to eq(0)
       end
 
       it "writes lock_refund_merchant for merchant + refund" do
@@ -102,7 +102,7 @@ module Stern
         expect(EntryPair.last.code).to eq("lock_chargeback_partner")
       end
 
-      it "rejects releasing more than was locked (refund_locked is non_negative)" do
+      it "rejects releasing more than was locked (refund_outbound is non_negative)" do
         described_class.new(**valid_inputs(amount: 700)).call
 
         expect {

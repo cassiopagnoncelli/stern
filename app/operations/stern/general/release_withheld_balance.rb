@@ -5,7 +5,7 @@ module Stern
   # book. Inverse of `WithholdBalance` (forward direction:
   # `*_withheld -> *_available`).
   #
-  # Like `*_locked`, `*_withheld` has no `confirmed` companion stage, so a
+  # Like `*_outbound`, `*_withheld` has no `confirmed` companion stage, so a
   # single inverse pair suffices — there is no `Reverse*` counterpart. The
   # DB-level `non_negative` backstop on `*_withheld` translates an over-debit
   # into `BalanceNonNegativeViolation`; the friendly `runtime_check` below

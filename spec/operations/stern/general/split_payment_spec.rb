@@ -77,19 +77,19 @@ module Stern
     end
 
     describe "#target_tuples" do
-      it "merchant: pins payment_id on the payment book, merchant_id on merchant_pending" do
+      it "merchant: pins payment_id on the payment book, merchant_id on merchant_inbound" do
         op = described_class.new(**valid_inputs)
         expect(op.target_tuples).to eq([
           [ "payment", payment_id, "BRL" ],
-          [ "merchant_pending", merchant_id, "BRL" ]
+          [ "merchant_inbound", merchant_id, "BRL" ]
         ])
       end
 
-      it "partner: pins payment_id on the payment book, partner_id on partner_pending" do
+      it "partner: pins payment_id on the payment book, partner_id on partner_inbound" do
         op = described_class.new(**valid_inputs(merchant_id: nil, partner_id: partner_id))
         expect(op.target_tuples).to eq([
           [ "payment", payment_id, "BRL" ],
-          [ "partner_pending", partner_id, "BRL" ]
+          [ "partner_inbound", partner_id, "BRL" ]
         ])
       end
 
@@ -122,13 +122,13 @@ module Stern
         )
       end
 
-      it "debits payment@payment_id and credits merchant_pending@merchant_id" do
+      it "debits payment@payment_id and credits merchant_inbound@merchant_id" do
         described_class.new(**valid_inputs).call
         expect(::Stern.balance(payment_id,  :payment,          :BRL)).to eq(-5000)
-        expect(::Stern.balance(merchant_id, :merchant_pending, :BRL)).to eq(5000)
+        expect(::Stern.balance(merchant_id, :merchant_inbound, :BRL)).to eq(5000)
         # Cross-gid leakage is zero.
         expect(::Stern.balance(merchant_id, :payment,          :BRL)).to eq(0)
-        expect(::Stern.balance(payment_id,  :merchant_pending, :BRL)).to eq(0)
+        expect(::Stern.balance(payment_id,  :merchant_inbound, :BRL)).to eq(0)
       end
 
       it "writes split_payment_partner for the partner variant" do

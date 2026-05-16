@@ -7,6 +7,28 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Book rename: `*_pending` → `*_inbound`, `*_locked` → `*_outbound`.**
+  The 11 stakeholder, withdrawal, refund, and chargeback "pending/locked"
+  books in `config/charts/general.yaml` were renamed to use direction-of-
+  flow vocabulary (`merchant_pending` → `merchant_inbound`,
+  `merchant_locked` → `merchant_outbound`, `wdw_*_locked` →
+  `wdw_*_outbound`, `refund_locked` → `refund_outbound`,
+  `chargeback_locked` → `chargeback_outbound`). Verb-based entry-pair
+  names (`lock_*_balance`, `unlock_*_balance`, `lock_withdrawal_*`,
+  `cancel_withdrawal_*`, `lock_refund_*`, `confirm_refund`,
+  `lock_chargeback_*`, `confirm_chargeback`) and the matching operation
+  Ruby classes (`LockBalance`, `UnlockBalance`, `LockWithdrawal`,
+  `CancelWithdrawal`, `LockRefund`, `CancelRefund`, `LockChargeback`,
+  `ConfirmChargeback`, …) are unchanged. Since book IDs are
+  XXhash-derived from book names, the rename changes the integer
+  `book_id` for every renamed book — environments with existing book
+  rows under the old names must re-seed from the new chart (no
+  automatic data migration is shipped). Pre-check error labels for
+  `UnlockBalance` and `CancelWithdrawal` shifted from "locked balance"
+  to "outbound balance"; `CancelRefund` likewise.
+
 ## [1.9.6] — 2026-05-11
 
 ### Changed
@@ -235,7 +257,7 @@ worker's hourly auto-prune is keeping up.
   `greater_than: 0` (was `only_integer: true` with no positivity check).
   Aligns with `LockWithdrawal`, `CancelWithdrawal`, and `ReverseWithdrawal`;
   prevents zero-amount no-op writes and negative-amount corruption of the
-  locked-vs-confirmed accounting.
+  outbound-vs-confirmed accounting.
 - **`Stern::Repair.clear` now requires `confirm: true`.** Previously a bare
   `Repair.clear` from a Rails console would wipe the entire ledger in any
   non-`production` env (staging, demo, sandbox). Brings the safeguard in line
@@ -333,7 +355,7 @@ is removed — call `amount_consistent?` for the narrow check or
 ## [1.8.0] — 2026-05-09
 
 Withdrawal-flow rework. The lifecycle now exposes explicit forward operations
-for every transition out of `wdw_*_locked` / `wdw_*_confirmed`, with intent
+for every transition out of `wdw_*_outbound` / `wdw_*_confirmed`, with intent
 preserved in the audit trail instead of inferred from a sign flip. The same
 shape is now extended to `lock_*_balance` via `UnlockBalance` and to
 `withhold_*_balance` via `ReleaseWithheldBalance`.
@@ -349,26 +371,26 @@ shape is now extended to `lock_*_balance` via `UnlockBalance` and to
   Bump past your longest expected op runtime when running legitimately slow
   ops so the janitor doesn't treat them as crashed.
 - **`Stern::CancelWithdrawal`.** Releases an in-flight lock back to
-  `*_available` (`wdw_*_locked → *_available`). Use before settlement; the
+  `*_available` (`wdw_*_outbound → *_available`). Use before settlement; the
   pre-check raises `Stern::InsufficientFunds` when the cancel exceeds the
-  current locked balance.
+  current outbound balance.
 - **`Stern::ReverseWithdrawal`.** Reverses a confirmed withdrawal back to
   `*_available` (`wdw_*_confirmed → *_available`), for post-settlement
   rejects (e.g. bank-side bounce). Same exception shape as Cancel.
 - **`Stern::UnlockBalance`.** Releases a previously locked balance back to
-  `*_available` (`*_locked → *_available`). Inverse of `LockBalance`; no
-  `confirmed` companion stage exists for `*_locked`, so a single inverse
+  `*_available` (`*_outbound → *_available`). Inverse of `LockBalance`; no
+  `confirmed` companion stage exists for `*_outbound`, so a single inverse
   pair suffices. Pre-check raises `Stern::InsufficientFunds` when the
-  unlock exceeds the current locked balance.
+  unlock exceeds the current outbound balance.
 - **`Stern::ReleaseWithheldBalance`.** Releases a previously withheld
   balance back to `*_available` (`*_withheld → *_available`). Inverse of
-  `WithholdBalance`; like `*_locked`, `*_withheld` has no `confirmed`
+  `WithholdBalance`; like `*_outbound`, `*_withheld` has no `confirmed`
   companion, so a single inverse pair suffices. Pre-check raises
   `Stern::InsufficientFunds` when the release exceeds the current
   withheld balance.
 - **`Stern::CancelRefund`.** Operation class for the `cancel_refund_*`
   books introduced in 1.5.0. Pre-check raises `Stern::InsufficientFunds`
-  when the cancel exceeds the current locked refund balance.
+  when the cancel exceeds the current outbound refund balance.
 - **`allow_overdraft` flag on `LockWithdrawal`, `LockBalance`, `Divest`,
   and `TransferBalance`.** Defaults to `false` (the safe path); set `true`
   to authorize a write that would otherwise be rejected. Replaces the
@@ -376,12 +398,12 @@ shape is now extended to `lock_*_balance` via `UnlockBalance` and to
   On `LockBalance` it gates a new pre-check that raises
   `Stern::InsufficientFunds` when the lock would exceed the stakeholder's
   per-gid available balance.
-- **DB-level backstop on `wdw_*_locked` / `wdw_*_confirmed`.** Both books
-  are now `non_negative: true`, mirroring `refund_locked` and
-  `chargeback_locked`. Translates an over-debit (concurrent or otherwise)
+- **DB-level backstop on `wdw_*_outbound` / `wdw_*_confirmed`.** Both books
+  are now `non_negative: true`, mirroring `refund_outbound` and
+  `chargeback_outbound`. Translates an over-debit (concurrent or otherwise)
   into `Stern::BalanceNonNegativeViolation`.
-- **DB-level backstop on `*_locked`.** `merchant_locked`, `partner_locked`,
-  and `customer_locked` are now `non_negative: true`, behind
+- **DB-level backstop on `*_outbound`.** `merchant_outbound`, `partner_outbound`,
+  and `customer_outbound` are now `non_negative: true`, behind
   `UnlockBalance`'s pre-check.
 - **DB-level backstop on `*_withheld`.** `merchant_withheld`,
   `partner_withheld`, and `customer_withheld` are now `non_negative: true`,
@@ -482,7 +504,7 @@ conflicts can keep its existing rescue, but should narrow to
 
 Balance and withdrawal operations, the investment family, and admin
 UX polish. Stern now has a complete forward-only operation set
-covering held / withheld / locked balances and the investment
+covering held / withheld / outbound balances and the investment
 lifecycle, plus a balance sheet with named presets and zone-correct
 date picking.
 
@@ -499,7 +521,7 @@ date picking.
   `investment_invest`, `investment_trade`, `investment_trade_operation`,
   `investment_trade_fee`. Trade has a per-operation protection cap.
 - **Balance entry pairs** in `config/charts/general.yaml` covering the
-  new `*_locked`, `*_withheld`, `*_available`, `*_settled` transitions.
+  new `*_outbound`, `*_withheld`, `*_available`, `*_settled` transitions.
 - **Balance sheet presets** at `config/balance_sheet_presets.yml` —
   named windows (today, 7d, 30d, MTD, YTD) selectable from the date
   range picker.

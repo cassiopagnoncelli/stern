@@ -7,22 +7,22 @@ operations: general
 # Naming conventions:
 # - available: immediately available for general operations
 # - withheld: frozen capital by management rule used as collateral
-# - pending: incoming funds
-# - locked: outgoing funds
+# - inbound: incoming funds
+# - outbound: outgoing funds
 # - adjusted: manually adjusted available balance
 # - credit: untransferable credits used to automatically rebate fees
 #
 books:
   # Merchant
   #
-  # `*_locked` and `*_withheld` are non_negative so UnlockBalance and
-  # ReleaseWithheldBalance cannot over-debit a stakeholder's locked or
+  # `*_outbound` and `*_withheld` are non_negative so UnlockBalance and
+  # ReleaseWithheldBalance cannot over-debit a stakeholder's outbound or
   # withheld slice (DB-level backstop behind each op's friendly pre-check).
   - merchant_available
   - merchant_withheld:
       non_negative: true
-  - merchant_pending
-  - merchant_locked:
+  - merchant_inbound
+  - merchant_outbound:
       non_negative: true
   - merchant_adjusted
   - merchant_credit:
@@ -32,8 +32,8 @@ books:
   - partner_available
   - partner_withheld:
       non_negative: true
-  - partner_pending
-  - partner_locked:
+  - partner_inbound
+  - partner_outbound:
       non_negative: true
   - partner_adjusted
   - partner_credit:
@@ -43,30 +43,30 @@ books:
   - customer_available
   - customer_withheld:
       non_negative: true
-  - customer_pending
-  - customer_locked:
+  - customer_inbound
+  - customer_outbound:
       non_negative: true
   - customer_adjusted
   - customer_credit:
       non_negative: true
   
   # Withdrawals.
-  # `*_locked` and `*_confirmed` are non_negative so the Cancel/Reverse ops
-  # cannot over-debit a withdrawal stage (DB-level backstop behind each op's
+  # `wdw_*_outbound` and `wdw_*_confirmed` are non_negative so the Cancel/Reverse
+  # ops cannot over-debit a withdrawal stage (DB-level backstop behind each op's
   # friendly pre-check).
-  - wdw_merchant_locked:
+  - wdw_merchant_outbound:
       non_negative: true
   - wdw_merchant_confirmed:
       non_negative: true
   - wdw_merchant_fee
 
-  - wdw_partner_locked:
+  - wdw_partner_outbound:
       non_negative: true
   - wdw_partner_confirmed:
       non_negative: true
   - wdw_partner_fee
 
-  - wdw_customer_locked:
+  - wdw_customer_outbound:
       non_negative: true
   - wdw_customer_confirmed:
       non_negative: true
@@ -93,7 +93,7 @@ books:
   - payment_fee_pix
 
   # Refunds
-  - refund_locked:
+  - refund_outbound:
       non_negative: true
   - refund_confirmed
 
@@ -101,7 +101,7 @@ books:
   - refund_fee_partner
 
   # Chargebacks
-  - chargeback_locked:
+  - chargeback_outbound:
       non_negative: true
   - chargeback_loss
 
@@ -124,7 +124,7 @@ entry_pairs:
   # Balances
   #
   # `lock_*_balance` / `unlock_*_balance` form a two-state lifecycle
-  # `*_available <-> *_locked`. Unlike withdrawals, there's no `confirmed`
+  # `*_available <-> *_outbound`. Unlike withdrawals, there's no `confirmed`
   # companion, so a single inverse pair (UnlockBalance) suffices.
   # `withhold_*_balance` / `release_withheld_*_balance` form the same
   # two-state lifecycle for `*_available <-> *_withheld` (ReleaseWithheldBalance).
@@ -135,13 +135,13 @@ entry_pairs:
     book_sub: merchant_withheld
     book_add: merchant_available
   settle_merchant_balance:
-    book_sub: merchant_pending
+    book_sub: merchant_inbound
     book_add: merchant_available
   lock_merchant_balance:
     book_sub: merchant_available
-    book_add: merchant_locked
+    book_add: merchant_outbound
   unlock_merchant_balance:
-    book_sub: merchant_locked
+    book_sub: merchant_outbound
     book_add: merchant_available
   adjust_merchant_balance:
     book_sub: merchant_adjusted
@@ -157,13 +157,13 @@ entry_pairs:
     book_sub: partner_withheld
     book_add: partner_available
   settle_partner_balance:
-    book_sub: partner_pending
+    book_sub: partner_inbound
     book_add: partner_available
   lock_partner_balance:
     book_sub: partner_available
-    book_add: partner_locked
+    book_add: partner_outbound
   unlock_partner_balance:
-    book_sub: partner_locked
+    book_sub: partner_outbound
     book_add: partner_available
   adjust_partner_balance:
     book_sub: partner_adjusted
@@ -179,13 +179,13 @@ entry_pairs:
     book_sub: customer_withheld
     book_add: customer_available
   settle_customer_balance:
-    book_sub: customer_pending
+    book_sub: customer_inbound
     book_add: customer_available
   lock_customer_balance:
     book_sub: customer_available
-    book_add: customer_locked
+    book_add: customer_outbound
   unlock_customer_balance:
-    book_sub: customer_locked
+    book_sub: customer_outbound
     book_add: customer_available
   adjust_customer_balance:
     book_sub: customer_adjusted
@@ -197,21 +197,21 @@ entry_pairs:
   # Withdrawals
   #
   # Lifecycle per stakeholder type:
-  #   *_available -> wdw_*_locked       (LockWithdrawal)
-  #   wdw_*_locked -> *_available       (CancelWithdrawal, before settlement)
-  #   wdw_*_locked -> wdw_*_confirmed   (ConfirmWithdrawal, on settlement)
+  #   *_available -> wdw_*_outbound     (LockWithdrawal)
+  #   wdw_*_outbound -> *_available     (CancelWithdrawal, before settlement)
+  #   wdw_*_outbound -> wdw_*_confirmed (ConfirmWithdrawal, on settlement)
   #   wdw_*_confirmed -> *_available    (ReverseWithdrawal, post-settlement reject)
   #
-  # `wdw_*_locked` carries in-flight withdrawals; `wdw_*_confirmed` accumulates
+  # `wdw_*_outbound` carries in-flight withdrawals; `wdw_*_confirmed` accumulates
   # settled ones (reversible only via ReverseWithdrawal).
   lock_withdrawal_merchant:
     book_sub: merchant_available
-    book_add: wdw_merchant_locked
+    book_add: wdw_merchant_outbound
   cancel_withdrawal_merchant:
-    book_sub: wdw_merchant_locked
+    book_sub: wdw_merchant_outbound
     book_add: merchant_available
   confirm_withdrawal_merchant:
-    book_sub: wdw_merchant_locked
+    book_sub: wdw_merchant_outbound
     book_add: wdw_merchant_confirmed
   reverse_withdrawal_merchant:
     book_sub: wdw_merchant_confirmed
@@ -219,12 +219,12 @@ entry_pairs:
 
   lock_withdrawal_partner:
     book_sub: partner_available
-    book_add: wdw_partner_locked
+    book_add: wdw_partner_outbound
   cancel_withdrawal_partner:
-    book_sub: wdw_partner_locked
+    book_sub: wdw_partner_outbound
     book_add: partner_available
   confirm_withdrawal_partner:
-    book_sub: wdw_partner_locked
+    book_sub: wdw_partner_outbound
     book_add: wdw_partner_confirmed
   reverse_withdrawal_partner:
     book_sub: wdw_partner_confirmed
@@ -232,12 +232,12 @@ entry_pairs:
 
   lock_withdrawal_customer:
     book_sub: customer_available
-    book_add: wdw_customer_locked
+    book_add: wdw_customer_outbound
   cancel_withdrawal_customer:
-    book_sub: wdw_customer_locked
+    book_sub: wdw_customer_outbound
     book_add: customer_available
   confirm_withdrawal_customer:
-    book_sub: wdw_customer_locked
+    book_sub: wdw_customer_outbound
     book_add: wdw_customer_confirmed
   reverse_withdrawal_customer:
     book_sub: wdw_customer_confirmed
@@ -338,33 +338,33 @@ entry_pairs:
   # Splits
   split_payment_merchant:
     book_sub: payment
-    book_add: merchant_pending
+    book_add: merchant_inbound
   split_payment_partner:
     book_sub: payment
-    book_add: partner_pending
+    book_add: partner_inbound
   
   # Refunds
   lock_refund_merchant:
     book_sub: merchant_available
-    book_add: refund_locked
+    book_add: refund_outbound
   lock_refund_partner:
     book_sub: partner_available
-    book_add: refund_locked
+    book_add: refund_outbound
 
   # Pre-confirm cancel (gateway declined the refund). Mirrors lock_refund_*
   # keying by funder so the released funds return to the same available book
   # they were drawn from. Use only before confirm_refund; once confirmed the
-  # refund_locked balance has drained to refund_confirmed and there is no
+  # refund_outbound balance has drained to refund_confirmed and there is no
   # cancel path — handle post-settlement reversals as a separate flow.
   cancel_refund_merchant:
-    book_sub: refund_locked
+    book_sub: refund_outbound
     book_add: merchant_available
   cancel_refund_partner:
-    book_sub: refund_locked
+    book_sub: refund_outbound
     book_add: partner_available
 
   confirm_refund:
-    book_sub: refund_locked
+    book_sub: refund_outbound
     book_add: refund_confirmed
   # Refund is a liability transfer, not a P&L event: funds move from the
   # funder's available book to customer_available, conserving total platform
@@ -381,7 +381,7 @@ entry_pairs:
   # Post-settlement refund reversal. Mirrors ReverseWithdrawal's "terminal
   # state back to available" idiom: drains directly from customer_available
   # to the funder's available book without retracing through refund_confirmed
-  # / refund_locked. Funder identity is consumed at lock_refund_*, drained
+  # / refund_outbound. Funder identity is consumed at lock_refund_*, drained
   # into the fungible refund_confirmed, and lost — so the caller must
   # re-supply it (merchant vs partner) on reversal. Entries land at
   # gid=funder; the customer's per-customer view stays untouched but the
@@ -405,10 +405,10 @@ entry_pairs:
   # Chargebacks
   lock_chargeback_merchant:
     book_sub: merchant_available
-    book_add: chargeback_locked
+    book_add: chargeback_outbound
   lock_chargeback_partner:
     book_sub: partner_available
-    book_add: chargeback_locked
+    book_add: chargeback_outbound
   
   # Chargeback is loss recognition, not a liability transfer: chargeback_loss
   # is a terminal P&L sink (parallel to chargeback_fee_*), since the issuing
@@ -417,7 +417,7 @@ entry_pairs:
   # reverse_chargeback_partner below — never call Chargeback with a negative
   # amount.
   confirm_chargeback:
-    book_sub: chargeback_locked
+    book_sub: chargeback_outbound
     book_add: chargeback_loss
 
   # Post-settlement chargeback reversal (issuer overturned the dispute).

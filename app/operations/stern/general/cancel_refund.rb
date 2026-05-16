@@ -3,16 +3,16 @@
 module Stern
   # Releases an in-flight refund lock back to the funder's available balance.
   # Inverse of `ReintegratePayment` for refunds (forward direction:
-  # `refund_locked → <funder>_available`). Used when the gateway declines a
+  # `refund_outbound → <funder>_available`). Used when the gateway declines a
   # refund between `ReintegratePayment` and `Refund` (confirm + settle). Once
-  # `Refund` has run, `refund_locked` for that refund has drained into
+  # `Refund` has run, `refund_outbound` for that refund has drained into
   # `refund_confirmed` and this op no longer applies — use `ReverseRefund`
   # for post-settlement reversals.
   #
   # Funder identity (merchant vs partner) must match the side that locked the
   # refund — `cancel_refund_merchant` undoes `lock_refund_merchant`,
   # `cancel_refund_partner` undoes `lock_refund_partner`. The DB-level
-  # `non_negative` backstop on `refund_locked` enforces that the cancel
+  # `non_negative` backstop on `refund_outbound` enforces that the cancel
   # cannot exceed what was locked at this `refund_id`, but does not enforce
   # which funder the lock came from — callers must pass the right one.
   class CancelRefund < BaseOperation
@@ -29,6 +29,6 @@ module Stern
       sub_gid: :refund_id,
       add_gid: :resolved,
       entry_uid: :resolved,
-      requires_balance: { book: :refund_locked, label: "locked balance", gid: :refund_id }
+      requires_balance: { book: :refund_outbound, label: "outbound balance", gid: :refund_id }
   end
 end

@@ -29,8 +29,8 @@ presets:
     book_names:
       - merchant_available
       - merchant_withheld
-      - merchant_pending
-      - merchant_locked
+      - merchant_inbound
+      - merchant_outbound
       - merchant_credit
 
   - key: brl_customers_last_month
@@ -41,8 +41,8 @@ presets:
     book_names:
       - customer_available
       - customer_withheld
-      - customer_pending
-      - customer_locked
+      - customer_inbound
+      - customer_outbound
       - customer_credit
 
   - key: brl_payments_today

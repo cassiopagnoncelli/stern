@@ -13,7 +13,7 @@ module Stern
       }.merge(overrides)
     end
 
-    # Chargeback's prerequisite — `chargeback_locked` is non_negative, so
+    # Chargeback's prerequisite — `chargeback_outbound` is non_negative, so
     # confirm_chargeback can only run if a prior ReintegratePayment locked
     # at least `amount`.
     def lock_chargeback(amount: 500)
@@ -42,7 +42,7 @@ module Stern
       it "locks confirm_chargeback's two sides at chargeback_id" do
         op = described_class.new(**valid_inputs)
         expect(op.target_tuples).to eq([
-          [ "chargeback_locked", chargeback_id, "BRL" ],
+          [ "chargeback_outbound", chargeback_id, "BRL" ],
           [ "chargeback_loss",   chargeback_id, "BRL" ]
         ])
       end
@@ -51,12 +51,12 @@ module Stern
     describe "#call" do
       before { Repair.clear(confirm: true) }
 
-      it "drains chargeback_locked at chargeback_id and recognizes loss" do
+      it "drains chargeback_outbound at chargeback_id and recognizes loss" do
         lock_chargeback(amount: 500)
 
         described_class.new(**valid_inputs).call
 
-        expect(::Stern.balance(chargeback_id, :chargeback_locked, :BRL)).to eq(0)
+        expect(::Stern.balance(chargeback_id, :chargeback_outbound, :BRL)).to eq(0)
         expect(::Stern.balance(chargeback_id, :chargeback_loss, :BRL)).to eq(500)
       end
 
@@ -72,7 +72,7 @@ module Stern
         )
       end
 
-      it "rejects confirming without a prior reintegrate (chargeback_locked is non_negative)" do
+      it "rejects confirming without a prior reintegrate (chargeback_outbound is non_negative)" do
         expect {
           described_class.new(**valid_inputs).call
         }.to raise_error(BalanceNonNegativeViolation)

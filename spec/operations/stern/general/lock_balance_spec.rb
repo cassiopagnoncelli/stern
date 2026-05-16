@@ -77,7 +77,7 @@ module Stern
         op = described_class.new(**valid_inputs)
         expect(op.target_tuples).to eq([
           [ "merchant_available", merchant_id, "BRL" ],
-          [ "merchant_locked", merchant_id, "BRL" ]
+          [ "merchant_outbound", merchant_id, "BRL" ]
         ])
       end
 
@@ -85,7 +85,7 @@ module Stern
         op = described_class.new(**valid_inputs(merchant_id: nil, customer_id:))
         expect(op.target_tuples).to eq([
           [ "customer_available", customer_id, "BRL" ],
-          [ "customer_locked", customer_id, "BRL" ]
+          [ "customer_outbound", customer_id, "BRL" ]
         ])
       end
 
@@ -93,7 +93,7 @@ module Stern
         op = described_class.new(**valid_inputs(merchant_id: nil, partner_id:))
         expect(op.target_tuples).to eq([
           [ "partner_available", partner_id, "BRL" ],
-          [ "partner_locked", partner_id, "BRL" ]
+          [ "partner_outbound", partner_id, "BRL" ]
         ])
       end
     end
@@ -101,13 +101,13 @@ module Stern
     describe "#call" do
       before { Repair.clear(confirm: true) }
 
-      it "moves balance from merchant_available to merchant_locked" do
+      it "moves balance from merchant_available to merchant_outbound" do
         seed_available({ merchant_id: }, amount: 10_000)
 
         described_class.new(**valid_inputs(amount: 5000)).call
 
         expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(5000)
-        expect(::Stern.balance(merchant_id, :merchant_locked, :BRL)).to eq(5000)
+        expect(::Stern.balance(merchant_id, :merchant_outbound, :BRL)).to eq(5000)
       end
 
       it "writes one entry pair (lock_merchant_balance) keyed by merchant_id" do
@@ -174,7 +174,7 @@ module Stern
           described_class.new(**valid_inputs(amount: 5000)).call
 
           expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(0)
-          expect(::Stern.balance(merchant_id, :merchant_locked, :BRL)).to eq(5000)
+          expect(::Stern.balance(merchant_id, :merchant_outbound, :BRL)).to eq(5000)
         end
       end
 
@@ -185,14 +185,14 @@ module Stern
           described_class.new(**valid_inputs(amount: 5000, allow_overdraft: true)).call
 
           expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(-4000)
-          expect(::Stern.balance(merchant_id, :merchant_locked, :BRL)).to eq(5000)
+          expect(::Stern.balance(merchant_id, :merchant_outbound, :BRL)).to eq(5000)
         end
 
         it "skips the runtime check entirely with no available balance seeded" do
           described_class.new(**valid_inputs(amount: 5000, allow_overdraft: true)).call
 
           expect(::Stern.balance(merchant_id, :merchant_available, :BRL)).to eq(-5000)
-          expect(::Stern.balance(merchant_id, :merchant_locked, :BRL)).to eq(5000)
+          expect(::Stern.balance(merchant_id, :merchant_outbound, :BRL)).to eq(5000)
         end
       end
     end

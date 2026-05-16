@@ -3,7 +3,7 @@
 module Stern
   # Releases an in-flight withdrawal lock back to the stakeholder's available
   # balance. Inverse of `LockWithdrawal` (forward direction:
-  # `wdw_*_locked → *_available`). Use only before `ConfirmWithdrawal`; once
+  # `wdw_*_outbound → *_available`). Use only before `ConfirmWithdrawal`; once
   # confirmed, use `ReverseWithdrawal` instead.
   class CancelWithdrawal < BaseOperation
     inputs :merchant_id, :partner_id, :customer_id, :amount, :currency
@@ -16,6 +16,6 @@ module Stern
     validates :currency, presence: true, allow_blank: false, allow_nil: false
 
     performs_stakeholder_pair "cancel_withdrawal_%{type}",
-      requires_balance: { book: "wdw_%{type}_locked", label: "locked balance" }
+      requires_balance: { book: "wdw_%{type}_outbound", label: "outbound balance" }
   end
 end

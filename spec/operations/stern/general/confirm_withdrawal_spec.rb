@@ -14,7 +14,7 @@ module Stern
       }.merge(overrides)
     end
 
-    def seed_locked_withdrawal(stakeholder_kwargs, amount:, currency: "BRL")
+    def seed_outbound_withdrawal(stakeholder_kwargs, amount:, currency: "BRL")
       Deposit.new(amount:, currency:, **stakeholder_kwargs).call
       LockWithdrawal.new(amount:, currency:, **stakeholder_kwargs).call
     end
@@ -75,7 +75,7 @@ module Stern
       it "merchant: pins merchant_id to confirm_withdrawal_merchant pair's two books" do
         op = described_class.new(**valid_inputs)
         expect(op.target_tuples).to eq([
-          [ "wdw_merchant_locked", merchant_id, "BRL" ],
+          [ "wdw_merchant_outbound", merchant_id, "BRL" ],
           [ "wdw_merchant_confirmed", merchant_id, "BRL" ]
         ])
       end
@@ -83,7 +83,7 @@ module Stern
       it "customer: pins customer_id to confirm_withdrawal_customer pair's two books" do
         op = described_class.new(**valid_inputs(merchant_id: nil, customer_id:))
         expect(op.target_tuples).to eq([
-          [ "wdw_customer_locked", customer_id, "BRL" ],
+          [ "wdw_customer_outbound", customer_id, "BRL" ],
           [ "wdw_customer_confirmed", customer_id, "BRL" ]
         ])
       end
@@ -91,7 +91,7 @@ module Stern
       it "partner: pins partner_id to confirm_withdrawal_partner pair's two books" do
         op = described_class.new(**valid_inputs(merchant_id: nil, partner_id:))
         expect(op.target_tuples).to eq([
-          [ "wdw_partner_locked", partner_id, "BRL" ],
+          [ "wdw_partner_outbound", partner_id, "BRL" ],
           [ "wdw_partner_confirmed", partner_id, "BRL" ]
         ])
       end
@@ -100,17 +100,17 @@ module Stern
     describe "#call" do
       before { Repair.clear(confirm: true) }
 
-      it "moves balance from wdw_merchant_locked to wdw_merchant_confirmed" do
-        seed_locked_withdrawal({ merchant_id: }, amount: 5000)
+      it "moves balance from wdw_merchant_outbound to wdw_merchant_confirmed" do
+        seed_outbound_withdrawal({ merchant_id: }, amount: 5000)
 
         described_class.new(**valid_inputs(amount: 5000)).call
 
-        expect(::Stern.balance(merchant_id, :wdw_merchant_locked, :BRL)).to eq(0)
+        expect(::Stern.balance(merchant_id, :wdw_merchant_outbound, :BRL)).to eq(0)
         expect(::Stern.balance(merchant_id, :wdw_merchant_confirmed, :BRL)).to eq(5000)
       end
 
       it "writes one entry pair (confirm_withdrawal_merchant) keyed by merchant_id" do
-        seed_locked_withdrawal({ merchant_id: }, amount: 5000)
+        seed_outbound_withdrawal({ merchant_id: }, amount: 5000)
 
         described_class.new(**valid_inputs(amount: 5000)).call
 
@@ -123,28 +123,28 @@ module Stern
       end
 
       it "writes confirm_withdrawal_customer for the customer variant" do
-        seed_locked_withdrawal({ customer_id: }, amount: 5000)
+        seed_outbound_withdrawal({ customer_id: }, amount: 5000)
         described_class.new(**valid_inputs(merchant_id: nil, customer_id:, amount: 5000)).call
         expect(EntryPair.last.code).to eq("confirm_withdrawal_customer")
       end
 
       it "writes confirm_withdrawal_partner for the partner variant" do
-        seed_locked_withdrawal({ partner_id: }, amount: 5000)
+        seed_outbound_withdrawal({ partner_id: }, amount: 5000)
         described_class.new(**valid_inputs(merchant_id: nil, partner_id:, amount: 5000)).call
         expect(EntryPair.last.code).to eq("confirm_withdrawal_partner")
       end
 
       it "supports partial confirmations: confirming 2000 of 5000 leaves 3000 locked" do
-        seed_locked_withdrawal({ merchant_id: }, amount: 5000)
+        seed_outbound_withdrawal({ merchant_id: }, amount: 5000)
 
         described_class.new(**valid_inputs(amount: 2000)).call
 
-        expect(::Stern.balance(merchant_id, :wdw_merchant_locked, :BRL)).to eq(3000)
+        expect(::Stern.balance(merchant_id, :wdw_merchant_outbound, :BRL)).to eq(3000)
         expect(::Stern.balance(merchant_id, :wdw_merchant_confirmed, :BRL)).to eq(2000)
       end
 
-      it "raises InsufficientFunds when amount exceeds the locked balance (non_negative book guard)" do
-        seed_locked_withdrawal({ merchant_id: }, amount: 1000)
+      it "raises InsufficientFunds when amount exceeds the outbound balance (non_negative book guard)" do
+        seed_outbound_withdrawal({ merchant_id: }, amount: 1000)
 
         expect {
           described_class.new(**valid_inputs(amount: 5000)).call

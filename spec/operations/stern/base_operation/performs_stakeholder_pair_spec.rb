@@ -125,19 +125,19 @@ module Stern
         define_op(inputs: %i[merchant_id partner_id refund_id amount currency]) do
           performs_stakeholder_pair "cancel_refund_%{type}",
             add_gid: :refund_id,
-            requires_balance: { book: :refund_locked, label: "locked balance", gid: :refund_id }
+            requires_balance: { book: :refund_outbound, label: "outbound balance", gid: :refund_id }
         end
       end
 
       it "calls require_sufficient_balance! with the literal book and configured gid" do
         op = klass.new(merchant_id:, refund_id:, amount: 200, currency: "BRL")
         expect(op).to receive(:require_sufficient_balance!).with(
-          book_id: :refund_locked,
+          book_id: :refund_outbound,
           gid:     refund_id,
           currency: "BRL",
           amount:   200,
           op_label: kind_of(String),
-          balance_label: "locked balance",
+          balance_label: "outbound balance",
         )
         op.runtime_check
       end
@@ -146,7 +146,7 @@ module Stern
         klass = define_op(name: "FancyCancel", inputs: %i[merchant_id partner_id refund_id amount currency]) do
           performs_stakeholder_pair "cancel_refund_%{type}",
             add_gid: :refund_id,
-            requires_balance: { book: :refund_locked, label: "locked balance", gid: :refund_id }
+            requires_balance: { book: :refund_outbound, label: "outbound balance", gid: :refund_id }
         end
         op = klass.new(merchant_id:, refund_id:, amount: 1, currency: "BRL")
         expect(op).to receive(:require_sufficient_balance!).with(hash_including(op_label: "fancy_cancel"))
@@ -158,16 +158,16 @@ module Stern
       let(:klass) do
         define_op do
           performs_stakeholder_pair "unlock_%{type}_balance",
-            requires_balance: { book: "%{type}_locked", label: "locked balance" }
+            requires_balance: { book: "%{type}_outbound", label: "outbound balance" }
         end
       end
 
       it "interpolates %{type} into the book name" do
         op = klass.new(customer_id:, amount: 10, currency: "BRL")
         expect(op).to receive(:require_sufficient_balance!).with(hash_including(
-          book_id: :customer_locked,
+          book_id: :customer_outbound,
           gid:     customer_id,
-          balance_label: "locked balance",
+          balance_label: "outbound balance",
         ))
         op.runtime_check
       end
