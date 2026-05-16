@@ -10,7 +10,7 @@ GIT
 PATH
   remote: .
   specs:
-    stern (1.9.6)
+    stern (1.9.7)
       cssbundling-rails (~> 1.4)
       idp-jwt (~> 0.1)
       nokogiri (~> 1.15, >= 1.15.6)

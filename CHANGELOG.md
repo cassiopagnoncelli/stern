@@ -7,6 +7,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.9.7] — 2026-05-15
+
 ### Changed
 
 - **Book rename: `*_pending` → `*_inbound`, `*_locked` → `*_outbound`.**
